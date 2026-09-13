@@ -1,0 +1,417 @@
+package main
+
+import (
+	"auth/internal/dao"
+	"auth/internal/database"
+	"auth/internal/handler"
+	"auth/internal/router"
+	"auth/internal/service"
+	"net/http"
+	"os"
+)
+
+/*
+Here we have to define all db, dao, service handlers, etc and connect them all
+*/
+func main() {
+	dbURL := os.Getenv("POSTGRES_URL")
+	db, _ := database.Connect(dbURL)
+
+	userDao := dao.NewPostgresUserDAO(db)
+	service := service.NewPGAuthService(userDao)
+
+	handler := handler.NewAuthHandler(service)
+
+	userRouter := router.NewRouter(handler)
+
+	http.ListenAndServe(":8080", userRouter)
+}
+
+
+package dao
+
+import model "auth/internal/model"
+
+type UserDAO interface {
+	// user creation doesnt mean user logging in, just create
+	CreateUser(user model.NewUser) error
+	GetUserByEmail(email string) (model.DomainUser, error)
+}
+
+
+package dao
+
+import (
+	model "auth/internal/model"
+	"database/sql"
+)
+
+// now write implementations for PGSQL
+// PGUserDAO implements userDAO, so behaviour of userDAO can be used on this
+type PGUserDAO struct {
+	db *sql.DB
+}
+
+// init pg user DAO struct
+func NewPostgresUserDAO(db *sql.DB) *PGUserDAO {
+	return &PGUserDAO{db: db}
+}
+
+func (p *PGUserDAO) CreateUser(user model.NewUser) error {
+	// we have CreateUserQuery
+	// db.exec when we dont expect rows back
+	_, err := p.db.Exec(CreateUserQuery, user.Email, user.Username, user.PasswordHash)
+	return err
+}
+
+func (p *PGUserDAO) GetUserByEmail(email string) (model.DomainUser, error) {
+	// we have GetUserByEmailQuery
+	rows := p.db.QueryRow(email)
+
+	var user model.DomainUser
+	err := rows.Scan(&user.ID, &user.Email, &user.Username, &user.PasswordHash)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return model.DomainUser{}, nil // no user found
+		}
+		return model.DomainUser{}, err // some error
+	}
+	return user, nil
+}
+
+package dao
+
+/*
+Only 2 main queries needed
+sign up request
+login validation
+*/
+
+const (
+	CreateUserQuery = `INSERT INTO users(email, username, password) VALUES ($1, $2, $3)`
+
+	// never compare passwords in queries,, get hash and compare in backend urself
+	GetUserByEmailQuery = `SELECT id, email, username, password_hash FROM users WHERE email = $1 `
+)
+
+package database
+
+import (
+	"database/sql"
+)
+
+// url is sent from main
+func Connect(url string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", url)
+	if err != nil {
+		return nil, err
+	}
+
+	// ping db to see if connectin secure
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+package handler
+
+import (
+	"encoding/json"
+	"net/http"
+)
+
+func ErrorJSON(w http.ResponseWriter, status int, msg string) {
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error": msg,
+	})
+}
+package handler
+
+import (
+	"auth/internal/model"
+	"auth/internal/service"
+	"encoding/json"
+	"net/http"
+)
+
+type UserHandlerInterface interface {
+	SignupHandler(w http.ResponseWriter, r *http.Request)
+	LoginHandler(w http.ResponseWriter, r *http.Request)
+}
+
+// to call services
+type AuthHandler struct {
+	service *service.AuthService
+}
+
+func NewAuthHandler(service *service.AuthService) *AuthHandler {
+	return &AuthHandler{service: service}
+}
+
+func (h *AuthHandler) SignupHandler(w http.ResponseWriter, r *http.Request) {
+	// parse json queries, validate and return response
+	var user model.SignUpRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		ErrorJSON(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	// validate required fields
+	if user.Email == "" || user.Password == "" || user.Username == "" {
+		ErrorJSON(w, http.StatusBadRequest, "missing required fields")
+		return
+	}
+
+	if err := h.service.Signup(user); err != nil {
+		ErrorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "signup successful",
+	})
+}
+
+func (h *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	var userReq model.LoginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&userReq); err != nil {
+		ErrorJSON(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if userReq.Email == "" || userReq.Password == "" {
+		ErrorJSON(w, http.StatusBadRequest, "missing required fields")
+		return
+	}
+
+	authResponse, err := h.service.Login(userReq)
+	if err != nil {
+		ErrorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// set http-only cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    authResponse.Token,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		Path:     "/",
+	})
+
+	// send JSON response too (username, email, etc.)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(authResponse)
+}
+package model
+
+/*
+List of Data Transfer Objects to create:
+- Sign up request
+- login request
+
+- auth response
+- error response
+
+*/
+
+type SignUpRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// response from login
+type AuthResponse struct {
+	Token    string `json:"token"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
+type ErrorResponse struct {
+	Message   string `json:"message"`
+	ErrorCode int    `json:"errorCode"`
+}
+
+// used to create token
+type TokenClaims struct {
+	ID    int    `json:"id"`
+	Email string `json:"email"`
+	Iat   int64  `json:"iat"`
+	Exp   int64  `json:"exp"`
+}
+package model
+
+type NewUser struct {
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"password"`
+}
+
+type DomainUser struct {
+	ID           int    `json:"user_id"`
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"password_hash"`
+}
+package router
+
+import (
+	"auth/internal/handler"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+)
+
+func NewRouter(h *handler.AuthHandler) http.Handler {
+	r := chi.NewRouter()
+
+	r.Post("/signup", h.SignupHandler)
+	r.Post("/login", h.LoginHandler)
+
+	return r
+}
+package service
+
+import (
+	"auth/internal/dao"
+	"auth/internal/model"
+	"auth/internal/utils"
+	"errors"
+)
+
+// intreface for just listing out methods
+type AuthServiceMethods interface {
+	Signup(user model.SignUpRequest) error
+	Login(user model.LoginRequest) (model.AuthResponse, error)
+}
+
+// we need a dao object to call the DAO methods
+type AuthService struct {
+	dao dao.UserDAO
+}
+
+// now any behaviour can be passed here, pg, mongo, memory
+func NewPGAuthService(p dao.UserDAO) *AuthService {
+	return &AuthService{dao: p}
+}
+
+// never pass *interface in go
+
+func (p *AuthService) Signup(user model.SignUpRequest) error {
+	// create user with email, username and password, after hash
+	var newUser model.NewUser
+	newUser.Username = user.Username
+	newUser.Email = user.Email
+
+	hashedPW, err := utils.HashPassword(user.Password)
+
+	if err != nil {
+		return err
+	}
+
+	newUser.PasswordHash = hashedPW
+
+	// call DAO
+	err = p.dao.CreateUser(newUser)
+
+	if err != nil {
+		return errors.New("user already exists")
+	}
+
+	return nil
+}
+
+func (p *AuthService) Login(user model.LoginRequest) (model.AuthResponse, error) {
+	// Get user from DB, check password, return token
+	var domainUser model.DomainUser
+
+	domainUser, err := p.dao.GetUserByEmail(user.Email)
+
+	if err != nil {
+		return model.AuthResponse{}, err
+	}
+
+	// if user exists, check password
+	err = utils.VerifyPassword(user.Password, domainUser.PasswordHash)
+	var token string
+
+	if err == nil {
+		token, err = utils.SignToken(domainUser)
+
+		if err != nil {
+			return model.AuthResponse{}, err
+		}
+	}
+
+	return model.AuthResponse{Token: token, Username: domainUser.Username, Email: domainUser.Email}, nil
+
+}
+package utils
+
+import (
+	"auth/internal/model"
+	"os"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+// SIGN JWT Token
+func SignToken(user model.DomainUser) (string, error) {
+	jwtSecret := os.Getenv("JWT_SECRET")
+	jwtExpiresIn := os.Getenv("JWT_EXPIRES_IN")
+
+	// map claims
+	claims := jwt.MapClaims{
+		"user_id":  user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	}
+
+	if jwtExpiresIn != "" {
+		duration, err := time.ParseDuration(jwtExpiresIn)
+		if err != nil {
+			return "", err
+		}
+		claims["exp"] = jwt.NewNumericDate(time.Now().Add(duration))
+	} else {
+		claims["exp"] = jwt.NewNumericDate(time.Now().Add(15 * time.Minute))
+	}
+
+	// finally create the token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	// sign the token
+	signedToken, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return signedToken, nil
+}
+package utils
+
+import "golang.org/x/crypto/bcrypt"
+
+// hash password
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
+}
+
+// verify if password correct
+func VerifyPassword(password, hash string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+}

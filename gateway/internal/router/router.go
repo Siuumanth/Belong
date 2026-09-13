@@ -49,20 +49,24 @@ func (r ChiRouter) ConfigureRoutes(proxies *Proxies, authz MW.Middleware) {
 	// Health check
 	r.mux.Get("/health", health.HealthCheckHandler)
 
-	//	r.mux.Handle("/metrics", promhttp.Handler())
-	// Public routes (no JWT)
+	// Public routes (no JWT required)
 	r.mux.Route("/auth", func(r chi.Router) {
 		r.Mount("/", http.StripPrefix("/auth", proxies.Auth))
 	})
 
-	r.mux.Route("/api", func(r chi.Router) {
-		// ---------- PUBLIC ----------
-		r.Mount("/files", http.StripPrefix("/api/files", proxies.Files))
+	// Protected routes (JWT authentication required)
+	r.mux.Group(func(r chi.Router) {
+		r.Use(authz.Handle)
 
-		// ---------- PROTECTED ----------
-		r.Group(func(r chi.Router) {
-			r.Use(authz.Handle)
-			r.Mount("/upload", http.StripPrefix("/api/upload", proxies.Upload))
-		})
+		// Belong domain routes forwarded to Python service
+		r.HandleFunc("/profiles", proxies.Belong.ServeHTTP)
+		r.HandleFunc("/profiles/*", proxies.Belong.ServeHTTP)
+		r.HandleFunc("/onboarding", proxies.Belong.ServeHTTP)
+		r.HandleFunc("/onboarding/*", proxies.Belong.ServeHTTP)
+		r.HandleFunc("/matches", proxies.Belong.ServeHTTP)
+		r.HandleFunc("/matches/*", proxies.Belong.ServeHTTP)
+
+		// Optional /api prefix forwarded cleanly (e.g. /api/profiles -> /profiles)
+		r.Mount("/api", http.StripPrefix("/api", proxies.Belong))
 	})
 }

@@ -1,0 +1,6 @@
+.env
+
+
+ 1. its its .dockerignore right
+
+2. i have a sessoins folder in my upoload microservice which stores files locally before it uploads to s3, what todo abt this 

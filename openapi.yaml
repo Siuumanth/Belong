@@ -1,0 +1,499 @@
+openapi: 3.1.0
+info:
+  title: Belong Platform API
+  description: >
+    Public and internal API specification for the Belong compatibility matching platform.
+    Requests are routed via the Go API Gateway (:9000), which proxies authentication requests
+    to the Go Auth Service (:9001) and domain requests to the Python Belong Service (:8000).
+  version: 1.0.0
+servers:
+  - url: http://localhost:9000
+    description: Go API Gateway (Primary Client Entrypoint)
+  - url: http://localhost:9001
+    description: Go Auth Service (Direct Internal)
+  - url: http://localhost:8000
+    description: Python Belong FastAPI Service (Direct Internal)
+
+paths:
+  # ==========================================
+  # GATEWAY SYSTEM ENDPOINTS
+  # ==========================================
+  /health:
+    get:
+      summary: Gateway Health Check
+      description: Returns health status of the Go API Gateway.
+      tags: [System]
+      responses:
+        '200':
+          description: Gateway is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: "ok" }
+                  service: { type: string, example: "go-gateway" }
+
+  # ==========================================
+  # AUTH SERVICE ENDPOINTS (/auth/*)
+  # ==========================================
+  /auth/signup:
+    post:
+      summary: Register a New User
+      description: Creates user credentials and stores them in the Auth DB.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: User registered successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "user created" }
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /auth/login:
+    post:
+      summary: Authenticate User
+      description: Verifies password and returns a signed JWT containing user claims.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ==========================================
+  # PROFILE ENDPOINTS (/profiles/*)
+  # ==========================================
+  /profiles:
+    post:
+      summary: Create Profile
+      description: Creates the initial structured profile and deterministic search filters for a user.
+      tags: [Profiles]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileCreate'
+      responses:
+        '201':
+          description: Profile created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /profiles/{user_id}:
+    get:
+      summary: Get Profile by User ID
+      description: Retrieves the complete profile, including deterministic attributes, JSONB signals, and extraction metadata.
+      tags: [Profiles]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Profile found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      summary: Update Profile
+      description: Partially updates deterministic fields or profile JSONB. Enqueues an embedding re-generation job if relevant traits change.
+      tags: [Profiles]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+
+  # ==========================================
+  # ONBOARDING ENDPOINTS (/onboarding/*)
+  # ==========================================
+  /onboarding/session:
+    post:
+      summary: Start Onboarding Conversation
+      description: Initializes a new LangGraph onboarding dialogue session and returns the first core question.
+      tags: [Onboarding]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Conversation session started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingSessionResponse'
+
+  /onboarding/message:
+    post:
+      summary: Send Onboarding Answer
+      description: Submits user response, executes LangGraph signal extraction, tests for contradictions, and asks adaptive follow-ups (max 2).
+      tags: [Onboarding]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingMessageRequest'
+      responses:
+        '200':
+          description: Step processed. Returns next question or indicates completion.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingMessageResponse'
+
+  /onboarding/{conversation_id}:
+    get:
+      summary: Get Onboarding State
+      description: Fetches full message transcript and current LangGraph checkpoint state.
+      tags: [Onboarding]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Transcript and status retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingStateResponse'
+
+  # ==========================================
+  # MATCHING ENDPOINTS (/matches/*)
+  # ==========================================
+  /matches:
+    post:
+      summary: Create Matching Job
+      description: Enqueues an asynchronous 2-stage matching job (SQL Hard Filters + pgvector Recall + Pairwise LLM Reasoning). Returns HTTP 202 immediately.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: { type: string, format: uuid }
+                limit: { type: integer, default: 5, example: 5 }
+      responses:
+        '202':
+          description: Job accepted and enqueued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+
+  /matches/jobs/{job_id}:
+    get:
+      summary: Get Matching Job Status & Results
+      description: Polls the state of an asynchronous matching job. Once completed, returns ranked candidate results with full compatibility reasoning cards.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current job status and results (if completed).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchJobResponse'
+
+  /matches/{user_id}:
+    get:
+      summary: Get Latest Persisted Matches
+      description: Reads the most recently completed pairwise compatibility results for a given user from the database.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Persisted matches list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: { type: string, format: uuid }
+                  matches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MatchResultItem'
+
+# ==========================================
+# COMPONENTS & SCHEMAS
+# ==========================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequestError:
+      description: Invalid payload or bad request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: "Invalid input parameters" }
+    UnauthorizedError:
+      description: Missing or invalid JWT token.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: "Unauthorized" }
+    NotFoundError:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: "Resource not found" }
+
+  schemas:
+    # Auth
+    SignUpRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username: { type: string, example: "alex_rivers" }
+        email: { type: string, format: email, example: "alex@example.com" }
+        password: { type: string, format: password, example: "SecurePass123!" }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: "alex@example.com" }
+        password: { type: string, format: password, example: "SecurePass123!" }
+
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string, example: "eyJhbGciOiJIUzI1NiIsInR5cCI6..." }
+        username: { type: string, example: "alex_rivers" }
+        email: { type: string, example: "alex@example.com" }
+
+    # Profile
+    ProfileCreate:
+      type: object
+      required: [user_id, age, gender, orientation, relationship_goal]
+      properties:
+        user_id: { type: string, format: uuid }
+        age: { type: integer, example: 25 }
+        gender: { type: string, example: "woman" }
+        orientation: { type: string, example: "heterosexual" }
+        latitude: { type: number, format: double, example: 37.7749 }
+        longitude: { type: number, format: double, example: -122.4194 }
+        relationship_goal: { type: string, example: "long-term" }
+        preferred_age_min: { type: integer, example: 24 }
+        preferred_age_max: { type: integer, example: 30 }
+        max_distance_km: { type: integer, example: 25 }
+        preferred_genders:
+          type: array
+          items: { type: string }
+          example: ["man"]
+        profile:
+          type: object
+          description: Structured profile signals (self, wants, constraints)
+
+    ProfileUpdate:
+      type: object
+      properties:
+        age: { type: integer }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        relationship_goal: { type: string }
+        preferred_age_min: { type: integer }
+        preferred_age_max: { type: integer }
+        max_distance_km: { type: integer }
+        preferred_genders:
+          type: array
+          items: { type: string }
+        profile: { type: object }
+
+    ProfileResponse:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        age: { type: integer }
+        gender: { type: string }
+        orientation: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        relationship_goal: { type: string }
+        preferred_age_min: { type: integer }
+        preferred_age_max: { type: integer }
+        max_distance_km: { type: integer }
+        preferred_genders: { type: array, items: { type: string } }
+        profile: { type: object }
+        extraction_version: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    # Onboarding
+    OnboardingSessionResponse:
+      type: object
+      properties:
+        conversation_id: { type: string, format: uuid }
+        question_id: { type: string, example: "q1_relationship_goal" }
+        message: { type: string, example: "What are you looking for in a relationship right now?" }
+
+    OnboardingMessageRequest:
+      type: object
+      required: [conversation_id, message]
+      properties:
+        conversation_id: { type: string, format: uuid }
+        message: { type: string, example: "I am looking for a serious partnership where we support each other's passions." }
+
+    OnboardingMessageResponse:
+      type: object
+      properties:
+        conversation_id: { type: string, format: uuid }
+        status: { type: string, enum: [in_progress, completed], example: "in_progress" }
+        question_id: { type: string, nullable: true, example: "q2_emotional_needs" }
+        message: { type: string, example: "What do you most need from a partner when things get stressful?" }
+
+    OnboardingStateResponse:
+      type: object
+      properties:
+        conversation_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        status: { type: string, example: "completed" }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role: { type: string, example: "user" }
+              content: { type: string }
+              question_id: { type: string, nullable: true }
+              created_at: { type: string, format: date-time }
+
+    # Matching
+    JobAcceptedResponse:
+      type: object
+      properties:
+        job_id: { type: string, format: uuid }
+        status: { type: string, example: "pending" }
+
+    MatchJobResponse:
+      type: object
+      properties:
+        job_id: { type: string, format: uuid }
+        status: { type: string, enum: [pending, running, completed, failed], example: "completed" }
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchResultItem'
+
+    MatchResultItem:
+      type: object
+      properties:
+        candidate_id: { type: string, format: uuid }
+        dimension_results:
+          type: object
+          description: Categorical verdicts per dimension
+          example:
+            emotional_needs:
+              verdict: "strong_alignment"
+              evidence_a: "Needs space to process stressful events"
+              evidence_b: "Respects boundaries and listens first"
+            conflict_style:
+              verdict: "partial_alignment"
+              evidence_a: "Takes time to cool down"
+              evidence_b: "Prefers immediate calm discussion"
+        strong_alignments:
+          type: array
+          items: { type: string }
+        potential_conflicts:
+          type: array
+          items: { type: string }
+        dealbreaker_violations:
+          type: array
+          items: { type: string }
+        uncertainties:
+          type: array
+          items: { type: string }

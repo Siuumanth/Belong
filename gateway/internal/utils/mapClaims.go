@@ -15,7 +15,7 @@ func MapClaims(claims jwt.MapClaims) (*AuthContext, error) {
 	}
 
 	email, _ := claims[ClaimsEmailKey].(string)
-	username, _ := claims[ClaimsUidKey].(string)
+	username, _ := claims[ClaimsUsernameKey].(string)
 
 	expFloat, ok := claims[ClaimsExpKey].(float64)
 	if !ok {
