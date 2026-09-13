@@ -15,7 +15,7 @@ servers:
     description: Python Belong FastAPI Service (Direct Internal)
 
 paths:
-  # ==========================================
+  # =========================================
   # GATEWAY SYSTEM ENDPOINTS
   # ==========================================
   /health:
