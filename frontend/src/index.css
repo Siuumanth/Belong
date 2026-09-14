@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --color-ink: #0c0b0a;
+  --color-panel: #161412;
+  --color-line: #2a2622;
+  --color-gold: #d4a574;
+  --color-gold-dim: #8a6a45;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ink);
+  color: #f4efe8;
+  font-family: var(--font-sans);
+}
+
+#root {
+  isolation: isolate;
+}
