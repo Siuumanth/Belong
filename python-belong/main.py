@@ -30,6 +30,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from api.routes.profiles import router as profiles_router
+from api.routes.onboarding import router as onboarding_router
+
 @app.get("/healthz")
 async def health_check():
     return {"status": "ok", "service": "python-belong-api"}
+
+app.include_router(profiles_router, prefix="/api")
+app.include_router(onboarding_router, prefix="/api")
+

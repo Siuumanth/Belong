@@ -49,12 +49,12 @@ sequenceDiagram
 ## 2. The Conversational Dialogue Flow (LangGraph)
 
 ### 2.1 Core Question Areas (4–6 Questions)
-1. **Relationship Intent**: What are you looking for in a relationship right now?
-2. **Core Emotional Needs**: What do you most need from a partner when things get stressful or difficult?
-3. **Offerings & Conflict Style**: How do you naturally handle disagreements, and what do you bring to a relationship?
-4. **Lifestyle & Rhythm**: What does your day-to-day rhythm look like, and what values guide your choices?
-5. **Non-Negotiables & Dealbreakers**: What are things that are absolute dealbreakers for you?
-
+- **Relationship intent + partner traits** — "What are you looking for in a relationship, and what kind of person tends to be a good fit for you?"
+- **Emotional needs** — "What do you most need from a partner when things get stressful or difficult?"
+- **Conflict style + provides** — "How do you naturally handle disagreements, and what do you bring to a relationship?"
+- **Lifestyle, values, interests, life goals** (merged) — "What does your day-to-day life look like, what do you enjoy, and what kind of life are you building for yourself?"
+- **Self-description / personality** — "How would people close to you describe you, and what do you think makes you a good partner?"
+- **Dealbreakers** — "What are things that are absolute dealbreakers for you?"
 ### 2.2 Adaptive Follow-Up Guardrails
 - **Max Follow-ups Rule**: At most **2 adaptive follow-ups** across the entire onboarding session.
 - **Trigger Conditions**: A follow-up is triggered *only* when:
