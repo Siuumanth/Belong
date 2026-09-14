@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/onboarding_and_storage_flow.md",
+                "file": "README.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "onboarding_and_storage_flow"
+              "title": "README"
             }
           }
         ]
@@ -99,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/onboarding_and_storage_flow.md",
+                "file": "README.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +118,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/onboarding_and_storage_flow.md",
+                "file": "README.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +161,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/onboarding_and_storage_flow.md",
+                "file": "README.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -190,6 +190,8 @@
   },
   "active": "cd358927837d9fb6",
   "lastOpenFiles": [
+    "docs/onboarding_and_storage_flow.md",
+    "README.md",
     "python-belong/api/routes/onboarding.py",
     "python-belong/onboarding/graph.py",
     "python-belong/onboarding/repository.py",
@@ -200,7 +202,6 @@
     "python-belong/api/routes",
     "python-belong/profile/repository.py",
     "python-belong/profile/models.py",
-    "python-belong/config.py",
     "docs/Belong_MVP_System_Design.md"
   ]
 }
