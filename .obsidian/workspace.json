@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "README.md",
+                "file": "docs/rabbitmq_architecture_plan.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "README"
+              "title": "rabbitmq_architecture_plan"
             }
           }
         ]
@@ -99,7 +99,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "README.md",
+                "file": "docs/rabbitmq_architecture_plan.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +118,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "README.md",
+                "file": "docs/rabbitmq_architecture_plan.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +161,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "README.md",
+                "file": "docs/rabbitmq_architecture_plan.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -190,21 +190,23 @@
   },
   "active": "cd358927837d9fb6",
   "lastOpenFiles": [
-    "frontend/vite.config.ts",
-    "frontend/tsconfig.json",
-    "frontend/src/pages/ProfilePage.tsx",
-    "frontend/src/pages/OnboardingPage.tsx",
-    "frontend/src/pages/MatchesPage.tsx",
-    "frontend/src/pages/AuthPages.tsx",
-    "frontend/src/lib/jwt.ts",
-    "frontend/src/lib/auth.tsx",
-    "frontend/src/lib/api.ts",
-    "frontend/src/components/ui.tsx",
-    "frontend/src/pages",
+    "README.md",
+    "docs/rabbitmq_architecture_plan.md",
+    "belong-workers/workers/matching_worker.py",
+    "belong-workers/workers/embedding_worker.py",
+    "belong-workers/workers/__init__.py",
+    "belong-workers/workers",
+    "belong-workers/rabbitmq/consumer.py",
+    "belong-workers/rabbitmq/connection.py",
+    "belong-workers/rabbitmq/__init__.py",
+    "belong-workers/rabbitmq",
+    "belong-workers/db/__init__.py",
+    "belong-workers/db/connection.py",
+    "belong-workers/README.md",
+    "belong-api/README.md",
     "frontend/public/vite.svg",
     "frontend/src/typescript.svg",
     "docs/onboarding_and_storage_flow.md",
-    "README.md",
     "docs/Belong_MVP_System_Design.md"
   ]
 }

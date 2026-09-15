@@ -11,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./python-belong/db/migrations:/docker-entrypoint-initdb.d:ro
+      - ./belong-api/db/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U belong_user -d belong"]
       interval: 5s
@@ -19,6 +19,17 @@ services:
       retries: 5
       start_period: 10s
 
+  # rabbitmq:                               # TODO Phase 6: uncomment when belong-workers is wired
+  #   image: rabbitmq:3.13-management
+  #   container_name: belong-rabbitmq
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"   # management UI
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: belong
+  #     RABBITMQ_DEFAULT_PASS: belong_password
+
 volumes:
   postgres_data:
     name: belong_postgres_data
+
