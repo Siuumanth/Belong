@@ -6,25 +6,37 @@ from db.connection import get_db_connection
 
 class OnboardingRepository:
     @staticmethod
-    async def create_conversation(user_id: UUID, initial_state: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_conversation(user_id: UUID, initial_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        state = initial_state or {}
+        status = state.get("status", "active")
+        current_area_index = state.get("current_area_index", 0)
+        follow_up_count = state.get("follow_up_count", 0)
+        covered_areas = json.dumps(state.get("covered_areas", []))
+        extracted_signals = json.dumps(state.get("extracted_signals", {}))
+
         async with get_db_connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
                 query = """
-                    INSERT INTO conversations (user_id, state, status)
-                    VALUES (%s, %s, 'active')
-                    RETURNING id, user_id, state, status, created_at, updated_at;
+                    INSERT INTO conversations (user_id, status, current_area_index, follow_up_count, covered_areas, extracted_signals)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING id, user_id, status, current_area_index, follow_up_count, covered_areas, extracted_signals, created_at, updated_at;
                 """
-                await cur.execute(query, (str(user_id), json.dumps(initial_state)))
+                await cur.execute(query, (str(user_id), status, current_area_index, follow_up_count, covered_areas, extracted_signals))
                 row = await cur.fetchone()
                 await conn.commit()
-                return dict(row)
+                res = dict(row)
+                if isinstance(res.get("covered_areas"), str):
+                    res["covered_areas"] = json.loads(res["covered_areas"])
+                if isinstance(res.get("extracted_signals"), str):
+                    res["extracted_signals"] = json.loads(res["extracted_signals"])
+                return res
 
     @staticmethod
     async def get_conversation(conversation_id: UUID) -> Optional[Dict[str, Any]]:
         async with get_db_connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
                 query = """
-                    SELECT id, user_id, state, status, created_at, updated_at
+                    SELECT id, user_id, status, current_area_index, follow_up_count, covered_areas, extracted_signals, created_at, updated_at
                     FROM conversations
                     WHERE id = %s;
                 """
@@ -32,7 +44,12 @@ class OnboardingRepository:
                 row = await cur.fetchone()
                 if not row:
                     return None
-                return dict(row)
+                res = dict(row)
+                if isinstance(res.get("covered_areas"), str):
+                    res["covered_areas"] = json.loads(res["covered_areas"])
+                if isinstance(res.get("extracted_signals"), str):
+                    res["extracted_signals"] = json.loads(res["extracted_signals"])
+                return res
 
     @staticmethod
     async def update_conversation_state(
@@ -40,30 +57,43 @@ class OnboardingRepository:
         state: Dict[str, Any],
         status: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
+        status_val = status or state.get("status", "active")
+        current_area_index = state.get("current_area_index", 0)
+        follow_up_count = state.get("follow_up_count", 0)
+        covered_areas = state.get("covered_areas", [])
+        extracted_signals = state.get("extracted_signals", {})
+
         async with get_db_connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
-                if status:
-                    query = """
-                        UPDATE conversations
-                        SET state = %s, status = %s, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                        RETURNING id, user_id, state, status, created_at, updated_at;
-                    """
-                    await cur.execute(query, (json.dumps(state), status, str(conversation_id)))
-                else:
-                    query = """
-                        UPDATE conversations
-                        SET state = %s, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                        RETURNING id, user_id, state, status, created_at, updated_at;
-                    """
-                    await cur.execute(query, (json.dumps(state), str(conversation_id)))
-                
+                query = """
+                    UPDATE conversations
+                    SET status = %s,
+                        current_area_index = %s,
+                        follow_up_count = %s,
+                        covered_areas = %s,
+                        extracted_signals = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    RETURNING id, user_id, status, current_area_index, follow_up_count, covered_areas, extracted_signals, created_at, updated_at;
+                """
+                await cur.execute(query, (
+                    status_val,
+                    current_area_index,
+                    follow_up_count,
+                    json.dumps(covered_areas),
+                    json.dumps(extracted_signals),
+                    str(conversation_id)
+                ))
                 row = await cur.fetchone()
                 await conn.commit()
                 if not row:
                     return None
-                return dict(row)
+                res = dict(row)
+                if isinstance(res.get("covered_areas"), str):
+                    res["covered_areas"] = json.loads(res["covered_areas"])
+                if isinstance(res.get("extracted_signals"), str):
+                    res["extracted_signals"] = json.loads(res["extracted_signals"])
+                return res
 
     @staticmethod
     async def add_message(

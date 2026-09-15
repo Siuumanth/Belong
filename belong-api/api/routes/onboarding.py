@@ -88,9 +88,17 @@ async def send_message(payload: SendMessageRequest):
             detail="Onboarding conversation has already been completed."
         )
 
-    current_state = conversation.get("state", {})
-    current_state["conversation_id"] = str(payload.conversation_id)
-    current_state["latest_user_input"] = payload.message
+    current_state = {
+        "conversation_id": str(payload.conversation_id),
+        "user_id": str(conversation["user_id"]),
+        "status": conversation["status"],
+        "current_area_index": conversation.get("current_area_index", 0),
+        "follow_up_count": conversation.get("follow_up_count", 0),
+        "covered_areas": conversation.get("covered_areas", []),
+        "extracted_signals": conversation.get("extracted_signals", {}),
+        "latest_user_input": payload.message,
+        "latest_assistant_response": None
+    }
 
     # Record user message in DB
     current_idx = current_state.get("current_area_index", 0)
@@ -150,10 +158,17 @@ async def get_conversation_details(conversation_id: UUID):
 
     messages = await OnboardingRepository.get_messages(conversation_id)
 
+    reconstructed_state = {
+        "current_area_index": conversation.get("current_area_index", 0),
+        "follow_up_count": conversation.get("follow_up_count", 0),
+        "covered_areas": conversation.get("covered_areas", []),
+        "extracted_signals": conversation.get("extracted_signals", {})
+    }
+
     return ConversationDetailsResponse(
         conversation_id=UUID(str(conversation["id"])),
         user_id=UUID(str(conversation["user_id"])),
         status=conversation["status"],
-        state=conversation.get("state", {}),
+        state=reconstructed_state,
         messages=messages
     )

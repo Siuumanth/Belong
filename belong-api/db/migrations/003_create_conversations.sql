@@ -4,8 +4,11 @@
 CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
-    state JSONB NOT NULL DEFAULT '{}'::jsonb,
     status TEXT NOT NULL DEFAULT 'active',
+    current_area_index INT NOT NULL DEFAULT 0,
+    follow_up_count INT NOT NULL DEFAULT 0,
+    covered_areas JSONB NOT NULL DEFAULT '[]'::jsonb,
+    extracted_signals JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

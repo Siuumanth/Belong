@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/rabbitmq_architecture_plan.md",
+                "file": "docs/dev1-onboarding_graph_working.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "rabbitmq_architecture_plan"
+              "title": "dev1-onboarding_graph_working"
             }
           }
         ]
@@ -83,7 +83,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "4a93de7a2771fb20",
@@ -99,7 +100,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/rabbitmq_architecture_plan.md",
+                "file": "docs/dev1-onboarding_graph_working.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -118,7 +119,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/rabbitmq_architecture_plan.md",
+                "file": "docs/dev1-onboarding_graph_working.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -161,7 +162,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/rabbitmq_architecture_plan.md",
+                "file": "docs/dev1-onboarding_graph_working.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -190,19 +191,21 @@
   },
   "active": "cd358927837d9fb6",
   "lastOpenFiles": [
+    "belong-api/api/routes/__pycache__/onboarding.cpython-313.pyc",
+    "belong-api/api/routes/__pycache__",
+    "belong-api/onboarding/__pycache__/state.cpython-313.pyc",
+    "belong-api/onboarding/__pycache__/graph.cpython-313.pyc",
+    "belong-api/onboarding/__pycache__/repository.cpython-313.pyc",
+    "belong-api/onboarding/__pycache__",
+    "docs/rabbitmq_architecture_plan.md",
+    "docs/dev1-onboarding_graph_working.md",
     "Belong Platform Architecture - Async Worker Pattern.png",
     "Belong Platform Architecture - Async Worker Pattern.png.opdownload",
     "README.md",
-    "docs/rabbitmq_architecture_plan.md",
     "belong-workers/workers/matching_worker.py",
     "belong-workers/workers/embedding_worker.py",
     "belong-workers/workers/__init__.py",
     "belong-workers/workers",
-    "belong-workers/rabbitmq/consumer.py",
-    "belong-workers/rabbitmq/connection.py",
-    "belong-workers/rabbitmq/__init__.py",
-    "belong-workers/rabbitmq",
-    "belong-workers/db/__init__.py",
     "belong-workers/README.md",
     "belong-api/README.md",
     "frontend/public/vite.svg",
