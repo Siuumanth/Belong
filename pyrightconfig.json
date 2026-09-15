@@ -1,0 +1,6 @@
+{
+  "extraPaths": [
+    "belong-api",
+    "belong-workers"
+  ]
+}

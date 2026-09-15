@@ -1,0 +1,5 @@
+[tool.pyrefly]
+search-path = ["belong-api", "belong-workers"]
+
+[tool.pyright]
+extraPaths = ["belong-api", "belong-workers"]

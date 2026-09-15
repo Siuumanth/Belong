@@ -40,6 +40,26 @@ def get_llm():
     else:
         raise ValueError(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
 
+def get_message_content(response: Any) -> str:
+    """Safely extract string content from LangChain AI response object or list."""
+    content = getattr(response, "content", response)
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict):
+                if "text" in part and isinstance(part["text"], str):
+                    parts.append(part["text"])
+                else:
+                    parts.append(str(part))
+            else:
+                parts.append(str(part))
+        return "".join(parts)
+    return str(content)
+
 async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
     """Node 1: Extract structured evidence signals from latest user input."""
     user_input = state.get("latest_user_input")
@@ -64,7 +84,7 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         
         # Parse JSON from response
-        content = response.content.strip()
+        content = get_message_content(response).strip()
         if "```json" in content:
             content = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content:
@@ -120,7 +140,7 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
         await finalize_profile(state)
 
         return {
-            "latest_assistant_response": resp.content,
+            "latest_assistant_response": get_message_content(resp),
             "status": "completed"
         }
 
@@ -139,7 +159,7 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
                 max_follow_ups=settings.MAX_FOLLOW_UPS
             )
             v_resp = await llm.ainvoke([HumanMessage(content=v_prompt)])
-            v_content = v_resp.content.strip()
+            v_content = get_message_content(v_resp).strip()
             if "```json" in v_content:
                 v_content = v_content.split("```json")[1].split("```")[0].strip()
             elif "```" in v_content:
@@ -192,7 +212,7 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
         "current_area_index": current_idx,
         "follow_up_count": new_follow_up_count,
         "covered_areas": covered_areas,
-        "latest_assistant_response": assistant_resp.content,
+        "latest_assistant_response": get_message_content(assistant_resp),
         "status": new_status
     }
 

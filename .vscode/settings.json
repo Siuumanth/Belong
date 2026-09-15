@@ -1,0 +1,14 @@
+{
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/belong-api",
+    "${workspaceFolder}/belong-workers"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}/belong-api",
+    "${workspaceFolder}/belong-workers"
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/belong-api/.venv/Scripts/python.exe",
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder}/belong-api;${workspaceFolder}/belong-workers"
+  }
+}
