@@ -37,7 +37,7 @@ class Settings(BaseModel):
         QuestionConfig(
             id="q3_conflict_provides",
             topic="Conflict Style & What You Provide",
-            prompt="How do you naturally handle disagreements, and what do you bring to a relationship?",
+            prompt="How do you naturally handle disagreements, differences and what do you bring to a relationship?",
             targets=["self.conflict_style", "self.provides"],
             description="Extract conflict resolution approach, communication tendencies, and personal contributions."
         ),

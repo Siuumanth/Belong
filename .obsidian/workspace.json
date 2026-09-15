@@ -190,6 +190,8 @@
   },
   "active": "cd358927837d9fb6",
   "lastOpenFiles": [
+    "Belong Platform Architecture - Async Worker Pattern.png",
+    "Belong Platform Architecture - Async Worker Pattern.png.opdownload",
     "README.md",
     "docs/rabbitmq_architecture_plan.md",
     "belong-workers/workers/matching_worker.py",
@@ -201,7 +203,6 @@
     "belong-workers/rabbitmq/__init__.py",
     "belong-workers/rabbitmq",
     "belong-workers/db/__init__.py",
-    "belong-workers/db/connection.py",
     "belong-workers/README.md",
     "belong-api/README.md",
     "frontend/public/vite.svg",
