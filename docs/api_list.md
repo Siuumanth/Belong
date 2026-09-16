@@ -19,9 +19,12 @@ Full schema and contract definitions: [`docs/openapi.yaml`](file:///d:/code/Gola
 | **POST** | `/onboarding/session` | **Yes (JWT)** | Python (`:8000`) | Starts conversational onboarding session; returns first question. |
 | **POST** | `/onboarding/message` | **Yes (JWT)** | Python (`:8000`) | Sends answer to LangGraph; returns next adaptive question. |
 | **GET** | `/onboarding/{conversation_id}` | **Yes (JWT)** | Python (`:8000`) | Fetches conversation transcript and current dialogue state. |
+| **POST** | `/profiles/{user_id}/embeddings` | **Yes (JWT)** | Python (`:8000`) | Manually triggers canonical serialization & vector generation. |
+| **GET** | `/profiles/{user_id}/embeddings` | **Yes (JWT)** | Python (`:8000`) | Retrieves embedding source text, model version, and status. |
 | **POST** | `/matches` | **Yes (JWT)** | Python (`:8000`) | Enqueues 2-stage matching job; returns `202 Accepted` + `job_id`. |
 | **GET** | `/matches/jobs/{job_id}` | **Yes (JWT)** | Python (`:8000`) | Polls status (`pending`/`running`/`completed`) and gets match results. |
 | **GET** | `/matches/{user_id}` | **Yes (JWT)** | Python (`:8000`) | Reads latest persisted compatibility cards & rankings. |
+
 
 ---
 

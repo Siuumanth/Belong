@@ -8,6 +8,7 @@ from embeddings.client import EmbeddingClient
 
 logger = logging.getLogger(__name__)
 
+# embedding worker
 class EmbeddingService:
     """Orchestrates serialization, vector embedding generation, and database updates."""
 

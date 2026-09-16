@@ -1,11 +1,12 @@
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel, Field
 
 from config import settings
 from onboarding.repository import OnboardingRepository
 from onboarding.graph import onboarding_graph
+from embeddings.service import EmbeddingService
 
 router = APIRouter(prefix="/onboarding", tags=["Onboarding"])
 
@@ -74,7 +75,7 @@ async def start_session(payload: StartSessionRequest):
     )
 
 @router.post("/message", response_model=SendMessageResponse)
-async def send_message(payload: SendMessageRequest):
+async def send_message(payload: SendMessageRequest, background_tasks: BackgroundTasks):
     conversation = await OnboardingRepository.get_conversation(payload.conversation_id)
     if not conversation:
         raise HTTPException(
@@ -138,6 +139,14 @@ async def send_message(payload: SendMessageRequest):
         state=new_state,
         status=new_status
     )
+
+    # Trigger background embedding generation upon onboarding completion
+    if new_status == "completed":
+        embedding_service = EmbeddingService()
+        background_tasks.add_task(
+            embedding_service.generate_and_store_embeddings, 
+            conversation["user_id"]
+        )
 
     return SendMessageResponse(
         conversation_id=payload.conversation_id,

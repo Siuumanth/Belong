@@ -191,6 +191,7 @@
   },
   "active": "cd358927837d9fb6",
   "lastOpenFiles": [
+    "docs/dev2-deterministic_embeddings_serialization.md",
     "belong-api/tests/__pycache__/test_serializer.cpython-313.pyc",
     "belong-api/tests/__pycache__/test_embeddings.cpython-313.pyc",
     "belong-api/tests/__pycache__",
@@ -201,7 +202,6 @@
     "belong-api/tests/test_embeddings.py",
     "belong-api/tests/test_serializer.py",
     "belong-api/tests",
-    "belong-api/api/routes/embeddings.py",
     "docs/rabbitmq_architecture_plan.md",
     "docs/dev1-onboarding_graph_working.md",
     "Belong Platform Architecture - Async Worker Pattern.png",
