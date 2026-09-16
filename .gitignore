@@ -1,0 +1,144 @@
+# ==============================================================================
+# Belong Root .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Environment & Secrets
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# ------------------------------------------------------------------------------
+# Python (belong-api, belong-workers, scripts)
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Linting
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+nosetests.xml
+coverage.xml
+*.cover
+
+# ------------------------------------------------------------------------------
+# Go (gateway, auth)
+# ------------------------------------------------------------------------------
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Test binary, output & coverage
+*.test
+*.out
+cover.out
+
+# ------------------------------------------------------------------------------
+# Node / Frontend (frontend/)
+# ------------------------------------------------------------------------------
+node_modules/
+dist/
+.dist/
+out/
+.next/
+.nuxt/
+.vuepress/dist
+.cache/
+.parcel-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+.turbo
+
+# ------------------------------------------------------------------------------
+# Database, Local Storage & Logs
+# ------------------------------------------------------------------------------
+postgres_data/
+data/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+logs/
+
+# ------------------------------------------------------------------------------
+# Obsidian & Notes
+# ------------------------------------------------------------------------------
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache/
+.obsidian/indexeddb/
+
+# ------------------------------------------------------------------------------
+# IDEs & OS Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# VS Code & JetBrains
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# ------------------------------------------------------------------------------
+# Agent & System Artifacts
+# ------------------------------------------------------------------------------
+.system_generated/
+scratch/
