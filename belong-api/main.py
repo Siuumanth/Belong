@@ -36,6 +36,7 @@ app.add_middleware(
 
 from api.routes.profiles import router as profiles_router
 from api.routes.onboarding import router as onboarding_router
+from api.routes.embeddings import router as embeddings_router
 
 @app.get("/healthz")
 async def health_check():
@@ -43,4 +44,6 @@ async def health_check():
 
 app.include_router(profiles_router, prefix="/api")
 app.include_router(onboarding_router, prefix="/api")
+app.include_router(embeddings_router, prefix="/api")
+
 

@@ -10,7 +10,23 @@
 - [x] **Phase 2: Database Schema, pgvector & Migrations**
 - [x] **Phase 3: Python Backend Core & Profile CRUD**
 - [x] **Phase 4: Conversational Onboarding Engine (LangGraph)**
-- [ ] **Phase 5: Deterministic Semantic Serialization & Embeddings**
+- [x] **Phase 5: Deterministic Semantic Serialization & Embeddings**
+
+---
+
+### Phase 5: Deterministic Semantic Serialization & Embeddings ✅
+- [x] Implement **Canonical Semantic Serializer** in `belong-api/embeddings/serializer.py`:
+  - [x] Category field-based serialization for `SELF TEXT` and `WANTS TEXT`.
+  - [x] Omit empty categories and filter low-confidence extractions (`confidence < 0.5`).
+  - [x] Strip evidence quotes, question IDs, and metadata from embedding text.
+- [x] Build Hugging Face / Local embedding client in `belong-api/embeddings/client.py`:
+  - [x] Async batch client for `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions).
+  - [x] Offline fallback vector generator for resilience when offline or without HF API key.
+- [x] Connect embedding generator to database updates:
+  - [x] Store generated vectors in `profiles.self_embedding` and `profiles.wants_embedding`.
+  - [x] Persist canonical source text in `profiles.embedding_source_text`.
+- [x] Expose `POST /api/profiles/{user_id}/embeddings` and `GET /api/profiles/{user_id}/embeddings` endpoints.
+
 - [ ] **Phase 6: Async Worker Engine (RabbitMQ + belong-workers)**
 - [ ] **Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval**
 - [ ] **Phase 8: Matching Stage 2 — Pairwise Compatibility Reasoning Agent**
@@ -84,19 +100,7 @@
 
 ---
 
-### Phase 5: Deterministic Semantic Serialization & Embeddings
-- [ ] Implement the **Deterministic Semantic Serializer** in `belong-api/embeddings/serializer.py`:
-  - [ ] Deterministic templates for `SELF TEXT` (what I offer, how I handle conflict, rhythm, values).
-  - [ ] Deterministic templates for `WANTS TEXT` (what I need, conflict preferences, lifestyle alignment).
-  - [ ] Syntactic pairing alignment check.
-- [ ] Build Hugging Face embedding client in `belong-api/embeddings/client.py`:
-  - [ ] Asynchronous API client for `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions).
-  - [ ] Batching and rate limit / exponential backoff handling.
-- [ ] Connect embedding generator to database updates:
-  - [ ] Store generated vectors in `profiles.self_embedding` and `profiles.wants_embedding`.
-  - [ ] Persist debug text in `profiles.embedding_source_text`.
 
----
 
 ### Phase 6: Async Worker Engine (RabbitMQ + belong-workers)
 - [ ] Wire up RabbitMQ in `docker-compose.yml` (uncomment `rabbitmq` service).

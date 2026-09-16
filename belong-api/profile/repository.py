@@ -124,3 +124,29 @@ class ProfileRepository:
                 if not row:
                     return None
                 return ProfileResponse(**row)
+
+    @staticmethod
+    async def update_profile_embeddings(
+        user_id: UUID,
+        self_embedding: List[float],
+        wants_embedding: List[float],
+        embedding_source_text: Dict[str, Any],
+    ) -> bool:
+        async with get_db_connection() as conn:
+            async with conn.cursor() as cur:
+                self_vec_str = json.dumps(self_embedding)
+                wants_vec_str = json.dumps(wants_embedding)
+                source_text_str = json.dumps(embedding_source_text)
+
+                query = """
+                    UPDATE profiles
+                    SET self_embedding = %s::vector,
+                        wants_embedding = %s::vector,
+                        embedding_source_text = %s::jsonb,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = %s;
+                """
+                await cur.execute(query, (self_vec_str, wants_vec_str, source_text_str, str(user_id)))
+                await conn.commit()
+                return cur.rowcount > 0
+
