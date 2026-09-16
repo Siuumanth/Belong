@@ -29,7 +29,7 @@
 - [x] Expose `POST /api/profiles/{user_id}/embeddings` and `GET /api/profiles/{user_id}/embeddings` endpoints.
 
 - [ ] **Phase 6: Async Matching Worker Engine (RabbitMQ + belong-workers)**
-- [ ] **Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval**
+- [x] **Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval ✅**
 - [ ] **Phase 8: Matching Stage 2 — Pairwise Compatibility Reasoning Agent**
 - [ ] **Phase 9: Go API Gateway Routing & Full Proxy Integration**
 - [ ] **Phase 10: Synthetic Evaluation, Benchmarking & End-to-End Testing**
@@ -37,6 +37,22 @@
 ---
 
 ## Detailed Task Breakdown
+
+### Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval ✅
+- [x] Implement deterministic SQL hard filters in `belong-api/matching/retrieval.py`:
+  - [x] Gender and orientation matching (mutual compatibility).
+  - [x] Mutual age range checks (`preferred_age_min` / `preferred_age_max`).
+  - [x] Haversine distance calculation using `latitude` and `longitude` (`max_distance_km`).
+  - [x] Relationship goal compatibility.
+- [x] Implement pgvector nearest-neighbor search:
+  - [x] Cosine distance query: `user_a.wants_embedding <=> candidate.self_embedding`.
+  - [x] Configurable candidate pool retrieval limit (`MATCHING_CANDIDATE_POOL_LIMIT`, default 50).
+- [x] Implement configurable pre-ranking & candidate reduction:
+  - [x] Weighted bidirectional scoring (`MATCHING_BIDIRECTIONAL_WEIGHT`).
+  - [x] Narrow shortlist to top N candidates (`MATCHING_PRE_RANK_LIMIT`, default 15) for deep LLM reasoning.
+  - [x] Configurable via `RetrievalOptions` and environment variables in `belong-api/config.py`.
+
+---
 
 ### Phase 6: Async Matching Worker Engine (RabbitMQ + belong-workers)
 - [ ] Wire up RabbitMQ in `docker-compose.yml` (uncomment `rabbitmq` service).
@@ -49,21 +65,6 @@
   - [ ] Update job status in `jobs` table → `completed`.
 - [ ] Add RabbitMQ publisher to `belong-api` for dispatching matching jobs (`POST /api/matches`).
 - [ ] Implement retry policy with exponential backoff and error logging.
-
----
-
-### Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval
-- [ ] Implement deterministic SQL hard filters in `belong-api/matching/retrieval.py`:
-  - [ ] Gender and orientation matching.
-  - [ ] Mutual age range checks (`preferred_age_min` / `preferred_age_max`).
-  - [ ] Haversine distance calculation using `latitude` and `longitude` (`max_distance_km`).
-  - [ ] Relationship goal compatibility.
-- [ ] Implement pgvector nearest-neighbor search:
-  - [ ] Cosine distance query: `user_a.wants_embedding <=> candidate.self_embedding`.
-  - [ ] Retrieve candidate shortlist (top 50–100 candidates).
-- [ ] Implement cheap pre-ranking / candidate reduction:
-  - [ ] Narrow shortlist to top 10–20 candidates for deep LLM reasoning.
-- [ ] Implement **Matching Worker** in `belong-workers/workers/matching_worker.py`.
 
 ---
 

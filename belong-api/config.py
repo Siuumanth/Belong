@@ -24,6 +24,13 @@ class Settings(BaseModel):
     EMBEDDING_CONFIDENCE_THRESHOLD: float = float(os.getenv("EMBEDDING_CONFIDENCE_THRESHOLD", "0.5"))
     USE_LOCAL_EMBEDDINGS: bool = os.getenv("USE_LOCAL_EMBEDDINGS", "true").lower() == "true"
     HF_API_TOKEN: Optional[str] = os.getenv("HF_API_TOKEN", None)
+
+    # Matching & Retrieval Settings
+    MATCHING_CANDIDATE_POOL_LIMIT: int = int(os.getenv("MATCHING_CANDIDATE_POOL_LIMIT", "50"))
+    MATCHING_PRE_RANK_LIMIT: int = int(os.getenv("MATCHING_PRE_RANK_LIMIT", "15"))
+    MATCHING_MAX_DISTANCE_KM_DEFAULT: int = int(os.getenv("MATCHING_MAX_DISTANCE_KM_DEFAULT", "100"))
+    MATCHING_MIN_SIMILARITY_THRESHOLD: float = float(os.getenv("MATCHING_MIN_SIMILARITY_THRESHOLD", "0.0"))
+    MATCHING_BIDIRECTIONAL_WEIGHT: float = float(os.getenv("MATCHING_BIDIRECTIONAL_WEIGHT", "0.5"))  # 0.5 * (A_wants_B_self) + 0.5 * (B_wants_A_self)
     
     # Questions Configuration
     ONBOARDING_QUESTIONS: List[QuestionConfig] = [

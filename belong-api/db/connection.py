@@ -1,6 +1,12 @@
 import os
 from contextlib import asynccontextmanager
-import psycopg_pool
+
+try:
+    import psycopg_pool
+    from psycopg_pool import AsyncConnectionPool
+except (ImportError, ModuleNotFoundError):
+    psycopg_pool = None
+    AsyncConnectionPool = None
 
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
@@ -11,7 +17,7 @@ DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "belong_password")
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Connection pool instance (can be initialized on FastAPI startup)
-pool: psycopg_pool.AsyncConnectionPool | None = None
+pool = None
 
 async def init_pool():
     global pool
