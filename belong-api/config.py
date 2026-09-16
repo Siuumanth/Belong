@@ -10,27 +10,28 @@ class QuestionConfig(BaseModel):
     description: str
 
 class Settings(BaseModel):
-    # LLM Settings
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "google")  # google, openai, anthropic
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.0-flash")
-    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))
-    
-    # Onboarding limits
-    MAX_FOLLOW_UPS: int = int(os.getenv("MAX_FOLLOW_UPS", "2"))
-    
-    # Embedding Settings
-    EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")
-    EMBEDDING_DIMENSION: int = int(os.getenv("EMBEDDING_DIMENSION", "384"))
-    EMBEDDING_CONFIDENCE_THRESHOLD: float = float(os.getenv("EMBEDDING_CONFIDENCE_THRESHOLD", "0.5"))
-    USE_LOCAL_EMBEDDINGS: bool = os.getenv("USE_LOCAL_EMBEDDINGS", "true").lower() == "true"
-    HF_API_TOKEN: Optional[str] = os.getenv("HF_API_TOKEN", None)
+    # --- External / Environment-Sourced ---
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "google")  # LLM backend: google, openai, anthropic
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.0-flash")  # Model used for onboarding extraction & reasoning
+    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))  # Creativity vs determinism (0.0 = strict, 1.0 = creative)
+    EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")  # Sentence transformer model for vector embeddings
+    EMBEDDING_DIMENSION: int = int(os.getenv("EMBEDDING_DIMENSION", "384"))  # Vector dimension (must match model output)
+    USE_LOCAL_EMBEDDINGS: bool = os.getenv("USE_LOCAL_EMBEDDINGS", "true").lower() == "true"  # Use local sentence-transformers lib instead of HF API
+    HF_API_TOKEN: Optional[str] = os.getenv("HF_API_TOKEN", None)  # Hugging Face Inference API token (required if USE_LOCAL_EMBEDDINGS=false)
 
-    # Matching & Retrieval Settings
-    MATCHING_CANDIDATE_POOL_LIMIT: int = int(os.getenv("MATCHING_CANDIDATE_POOL_LIMIT", "50"))
-    MATCHING_PRE_RANK_LIMIT: int = int(os.getenv("MATCHING_PRE_RANK_LIMIT", "15"))
-    MATCHING_MAX_DISTANCE_KM_DEFAULT: int = int(os.getenv("MATCHING_MAX_DISTANCE_KM_DEFAULT", "100"))
-    MATCHING_MIN_SIMILARITY_THRESHOLD: float = float(os.getenv("MATCHING_MIN_SIMILARITY_THRESHOLD", "0.0"))
-    MATCHING_BIDIRECTIONAL_WEIGHT: float = float(os.getenv("MATCHING_BIDIRECTIONAL_WEIGHT", "0.5"))  # 0.5 * (A_wants_B_self) + 0.5 * (B_wants_A_self)
+    # --- Internal Tuning Constants ---
+    # Onboarding
+    MAX_FOLLOW_UPS: int = 2  # Max follow-up questions per onboarding topic before moving on
+
+    # Embedding
+    EMBEDDING_CONFIDENCE_THRESHOLD: float = 0.5  # Min extraction confidence to include in embedding text (0.0–1.0)
+
+    # Matching & Retrieval
+    MATCHING_CANDIDATE_POOL_LIMIT: int = 10  # Max candidates retrieved from pgvector in Stage 1
+    MATCHING_PRE_RANK_LIMIT: int = 5  # Top N candidates passed to Stage 2 pairwise LLM reasoning
+    MATCHING_MAX_DISTANCE_KM_DEFAULT: int = 100  # Fallback max geographic distance (km) if user hasn't set one
+    MATCHING_MIN_SIMILARITY_THRESHOLD: float = 0.0  # Floor combined similarity score; candidates below this are dropped
+    MATCHING_BIDIRECTIONAL_WEIGHT: float = 0.5  # Balance: (1-w) * A_wants→B_self + w * B_wants→A_self
     
     # Questions Configuration
     ONBOARDING_QUESTIONS: List[QuestionConfig] = [

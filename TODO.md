@@ -109,3 +109,7 @@
 - [ ] Evaluate candidate recall quality (`Recall@50` and `Recall@100`).
 - [ ] Evaluate Compatibility Reasoning Agent consistency and quote faithfulness.
 - [ ] Run full end-to-end flow test (Onboarding → Embeddings → Matching Job → Polling Results).
+
+
+Final:
+- [ ] Make embeddings update when profile is updated
