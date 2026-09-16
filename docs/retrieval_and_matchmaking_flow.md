@@ -48,87 +48,77 @@ flowchart TD
 
 ---
 
-## 2. Deterministic Semantic Serialization (Why NOT Freeform LLM Text)
+## 2. Canonical Semantic Serialization
 
-A critical architectural flaw in naive vector systems is generating embedding text freeform with an LLM:
+The structured profile is optimized for storage, querying, and compatibility reasoning, while embedding models operate on text. Belong converts the structured profile into a canonical textual representation before generating embeddings.
 
-```
-[Anti-Pattern]
-Self Text  <-- Generated independently by LLM
-Wants Text <-- Generated independently by LLM
-```
-
-### Why Freeform LLM Generation Fails
-1. **Representation Mismatch**: Different LLM prompts or runs describe identical concepts using disparate vocabularies, sentence structures, or emotional registers.
-2. **Non-Deterministic Noise**: An LLM might hallucinate adjectives, drop nuanced constraints, or introduce tone shifts between calls.
-3. **Untestable Retrieval**: If the text generation varies randomly, you cannot reliably measure or optimize `Recall@100`.
-
-### The Belong Solution: Separation of Concerns
-
-- **LLM Responsibility**: Extract meaning from dialogue into a typed, validated **Structured Profile JSON**.
-- **Code / Template Responsibility**: Transform Structured Profile JSON into **Embedding Texts** via a **Deterministic Semantic Serializer**.
-
-```
-Conversation / User Answers
-            ↓
-   LLM Meaning Extraction
-            ↓
-  Structured Profile JSON
-            ↓
- ┌───────────────────────────────────────────────┐
- │       Deterministic Semantic Serializer       │
- │   (Fixed code-level syntactic templates)      │
- └──────────────────────┬────────────────────────┘
-            ┌───────────┴───────────┐
-            ▼                       ▼
-      [SELF TEXT]              [WANTS TEXT]
-            ↓                       ↓
-  Hugging Face Model       Hugging Face Model
-            ↓                       ↓
-      self_embedding          wants_embedding
+```text
+User answers
+     ↓
+LLM extraction
+     ↓
+StructuredProfileJSON
+     ↓
+Canonical Semantic Serializer
+     ↓
+┌─────────────────┐
+│                 │
+SELF            WANTS
+│                 │
+└───────┬─────────┘
+        ↓
+all-MiniLM-L6-v2
+        ↓
+384-d vectors
+        ↓
+PostgreSQL + pgvector
+        ↓
+Candidate retrieval
+        ↓
+Pairwise compatibility LLM
 ```
 
 ---
 
-## 3. Semantic Pairing by Design
+## 3. Serialization Rules & Representation Strategy
 
-The deterministic serializer guarantees that the language used for a person's **offerings (`SELF`)** mirrors the linguistic patterns used for another person's **needs (`WANTS`)**.
+### Core Serialization Principles
+1. **Direct Category Structure**: Format `SELF` and `WANTS` using clean category headers followed by comma-separated summaries of extracted signals rather than verbose or mirrored sentences.
+2. **Omit Empty Fields**: Never include headers or keys for empty profile fields (e.g. if `life_goals` is empty, omit the line completely).
+3. **Keep Evidence Out of Embedding Text**: Store quotes, question IDs, and confidence scores in the profile JSON for explainability and LLM reasoning, but embed only concise semantic summaries.
+4. **Confidence Filtering**: Exclude weak or uncertain extractions (e.g., `confidence < 0.5`) from the embedding text to prevent noise.
 
-### Concrete Example
+### Canonical Text Format (Representation A - Default)
 
-Suppose User B's profile contains:
-```yaml
-provides:
-  emotional_support: "listens when partner is struggling before offering advice"
-
-conflict_style: "takes time to cool down before discussing disagreements"
-```
-
-The deterministic serializer for **`SELF TEXT`** outputs:
+**`SELF` Text Example:**
 ```text
-What I offer in a relationship: I listen when my partner is struggling before offering advice.
-How I handle conflict: I prefer taking time to cool down before discussing disagreements.
+SELF
+
+Values: honesty, independence.
+Lifestyle: enjoys travelling, active lifestyle.
+Personality: supportive, social.
+Interests: hiking, music.
+Life goals: stable career, meaningful relationships.
+Conflict style: prefers discussing problems openly.
+Provides: emotional support, listens before giving advice.
 ```
 
-Now suppose User A's profile contains:
-```yaml
-wants:
-  emotional_needs: "needs a partner who listens without immediately trying to fix things"
-
-  conflict_preference: "someone who allows space to calm down rather than forcing immediate resolution"
-```
-
-The deterministic serializer for **`WANTS TEXT`** outputs:
+**`WANTS` Text Example:**
 ```text
-What I need from a partner: Someone who listens when I'm struggling before offering advice.
-What I prefer during conflict: A partner who gives space to cool down before discussing disagreements.
+WANTS
+
+Partner traits: emotionally available, independent.
+Emotional needs: reassurance, emotional support.
+Relationship expectations: open communication, mutual support.
+Desired lifestyle: active, enjoys travelling.
+Partner values: honesty, independence.
 ```
 
-Because both sentences use harmonized sentence frames generated by deterministic code templates:
-1. The embedding model (`all-MiniLM-L6-v2` / `bge-base`) places both vectors close in embedding space.
-2. Cosine similarity performs accurately on semantic intent.
-3. You can tune the serializer templates directly and measure:
-   > *"Does template version v2 improve Recall@100 on our synthetic benchmark dataset?"*
+### Representation Benchmark Strategy
+The serialization format is treated as an experimental retrieval component. Different candidate representations can be benchmarked on candidate retrieval metrics (`Recall@100`):
+- **Representation A (Structured Field-Based - Default)**: Category key-value summaries.
+- **Representation B (Natural Language)**: Prose narrative summaries.
+- **Representation C (Mirrored Frames)**: Verbose prompt frames.
 
 ---
 
