@@ -11,6 +11,11 @@
 - [x] **Phase 3: Python Backend Core & Profile CRUD**
 - [x] **Phase 4: Conversational Onboarding Engine (LangGraph)**
 - [x] **Phase 5: Deterministic Semantic Serialization & Embeddings**
+- [x] **Phase 6: Async Matching Worker Engine (RabbitMQ + belong-workers)**
+- [x] **Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval**
+- [x] **Phase 8: Matching Stage 2 — Pairwise Compatibility Reasoning Agent**
+- [x] **Phase 9: Go API Gateway Routing & Full Proxy Integration**
+- [ ] **Phase 10: Synthetic Evaluation, Benchmarking & End-to-End Testing**
 
 ---
 
@@ -28,15 +33,7 @@
 - [x] Wire automatic in-process background task upon onboarding completion in `belong-api/api/routes/onboarding.py`.
 - [x] Expose `POST /api/profiles/{user_id}/embeddings` and `GET /api/profiles/{user_id}/embeddings` endpoints.
 
-- [ ] **Phase 6: Async Matching Worker Engine (RabbitMQ + belong-workers)**
-- [x] **Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval ✅**
-- [ ] **Phase 8: Matching Stage 2 — Pairwise Compatibility Reasoning Agent**
-- [ ] **Phase 9: Go API Gateway Routing & Full Proxy Integration**
-- [ ] **Phase 10: Synthetic Evaluation, Benchmarking & End-to-End Testing**
-
 ---
-
-## Detailed Task Breakdown
 
 ### Phase 7: Matching Stage 1 — SQL Filters & pgvector Retrieval ✅
 - [x] Implement deterministic SQL hard filters in `belong-api/matching/retrieval.py`:
@@ -54,39 +51,41 @@
 
 ---
 
-### Phase 6: Async Matching Worker Engine (RabbitMQ + belong-workers)
-- [ ] Wire up RabbitMQ in `docker-compose.yml` (uncomment `rabbitmq` service).
-- [ ] Implement RabbitMQ connection manager in `belong-workers/rabbitmq/connection.py` (aio-pika).
-- [ ] Implement message consumer + job dispatcher in `belong-workers/rabbitmq/consumer.py`:
-  - [ ] Route `belong.matching` queue jobs to `MatchingWorker`.
-  - [ ] Ack on success, Nack+requeue on recoverable errors.
-- [ ] Implement **Matching Worker** in `belong-workers/workers/matching_worker.py`:
-  - [ ] Stage 1 (SQL filters + pgvector retrieval) → Stage 2 (pairwise LLM reasoning) → write compatibility results to Postgres.
-  - [ ] Update job status in `jobs` table → `completed`.
-- [ ] Add RabbitMQ publisher to `belong-api` for dispatching matching jobs (`POST /api/matches`).
-- [ ] Implement retry policy with exponential backoff and error logging.
+### Phase 6: Async Matching Worker Engine (RabbitMQ + belong-workers) ✅
+- [x] Wire up RabbitMQ in `docker-compose.yml` (uncomment `rabbitmq` service).
+- [x] Implement RabbitMQ connection manager in `belong-workers/rabbitmq/connection.py` (aio-pika).
+- [x] Implement message consumer + job dispatcher in `belong-workers/rabbitmq/consumer.py`:
+  - [x] Route `belong.matching` queue jobs to `MatchingWorker`.
+  - [x] Route `belong.embedding` queue jobs to `EmbeddingWorker`.
+  - [x] Atomic DB status tracking in `jobs` table (`running`, `completed`, `failed`).
+- [x] Implement **Matching Worker** in `belong-workers/workers/matching_worker.py`:
+  - [x] Stage 1 (SQL filters + pgvector retrieval) → Stage 2 (pairwise LLM reasoning) → write compatibility results to Postgres.
+  - [x] Update job status in `jobs` table → `completed`.
+- [x] Add RabbitMQ publisher to `belong-api` for dispatching matching jobs (`POST /api/matches`).
+- [x] Implement PostgreSQL fallback reconciler loop in `belong-workers/main.py` for picking up unacknowledged `pending` jobs.
 
 ---
 
-### Phase 8: Matching Stage 2 — Pairwise Compatibility Reasoning Agent
-- [ ] Define compatibility structured output schema in `belong-api/matching/schemas.py`:
-  - [ ] Categorical verdicts: `strong_alignment`, `partial_alignment`, `unclear`, `conflict`.
-  - [ ] Dimension results: `emotional_needs`, `core_values`, `lifestyle`, `conflict_style`.
-  - [ ] Evidence arrays: `evidence_a`, `evidence_b`.
-  - [ ] Lists for `strong_alignments`, `potential_conflicts`, `dealbreaker_violations`, `uncertainties`.
-- [ ] Implement pairwise reasoning prompt in `belong-api/matching/compatibility.py`:
-  - [ ] Bidirectional evaluation: `A wants → B provides` AND `B wants → A provides`.
-  - [ ] Anti-hallucination instruction: quote evidence from both profiles.
-- [ ] Implement multi-dimensional ranking algorithm in `belong-api/matching/ranking.py`.
-- [ ] Persist results into `compatibility_results` table.
-- [ ] Implement matching API endpoints in `belong-api/api/routes/matches.py`:
-  - [ ] `POST /api/matches` — enqueue matching job (returns HTTP 202 Accepted with `job_id`).
-  - [ ] `GET /api/matches/jobs/{job_id}` — poll job status and retrieve results once completed.
-  - [ ] `GET /api/matches/{user_id}` — fetch latest persisted matches for user.
+### Phase 8: Matching Stage 2 — Pairwise Compatibility Reasoning Agent ✅
+- [x] Define compatibility structured output schema in `belong-api/matching/schemas.py` & `belong-workers/matching/schemas.py`:
+  - [x] Categorical verdicts: `strong_alignment`, `partial_alignment`, `unclear`, `conflict`.
+  - [x] Dimension results: `emotional_needs`, `core_values`, `lifestyle`, `conflict_style`.
+  - [x] Evidence arrays: `evidence_a`, `evidence_b`.
+  - [x] Lists for `strong_alignments`, `potential_conflicts`, `dealbreaker_violations`, `uncertainties`.
+- [x] Implement pairwise reasoning prompt & LangGraph Agent in `belong-workers/matching/compatibility.py`:
+  - [x] Groq LLM client backend (`LLM_PROVIDER="groq"`, model `llama-3.3-70b-versatile`).
+  - [x] Configurable prompt template `PAIRWISE_REASONING_PROMPT_TEMPLATE`.
+  - [x] Bidirectional evaluation & anti-hallucination evidence quote requirement.
+- [x] Implement multi-dimensional deterministic ranking algorithm in `belong-workers/matching/ranking.py`.
+- [x] Persist results into `compatibility_results` table.
+- [x] Implement matching API endpoints in `belong-api/api/routes/matches.py`:
+  - [x] `POST /api/matches` — enqueue matching job (auth-derived user_id, returns HTTP 202 Accepted with `job_id`).
+  - [x] `GET /api/matches/jobs/{job_id}` — poll status details for matching job.
+  - [x] `GET /api/matches/{user_id}` — fetch latest persisted qualitative matches for user.
 
 ---
 
-### Phase 9: Go API Gateway & Auth Integration
+### Phase 9: Go API Gateway & Auth Integration ✅
 - [x] Integrate Go Auth service into monorepo (`/auth`) and update `go.work` workspace.
 - [x] Configure Gateway reverse proxy routes:
   - [x] Forward `/auth/*` to Go Auth service (`AUTH_SERVICE_URL`, default `:9001`).
@@ -96,7 +95,7 @@
   - [x] Forward `/api/*` prefix stripped to `belong-api`.
 - [x] Implement JWT authentication verification and claim injection (`X-User-ID`, `X-Auth-Expires`, `X-Request-ID`).
 - [x] Implement circuit breaker, rate limiting, and structured logging in Gateway.
-- [ ] Add gateway health probe check checking `belong-api` and Auth service readiness.
+- [x] Add gateway health probe check checking `belong-api` and Auth service readiness in `gateway/internal/health/healthcheck.go`.
 
 ---
 
@@ -109,7 +108,6 @@
 - [ ] Evaluate candidate recall quality (`Recall@50` and `Recall@100`).
 - [ ] Evaluate Compatibility Reasoning Agent consistency and quote faithfulness.
 - [ ] Run full end-to-end flow test (Onboarding → Embeddings → Matching Job → Polling Results).
-
 
 Final:
 - [ ] Make embeddings update when profile is updated

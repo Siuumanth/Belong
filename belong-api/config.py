@@ -11,13 +11,43 @@ class QuestionConfig(BaseModel):
 
 class Settings(BaseModel):
     # --- External / Environment-Sourced ---
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "google")  # LLM backend: google, openai, anthropic
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.0-flash")  # Model used for onboarding extraction & reasoning
-    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.7"))  # Creativity vs determinism (0.0 = strict, 1.0 = creative)
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")  # LLM backend: groq, google, openai, anthropic
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")  # Model used for extraction & reasoning
+    LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))  # Creativity vs determinism
+    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY", None)  # Groq API key
     EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")  # Sentence transformer model for vector embeddings
     EMBEDDING_DIMENSION: int = int(os.getenv("EMBEDDING_DIMENSION", "384"))  # Vector dimension (must match model output)
     USE_LOCAL_EMBEDDINGS: bool = os.getenv("USE_LOCAL_EMBEDDINGS", "true").lower() == "true"  # Use local sentence-transformers lib instead of HF API
     HF_API_TOKEN: Optional[str] = os.getenv("HF_API_TOKEN", None)  # Hugging Face Inference API token (required if USE_LOCAL_EMBEDDINGS=false)
+
+    # --- Configurable Prompt Templates ---
+    PAIRWISE_REASONING_PROMPT_TEMPLATE: str = os.getenv(
+        "PAIRWISE_REASONING_PROMPT_TEMPLATE",
+        """You are an expert AI compatibility matchmaking reasoning agent.
+Your task is to analyze two user profiles (User A and User B) to determine their relational compatibility.
+
+EVALUATION RULES:
+1. Bidirectional Evaluation: Compare User A's desired partner traits ('wants') against User B's profile ('self'), AND User B's desired partner traits ('wants') against User A's profile ('self').
+2. Anti-Hallucination: For every dimension verdict, you MUST quote direct, exact evidence strings from User A's profile ('evidence_a') and User B's profile ('evidence_b'). If no explicit quote exists for a user, state "No explicit statement provided."
+3. Evaluate 4 Core Dimensions:
+   - emotional_needs: Stress response, emotional support, vulnerability alignment.
+   - core_values: Life principles, ethics, relationship intent, dealbreakers.
+   - lifestyle: Daily habits, hobbies, energy levels, future life building.
+   - conflict_style: Disagreement resolution, communication style.
+4. Categorical Verdicts: Use ONLY one of these four verdicts for overall and dimension results:
+   - "strong_alignment"
+   - "partial_alignment"
+   - "unclear"
+   - "conflict"
+
+USER A PROFILE:
+{user_a_profile}
+
+USER B PROFILE:
+{user_b_profile}
+
+Analyze their compatibility across all dimensions according to the required schema."""
+    )
 
     # --- Internal Tuning Constants ---
     # Onboarding

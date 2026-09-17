@@ -14,10 +14,40 @@ class WorkerSettings:
     RABBITMQ_QUEUE_EMBEDDING: str = os.getenv("RABBITMQ_QUEUE_EMBEDDING", "belong.embedding")
     RABBITMQ_QUEUE_MATCHING: str = os.getenv("RABBITMQ_QUEUE_MATCHING", "belong.matching")
 
-    # LLM (same as belong-api, swappable)
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "google")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.0-flash")
+    # LLM (Groq default)
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+
+    # Configurable Prompt Templates
+    PAIRWISE_REASONING_PROMPT_TEMPLATE: str = os.getenv(
+        "PAIRWISE_REASONING_PROMPT_TEMPLATE",
+        """You are an expert AI compatibility matchmaking reasoning agent.
+Your task is to analyze two user profiles (User A and User B) to determine their relational compatibility.
+
+EVALUATION RULES:
+1. Bidirectional Evaluation: Compare User A's desired partner traits ('wants') against User B's profile ('self'), AND User B's desired partner traits ('wants') against User A's profile ('self').
+2. Anti-Hallucination: For every dimension verdict, you MUST quote direct, exact evidence strings from User A's profile ('evidence_a') and User B's profile ('evidence_b'). If no explicit quote exists for a user, state "No explicit statement provided."
+3. Evaluate 4 Core Dimensions:
+   - emotional_needs: Stress response, emotional support, vulnerability alignment.
+   - core_values: Life principles, ethics, relationship intent, dealbreakers.
+   - lifestyle: Daily habits, hobbies, energy levels, future life building.
+   - conflict_style: Disagreement resolution, communication style.
+4. Categorical Verdicts: Use ONLY one of these four verdicts for overall and dimension results:
+   - "strong_alignment"
+   - "partial_alignment"
+   - "unclear"
+   - "conflict"
+
+USER A PROFILE:
+{user_a_profile}
+
+USER B PROFILE:
+{user_b_profile}
+
+Analyze their compatibility across all dimensions according to the required schema."""
+    )
 
     # Embeddings
     HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
