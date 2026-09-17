@@ -51,7 +51,12 @@ Analyze their compatibility across all dimensions according to the required sche
 
     # Embeddings
     HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
+    HF_API_TOKEN: str = os.getenv("HF_API_TOKEN", "")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")
     EMBEDDING_DIMENSIONS: int = 384
+    EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_CONFIDENCE_THRESHOLD: float = float(os.getenv("EMBEDDING_CONFIDENCE_THRESHOLD", "0.5"))
+    USE_LOCAL_EMBEDDINGS: bool = os.getenv("USE_LOCAL_EMBEDDINGS", "true").lower() == "true"
 
 settings = WorkerSettings()

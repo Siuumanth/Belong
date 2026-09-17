@@ -5,11 +5,6 @@ import sys
 from typing import Dict, Any, List
 from uuid import UUID
 
-# Ensure belong-api is in python path for shared modules (CandidateRetriever, etc.)
-API_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "belong-api"))
-if API_PATH not in sys.path:
-    sys.path.insert(0, API_PATH)
-
 from psycopg.rows import dict_row
 
 from db.connection import get_db_connection

@@ -13,13 +13,17 @@ if API_PATH not in sys.path:
 from psycopg.rows import dict_row
 
 from db.connection import get_db_connection
-from embeddings.serializer import serialize_profile_to_embedding_text
-from embeddings.client import embedding_client
+from embeddings.serializer import CanonicalSerializer
+from embeddings.client import EmbeddingClient
 
 logger = logging.getLogger(__name__)
 
 class EmbeddingWorker:
     """Worker task that handles asynchronous deterministic semantic serialization and embedding generation."""
+
+    def __init__(self):
+        self.serializer = CanonicalSerializer()
+        self.embedding_client = EmbeddingClient()
 
     async def execute(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         job_id = payload.get("job_id")
@@ -46,11 +50,11 @@ class EmbeddingWorker:
         profile_data = row.get("profile") or {}
 
         # 2. Run canonical semantic serializer
-        self_text, wants_text = serialize_profile_to_embedding_text(profile_data)
+        self_text, wants_text = self.serializer.serialize(profile_data)
 
         # 3. Generate vectors
-        self_vec = await embedding_client.embed_text(self_text) if self_text else None
-        wants_vec = await embedding_client.embed_text(wants_text) if wants_text else None
+        self_vec = await self.embedding_client.embed_text(self_text) if self_text else None
+        wants_vec = await self.embedding_client.embed_text(wants_text) if wants_text else None
 
         source_text_dict = {
             "self_text": self_text,
