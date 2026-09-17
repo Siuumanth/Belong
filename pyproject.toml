@@ -1,5 +1,5 @@
-[tool.pyrefly]
-search-path = ["belong-api", "belong-workers"]
-
 [tool.pyright]
-extraPaths = ["belong-api", "belong-workers"]
+executionEnvironments = [
+  { root = "belong-workers", extraPaths = ["belong-workers"], venvPath = "belong-workers", venv = ".venv" },
+  { root = "belong-api", extraPaths = ["belong-api"], venvPath = "belong-api", venv = ".venv" }
+]
