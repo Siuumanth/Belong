@@ -14,7 +14,7 @@ from workers.embedding_worker import EmbeddingWorker
 logger = logging.getLogger(__name__)
 
 class JobConsumer:
-    """RabbitMQ consumer that dispatches tasks to worker classes and manages DB job lifecycle."""
+    """RabbitMQ consumer that dispatches tasks to dedicated worker classes and manages DB job lifecycle."""
 
     def __init__(self):
         self.matching_worker = MatchingWorker()
@@ -52,46 +52,69 @@ class JobConsumer:
                 await cur.execute(query, params)
                 await conn.commit()
 
-    async def process_message(self, message: AbstractIncomingMessage):
+    async def process_embedding_message(self, message: AbstractIncomingMessage):
+        """Dedicated consumer callback for the belong.embedding queue."""
         async with message.process(requeue=False):
             try:
                 body = json.loads(message.body.decode("utf-8"))
                 job_id = body.get("job_id")
-                job_type = body.get("type")
 
                 if not job_id:
-                    logger.error("Received RabbitMQ message missing 'job_id'")
+                    logger.error("Received RabbitMQ embedding message missing 'job_id'")
                     return
 
-                logger.info(f"Received RabbitMQ job {job_id} of type '{job_type}'")
+                logger.info(f"Received RabbitMQ embedding job {job_id}")
 
-                # Mark job running in Postgres
                 await self._update_job_db(job_id=job_id, status="running", increment_attempts=True)
-
-                if job_type == "matching":
-                    result = await self.matching_worker.execute(body)
-                elif job_type == "embedding":
-                    result = await self.embedding_worker.execute(body)
-                else:
-                    raise ValueError(f"Unknown job type: {job_type}")
-
-                # Mark job completed
+                result = await self.embedding_worker.execute(body)
                 await self._update_job_db(job_id=job_id, status="completed", result=result)
-                logger.info(f"Successfully processed job {job_id}")
+                logger.info(f"Successfully processed embedding job {job_id}")
 
             except Exception as e:
-                logger.error(f"Error processing RabbitMQ job {job_id if 'job_id' in locals() else 'unknown'}: {e}", exc_info=True)
+                logger.error(f"Error processing embedding job {job_id if 'job_id' in locals() else 'unknown'}: {e}", exc_info=True)
                 if 'job_id' in locals() and job_id:
                     await self._update_job_db(job_id=job_id, status="failed", error=str(e))
 
-    async def start_listening(self):
-        """Starts listening on RabbitMQ queues."""
+    async def process_matching_message(self, message: AbstractIncomingMessage):
+        """Dedicated consumer callback for the belong.matching queue."""
+        async with message.process(requeue=False):
+            try:
+                body = json.loads(message.body.decode("utf-8"))
+                job_id = body.get("job_id")
+
+                if not job_id:
+                    logger.error("Received RabbitMQ matching message missing 'job_id'")
+                    return
+
+                logger.info(f"Received RabbitMQ matching job {job_id}")
+
+                await self._update_job_db(job_id=job_id, status="running", increment_attempts=True)
+                result = await self.matching_worker.execute(body)
+                await self._update_job_db(job_id=job_id, status="completed", result=result)
+                logger.info(f"Successfully processed matching job {job_id}")
+
+            except Exception as e:
+                logger.error(f"Error processing matching job {job_id if 'job_id' in locals() else 'unknown'}: {e}", exc_info=True)
+                if 'job_id' in locals() and job_id:
+                    await self._update_job_db(job_id=job_id, status="failed", error=str(e))
+
+    async def start_listening_embedding(self):
+        """Starts listening exclusively on the belong.embedding queue."""
         channel = await rabbitmq_manager.get_channel()
         await channel.set_qos(prefetch_count=5)
-
-        queue_matching = await channel.get_queue(settings.RABBITMQ_QUEUE_MATCHING)
         queue_embedding = await channel.get_queue(settings.RABBITMQ_QUEUE_EMBEDDING)
+        logger.info(f"Starting dedicated Embedding consumer loop on queue '{settings.RABBITMQ_QUEUE_EMBEDDING}'...")
+        await queue_embedding.consume(self.process_embedding_message)
 
-        logger.info(f"Starting consumer loop on queues '{settings.RABBITMQ_QUEUE_MATCHING}' and '{settings.RABBITMQ_QUEUE_EMBEDDING}'...")
-        await queue_matching.consume(self.process_message)
-        await queue_embedding.consume(self.process_message)
+    async def start_listening_matching(self):
+        """Starts listening exclusively on the belong.matching queue."""
+        channel = await rabbitmq_manager.get_channel()
+        await channel.set_qos(prefetch_count=5)
+        queue_matching = await channel.get_queue(settings.RABBITMQ_QUEUE_MATCHING)
+        logger.info(f"Starting dedicated Matching consumer loop on queue '{settings.RABBITMQ_QUEUE_MATCHING}'...")
+        await queue_matching.consume(self.process_matching_message)
+
+    async def start_listening(self):
+        """Starts listening on both embedding and matching queues for V1 combined worker process."""
+        await self.start_listening_embedding()
+        await self.start_listening_matching()

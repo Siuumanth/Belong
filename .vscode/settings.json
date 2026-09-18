@@ -7,7 +7,7 @@
     "${workspaceFolder}/belong-api",
     "${workspaceFolder}/belong-workers"
   ],
-  "python.defaultInterpreterPath": "${workspaceFolder}/belong-api/.venv/Scripts/python.exe",
+  "python.defaultInterpreterPath": "${workspaceFolder}/belong-workers/.venv/Scripts/python.exe",
   "terminal.integrated.env.windows": {
     "PYTHONPATH": "${workspaceFolder}/belong-api;${workspaceFolder}/belong-workers"
   }

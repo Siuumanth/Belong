@@ -5,11 +5,6 @@ import sys
 from typing import Dict, Any
 from uuid import UUID
 
-# Ensure belong-api is in python path for shared serializer & embedding client
-API_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "belong-api"))
-if API_PATH not in sys.path:
-    sys.path.insert(0, API_PATH)
-
 from psycopg.rows import dict_row
 
 from db.connection import get_db_connection
@@ -89,3 +84,29 @@ class EmbeddingWorker:
             "self_embedding_generated": self_vec is not None,
             "wants_embedding_generated": wants_vec is not None
         }
+
+if __name__ == "__main__":
+    import asyncio
+    from db.connection import init_pool, close_pool
+    from rabbitmq.connection import rabbitmq_manager
+    from rabbitmq.consumer import JobConsumer
+
+    async def run_standalone():
+        logging.basicConfig(level=logging.INFO)
+        logger.info("Starting standalone Embedding Worker process...")
+        await init_pool()
+        consumer = JobConsumer()
+        try:
+            await rabbitmq_manager.connect()
+            await consumer.start_listening_embedding()
+            stop = asyncio.Event()
+            await stop.wait()
+        finally:
+            await rabbitmq_manager.close()
+            await close_pool()
+
+    try:
+        asyncio.run(run_standalone())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Embedding Worker stopped.")
+

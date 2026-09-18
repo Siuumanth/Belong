@@ -1,38 +1,51 @@
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
-from embeddings.service import EmbeddingService
+
+from jobs.repository import job_repository
+from matching.schemas import JobCreateResponse
 from profile.repository import ProfileRepository
+from rabbitmq.publisher import publisher
 
 router = APIRouter(tags=["embeddings"])
-embedding_service = EmbeddingService()
-
-class EmbeddingGenerateResponse(BaseModel):
-    user_id: UUID
-    self_text: str
-    wants_text: str
-    self_embedding_length: int
-    wants_embedding_length: int
-    status: str
 
 @router.post(
     "/profiles/{user_id}/embeddings",
-    response_model=EmbeddingGenerateResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Generate canonical semantic embeddings for a profile",
+    response_model=JobCreateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Enqueue asynchronous canonical semantic embedding generation for a profile",
 )
 async def generate_profile_embeddings(user_id: UUID):
-    try:
-        result = await embedding_service.generate_and_store_embeddings(user_id)
-        return EmbeddingGenerateResponse(**result)
-    except ValueError as ve:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(ve))
-    except Exception as e:
+    profile = await ProfileRepository.get_profile(user_id)
+    if not profile:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate embeddings: {str(e)}",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Profile for user {user_id} not found."
         )
+
+    payload = {"user_id": str(user_id)}
+    job_data = await job_repository.create_job(
+        user_id=user_id,
+        job_type="embedding",
+        payload=payload
+    )
+
+    job_id = UUID(str(job_data["id"]))
+    mq_payload = {
+        "job_id": str(job_id),
+        "user_id": str(user_id),
+        "type": "embedding"
+    }
+
+    await publisher.publish_job(routing_key="embedding", payload=mq_payload)
+
+    return JobCreateResponse(
+        job_id=job_id,
+        user_id=user_id,
+        type="embedding",
+        status=job_data["status"],
+        created_at=job_data["created_at"]
+    )
 
 @router.get(
     "/profiles/{user_id}/embeddings",
@@ -43,7 +56,6 @@ async def get_profile_embedding_status(user_id: UUID):
     if not profile:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
 
-    # Fetch source text from DB
     from db.connection import get_db_connection
     from psycopg.rows import dict_row
 

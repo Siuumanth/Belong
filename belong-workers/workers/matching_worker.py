@@ -133,3 +133,29 @@ class MatchingWorker:
             "total_matches": len(ranked_candidates),
             "matches_persisted": len(ranked_candidates)
         }
+
+if __name__ == "__main__":
+    import asyncio
+    from db.connection import init_pool, close_pool
+    from rabbitmq.connection import rabbitmq_manager
+    from rabbitmq.consumer import JobConsumer
+
+    async def run_standalone():
+        logging.basicConfig(level=logging.INFO)
+        logger.info("Starting standalone Matching Worker process...")
+        await init_pool()
+        consumer = JobConsumer()
+        try:
+            await rabbitmq_manager.connect()
+            await consumer.start_listening_matching()
+            stop = asyncio.Event()
+            await stop.wait()
+        finally:
+            await rabbitmq_manager.close()
+            await close_pool()
+
+    try:
+        asyncio.run(run_standalone())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("Matching Worker stopped.")
+

@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field
 from config import settings
 from onboarding.repository import OnboardingRepository
 from onboarding.graph import onboarding_graph
-from embeddings.service import EmbeddingService
+from jobs.repository import job_repository
+from rabbitmq.publisher import publisher
 
 router = APIRouter(prefix="/onboarding", tags=["Onboarding"])
 
@@ -140,13 +141,22 @@ async def send_message(payload: SendMessageRequest, background_tasks: Background
         status=new_status
     )
 
-    # Trigger background embedding generation upon onboarding completion
+    # Trigger async embedding job upon onboarding completion
     if new_status == "completed":
-        embedding_service = EmbeddingService()
-        background_tasks.add_task(
-            embedding_service.generate_and_store_embeddings, 
-            conversation["user_id"]
+        user_id = UUID(str(conversation["user_id"]))
+        payload_data = {"user_id": str(user_id)}
+        job_data = await job_repository.create_job(
+            user_id=user_id,
+            job_type="embedding",
+            payload=payload_data
         )
+        job_id = UUID(str(job_data["id"]))
+        mq_payload = {
+            "job_id": str(job_id),
+            "user_id": str(user_id),
+            "type": "embedding"
+        }
+        await publisher.publish_job(routing_key="embedding", payload=mq_payload)
 
     return SendMessageResponse(
         conversation_id=payload.conversation_id,
