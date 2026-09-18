@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import signal
 import sys
@@ -90,8 +91,6 @@ async def reconcile_pending_jobs():
             break
         except Exception as e:
             logger.error(f"Error in pending job reconciler loop: {e}")
-
-import json
 
 async def main():
     logger.info("Starting belong-workers engine...")

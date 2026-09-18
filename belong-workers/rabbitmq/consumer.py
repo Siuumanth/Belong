@@ -25,7 +25,7 @@ class JobConsumer:
         job_id: str, 
         status: str, 
         result: Any = None, 
-        error: str = None, 
+        error: str | None = None, 
         increment_attempts: bool = False
     ):
         """Helper function to atomically update status in PostgreSQL jobs table."""
@@ -55,6 +55,7 @@ class JobConsumer:
     async def process_embedding_message(self, message: AbstractIncomingMessage):
         """Dedicated consumer callback for the belong.embedding queue."""
         async with message.process(requeue=False):
+            job_id: str | None = None
             try:
                 body = json.loads(message.body.decode("utf-8"))
                 job_id = body.get("job_id")
@@ -71,13 +72,14 @@ class JobConsumer:
                 logger.info(f"Successfully processed embedding job {job_id}")
 
             except Exception as e:
-                logger.error(f"Error processing embedding job {job_id if 'job_id' in locals() else 'unknown'}: {e}", exc_info=True)
-                if 'job_id' in locals() and job_id:
+                logger.error(f"Error processing embedding job {job_id or 'unknown'}: {e}", exc_info=True)
+                if job_id:
                     await self._update_job_db(job_id=job_id, status="failed", error=str(e))
 
     async def process_matching_message(self, message: AbstractIncomingMessage):
         """Dedicated consumer callback for the belong.matching queue."""
         async with message.process(requeue=False):
+            job_id: str | None = None
             try:
                 body = json.loads(message.body.decode("utf-8"))
                 job_id = body.get("job_id")
@@ -94,8 +96,8 @@ class JobConsumer:
                 logger.info(f"Successfully processed matching job {job_id}")
 
             except Exception as e:
-                logger.error(f"Error processing matching job {job_id if 'job_id' in locals() else 'unknown'}: {e}", exc_info=True)
-                if 'job_id' in locals() and job_id:
+                logger.error(f"Error processing matching job {job_id or 'unknown'}: {e}", exc_info=True)
+                if job_id:
                     await self._update_job_db(job_id=job_id, status="failed", error=str(e))
 
     async def start_listening_embedding(self):

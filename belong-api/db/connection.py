@@ -4,9 +4,12 @@ from contextlib import asynccontextmanager
 try:
     import psycopg_pool
     from psycopg_pool import AsyncConnectionPool
-except (ImportError, ModuleNotFoundError):
+except (ImportError, ModuleNotFoundError) as e:
     psycopg_pool = None
     AsyncConnectionPool = None
+    _import_error = e
+else:
+    _import_error = None
 
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
@@ -21,14 +24,20 @@ pool = None
 
 async def init_pool():
     global pool
-    if pool is None:
-        pool = psycopg_pool.AsyncConnectionPool(
-            conninfo=DATABASE_URL,
-            min_size=2,
-            max_size=10,
-            open=False,
+    if pool is not None:
+        return
+    if AsyncConnectionPool is None:
+        raise RuntimeError(
+            f"Failed to initialize database connection pool: {_import_error}. "
+            "Please ensure 'psycopg[binary]' and 'psycopg_pool' are installed (`pip install \"psycopg[binary]\" psycopg_pool`)."
         )
-        await pool.open()
+    pool = AsyncConnectionPool(
+        conninfo=DATABASE_URL,
+        min_size=2,
+        max_size=10,
+        open=False,
+    )
+    await pool.open()
 
 async def close_pool():
     global pool

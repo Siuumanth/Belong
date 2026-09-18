@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import Optional
+from typing import Optional, cast
 import aio_pika
 from aio_pika.abc import AbstractRobustConnection, AbstractRobustChannel
 
@@ -25,27 +25,28 @@ class RabbitMQManager:
     async def get_channel(self) -> AbstractRobustChannel:
         connection = await self.connect()
         if self._channel is None or self._channel.is_closed:
-            self._channel = await connection.channel()
+            channel = cast(AbstractRobustChannel, await connection.channel())
             # Declare exchange and queues
-            exchange = await self._channel.declare_exchange(
+            exchange = await channel.declare_exchange(
                 settings.RABBITMQ_EXCHANGE,
                 aio_pika.ExchangeType.DIRECT,
                 durable=True
             )
             
-            queue_matching = await self._channel.declare_queue(
+            queue_matching = await channel.declare_queue(
                 settings.RABBITMQ_QUEUE_MATCHING,
                 durable=True
             )
             await queue_matching.bind(exchange, routing_key="matching")
 
-            queue_embedding = await self._channel.declare_queue(
+            queue_embedding = await channel.declare_queue(
                 settings.RABBITMQ_QUEUE_EMBEDDING,
                 durable=True
             )
             await queue_embedding.bind(exchange, routing_key="embedding")
 
             logger.info("RabbitMQ exchange and queues declared successfully.")
+            self._channel = channel
         return self._channel
 
     async def close(self):
