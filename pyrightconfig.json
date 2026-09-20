@@ -1,20 +1,19 @@
 {
+  "extraPaths": [
+    ".",
+    "belong-api",
+    "belong-workers",
+    "tests"
+  ],
   "executionEnvironments": [
     {
-      "root": "belong-workers",
+      "root": ".",
       "extraPaths": [
-        "belong-workers"
-      ],
-      "venvPath": "belong-workers",
-      "venv": ".venv"
-    },
-    {
-      "root": "belong-api",
-      "extraPaths": [
-        "belong-api"
-      ],
-      "venvPath": "belong-api",
-      "venv": ".venv"
+        ".",
+        "belong-api",
+        "belong-workers",
+        "tests"
+      ]
     }
   ]
 }

@@ -1,14 +1,22 @@
 {
   "python.analysis.extraPaths": [
+    "${workspaceFolder}",
     "${workspaceFolder}/belong-api",
-    "${workspaceFolder}/belong-workers"
+    "${workspaceFolder}/belong-workers",
+    "${workspaceFolder}/tests"
   ],
   "python.autoComplete.extraPaths": [
+    "${workspaceFolder}",
     "${workspaceFolder}/belong-api",
-    "${workspaceFolder}/belong-workers"
+    "${workspaceFolder}/belong-workers",
+    "${workspaceFolder}/tests"
   ],
-  "python.defaultInterpreterPath": "${workspaceFolder}/belong-workers/.venv/Scripts/python.exe",
+  "python.defaultInterpreterPath": "C:\\Users\\gsuma\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
   "terminal.integrated.env.windows": {
-    "PYTHONPATH": "${workspaceFolder}/belong-api;${workspaceFolder}/belong-workers"
-  }
+    "PYTHONPATH": "${workspaceFolder};${workspaceFolder}/belong-api;${workspaceFolder}/belong-workers;${workspaceFolder}/tests"
+  },
+  "pytest.args": [
+    "tests"
+  ],
+  "python.testing.pytestEnabled": true
 }
