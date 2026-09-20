@@ -90,23 +90,34 @@ async def reconcile_pending_jobs():
         except asyncio.CancelledError:
             break
         except Exception as e:
-            logger.error(f"Error in pending job reconciler loop: {e}")
+            if "relation \"jobs\" does not exist" in str(e) or "UndefinedTable" in str(type(e).__name__):
+                logger.info("Jobs DB table not initialized yet. Waiting for API migrations...")
+            else:
+                logger.error(f"Error in pending job reconciler loop: {e}")
 
 async def main():
-    logger.info("Starting belong-workers engine...")
-    await init_pool()
+    logger.info("=========================================")
+    logger.info("   Starting Belong Workers Engine        ")
+    logger.info("=========================================")
+    try:
+        await init_pool()
+        logger.info("[OK] Workers connected to PostgreSQL with pgvector.")
+    except Exception as e:
+        logger.warning(f"[WARNING] Could not connect to DB on startup: {e}")
 
     # Try connecting to RabbitMQ
     consumer = JobConsumer()
     try:
         await rabbitmq_manager.connect()
         await consumer.start_listening()
-        logger.info("RabbitMQ consumer listening for incoming job messages.")
+        logger.info("[OK] RabbitMQ consumer listening for incoming job messages.")
     except Exception as e:
-        logger.warning(f"Could not connect to RabbitMQ initially: {e}. Workers will rely on PostgreSQL pending job reconciler loop.")
+        logger.warning(f"[WARNING] Could not connect to RabbitMQ initially: {e}. Workers will rely on PostgreSQL pending job reconciler loop.")
 
     # Launch background DB reconciler loop
     reconciler_task = asyncio.create_task(reconcile_pending_jobs())
+
+    logger.info("[OK] Belong Workers Engine is READY and active!")
 
     # Keep worker running
     stop_event = asyncio.Event()

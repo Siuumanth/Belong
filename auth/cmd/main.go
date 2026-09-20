@@ -13,32 +13,39 @@ import (
 	"github.com/joho/godotenv"
 )
 
-/*
-Here we have to define all db, dao, service handlers, etc and connect them all
-*/
 func main() {
 	godotenv.Load() // loads .env from root
-	fmt.Println("Starting server...")
-	dbURL := os.Getenv("AUTH_POSTGRES_URL_DEV")
 
-	fmt.Println("DB URL:", dbURL)
+	fmt.Println("=========================================")
+	fmt.Println("       Starting Belong Auth Service       ")
+	fmt.Println("=========================================")
+
+	dbURL := os.Getenv("AUTH_POSTGRES_URL_DEV")
+	if dbURL == "" {
+		dbURL = "postgres://belong_user:belong_password@localhost:5432/belong?sslmode=disable"
+	}
 
 	db, err := database.Connect(dbURL)
 	if err != nil {
-		fmt.Println("DB connection Erorr ")
+		fmt.Printf("[ERROR] DB Connection Failed: %v\n", err)
 		panic(err)
 	}
-	fmt.Println("Connected to database...")
+	fmt.Println("[OK] Connected to PostgreSQL Database.")
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9001"
+	}
 
 	authDao := postgres.NewPostgresUserDAO(db)
 	authService := service.NewAuthService(authDao)
 	authHandler := handler.NewAuthHandler(authService)
 	userRouter := router.NewRouter(authHandler)
 
-	err = http.ListenAndServe(":9001", userRouter)
+	fmt.Printf("[OK] Belong Auth Service is READY and listening on port :%s\n", port)
+	err = http.ListenAndServe(":"+port, userRouter)
 	if err != nil {
-		fmt.Println("Error starting server")
+		fmt.Printf("[ERROR] Failed to start Auth server: %v\n", err)
 		panic(err)
 	}
-
 }

@@ -21,28 +21,25 @@ import (
 	"go.uber.org/zap"
 )
 
-/*
-Steps to create the api gatway:
-1. Get gateway Deps
-2. Create gateway
-3. Get proxies
-3. Get router
-4. Inject router while buidling gateway
-*/
-
 func main() {
-	// development level logger
 	zlog.Init()
 	defer zlog.Sync()
 
-	zlog.L.Info("Server starting...")
+	fmt.Println("=========================================")
+	fmt.Println("      Starting Belong API Gateway        ")
+	fmt.Println("=========================================")
 
 	metrics.Init()
 	godotenv.Load()
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9000"
+	}
+
 	rl := MW.NewBasicRateLimiter(100000, time.Minute)
 	authz := MW.NewAuthZ()
-	// all controllable from the main function - DI
+
 	gatewayDeps := &gateway.GatewayDeps{
 		JWT:                MW.NewJWT(),
 		CORS:               MW.NewCORS(),
@@ -59,35 +56,28 @@ func main() {
 
 	finalGateway := gw.BuildGateway(r)
 
-	// top level mux — splits traffic before any middleware runs
-	// /metric shud be in the root, can make this better code later
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.Handle("/", finalGateway)
 
-	// finalGateway is a handler with all the middlewares applied
 	server := &http.Server{
-		Addr:    ":9000",
+		Addr:    ":" + port,
 		Handler: mux,
 	}
 
-	// 1. create a channel to listen for OS signals (Interrupt/Kill), eg:- Ctrl + C is a kill
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM) // set stop channel as a listener
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	// 2. run the server in a goroutine so it doesn't block
 	go func() {
-		fmt.Println("Gateway starting on :9000")
+		fmt.Printf("[OK] Belong API Gateway is READY and listening on port :%s\n", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			zlog.L.Error("Listen error: %v\n", zap.Error(err))
 		}
 	}()
 
-	// 3. wait for any signal by OS (usere)
 	<-stop
 
-	// 4. shut down gracefully with some timeout
-	fmt.Println("\nShutting down gracefully...")
+	fmt.Println("\nShutting down Gateway gracefully...")
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
 	defer cancel()
 
@@ -95,5 +85,5 @@ func main() {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	fmt.Println("Server exiting")
+	fmt.Println("Gateway exiting cleanly")
 }
