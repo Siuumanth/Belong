@@ -1,3 +1,19 @@
+"""
+Layer 4: Full Microservice End-to-End Integration Tests
+======================================================
+WHAT THIS FILE DOES:
+- Tests the complete async pipeline against live running services (belong-api, belong-workers, PostgreSQL, RabbitMQ).
+- Steps executed:
+  1. POST /profiles -> Creates User A & User B profiles in DB.
+  2. POST /profiles/{id}/embeddings -> Publishes job to RabbitMQ -> EmbeddingWorker generates embeddings & updates DB.
+  3. POST /matches -> Triggers async matching job -> MatchingWorker runs Stage 1 pgvector retrieval & Stage 2 LLM reasoning.
+  4. GET /matches -> Verifies persisted compatibility results.
+- REQUIRES: Microservices running locally (e.g. via `docker compose up -d` or running belong-api on port 8000).
+
+HOW TO RUN:
+    pytest tests/test_e2e_integration.py -m e2e -v
+"""
+
 import asyncio
 import os
 import unittest

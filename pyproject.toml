@@ -1,5 +1,13 @@
 [tool.pyright]
+pythonVersion = "3.13"
+pythonPlatform = "Windows"
+pythonPath = "C:\\Users\\gsuma\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+extraPaths = [
+  ".",
+  "belong-api",
+  "belong-workers",
+  "tests"
+]
 executionEnvironments = [
-  { root = "belong-workers", extraPaths = ["belong-workers"], venvPath = "belong-workers", venv = ".venv" },
-  { root = "belong-api", extraPaths = ["belong-api"], venvPath = "belong-api", venv = ".venv" }
+  { root = ".", extraPaths = [".", "belong-api", "belong-workers", "tests"] }
 ]

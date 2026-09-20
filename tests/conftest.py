@@ -31,3 +31,9 @@ def expected_outcomes() -> Dict[str, Any]:
     with open(outcomes_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return data.get("outcomes", {})
+
+@pytest.fixture(scope="session")
+def personas_map(golden_personas: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Map of persona_id -> persona dict."""
+    return {p["id"]: p for p in golden_personas}
+

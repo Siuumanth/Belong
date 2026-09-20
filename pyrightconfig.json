@@ -1,4 +1,7 @@
 {
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Windows",
+  "pythonPath": "C:\\Users\\gsuma\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
   "extraPaths": [
     ".",
     "belong-api",
@@ -8,6 +11,7 @@
   "executionEnvironments": [
     {
       "root": ".",
+      "pythonPath": "C:\\Users\\gsuma\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
       "extraPaths": [
         ".",
         "belong-api",
