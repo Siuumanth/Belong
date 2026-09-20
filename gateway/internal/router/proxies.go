@@ -18,7 +18,7 @@ func NewProxies() *Proxies {
 		authURL = os.Getenv("GOVAULT_AUTH_SERVICE_URL")
 	}
 	if authURL == "" {
-		authURL = "http://localhost:9001"
+		authURL = "http://belong-auth:9001"
 	}
 
 	belongURL := os.Getenv("BELONG_SERVICE_URL")
@@ -26,7 +26,7 @@ func NewProxies() *Proxies {
 		belongURL = os.Getenv("PYTHON_SERVICE_URL")
 	}
 	if belongURL == "" {
-		belongURL = "http://localhost:8000"
+		belongURL = "http://belong-api:8000"
 	}
 
 	return &Proxies{

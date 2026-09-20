@@ -11,7 +11,7 @@ RUN go mod download
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -o auth ./cmd
+    go build -o gateway ./cmd
 
 # -------- RUNTIME STAGE --------
 FROM alpine:3.19
@@ -20,10 +20,10 @@ WORKDIR /app
 
 RUN apk add --no-cache ca-certificates
 
-COPY --from=builder /app/auth ./auth
+COPY --from=builder /app/gateway ./gateway
 
-EXPOSE 9001
+EXPOSE 9000
 
-ENV PORT=9001
+ENV PORT=9000
 
-ENTRYPOINT ["./auth"]
+ENTRYPOINT ["./gateway"]
