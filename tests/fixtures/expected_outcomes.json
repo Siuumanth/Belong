@@ -1,0 +1,53 @@
+{
+  "outcomes": {
+    "cp_alice -> cp_bob": {
+      "expected_in_recall": true,
+      "allowed_verdicts": ["strong_alignment", "partial_alignment"],
+      "must_have_dealbreakers": false,
+      "grounded_concepts": {
+        "emotional_needs": ["listen", "communicat", "support", "reassurance"],
+        "core_values": ["long-term", "growth", "honesty", "integrity"],
+        "lifestyle": ["active", "hiking", "healthy", "balanced"]
+      }
+    },
+    "cp_elena -> cp_felix": {
+      "expected_in_recall": true,
+      "allowed_verdicts": ["strong_alignment", "partial_alignment"],
+      "must_have_dealbreakers": false,
+      "grounded_concepts": {
+        "core_values": ["family", "marriage", "home", "creative"],
+        "lifestyle": ["gardening", "cooking", "hosting", "woodworking"]
+      }
+    },
+    "cp_grace -> cp_henry": {
+      "expected_in_recall": true,
+      "allowed_verdicts": ["strong_alignment", "partial_alignment"],
+      "must_have_dealbreakers": false,
+      "grounded_concepts": {
+        "core_values": ["intellectual", "art", "culture", "learning"],
+        "lifestyle": ["city", "museum", "book", "photography"]
+      }
+    },
+    "sc_ian -> sc_julia": {
+      "expected_in_recall": true,
+      "allowed_verdicts": ["partial_alignment", "conflict"],
+      "must_have_dealbreakers": false,
+      "conflict_dimension": "conflict_style"
+    },
+    "db_eve -> db_frank": {
+      "expected_in_recall": true,
+      "allowed_verdicts": ["conflict", "partial_alignment"],
+      "must_have_dealbreakers": true,
+      "expected_dealbreaker_substrings": ["smok"]
+    },
+    "vg_oliver -> cp_alice": {
+      "expected_in_recall": true,
+      "allowed_verdicts": ["unclear", "partial_alignment"],
+      "must_have_uncertainties": true
+    },
+    "geo_quinn -> geo_ryan": {
+      "expected_in_recall": false,
+      "reason": "distance_exclusion"
+    }
+  }
+}

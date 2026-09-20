@@ -1,0 +1,477 @@
+{
+  "personas": [
+    {
+      "id": "cp_alice",
+      "category": "complementary",
+      "demographics": {
+        "age": 28,
+        "gender": "female",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "preferred_age_min": 26,
+        "preferred_age_max": 35,
+        "preferred_genders": ["male"],
+        "max_distance_km": 50,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "I'm looking for a committed, long-term partner who values emotional connection and personal growth. A good fit for me is someone communicative, emotionally available, and kind.",
+        "q2_emotional_needs": "When things get stressful, I need a partner who listens actively before jumping into solution mode, offers calm reassurance, and creates a safe space for vulnerability.",
+        "q3_conflict_provides": "I handle disagreements by taking a breath, expressing my feelings calmly, and working together to find a solution. In a relationship, I bring deep loyalty, empathy, and active encouragement.",
+        "q4_lifestyle_values": "My daily life involves working in product design, morning yoga, cooking plant-based meals, and spending weekends hiking or reading. I value honesty, continuous learning, and balance.",
+        "q5_personality": "Friends describe me as warm, thoughtful, empathetic, and grounded. I make a good partner because I am a reliable communicator and genuinely invest in supporting my partner's dreams.",
+        "q6_dealbreakers": "Absolute dealbreakers for me are dishonesty, smoking/substance abuse, disrespect, and an unwillingness to communicate during tough times."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "honesty and emotional connection", "confidence": 0.9, "evidence": "I value honesty, continuous learning, and balance."}],
+          "lifestyle": [{"summary": "active and balanced lifestyle with yoga and hiking", "confidence": 0.95, "evidence": "morning yoga, cooking plant-based meals, and spending weekends hiking"}],
+          "personality_signals": [{"summary": "warm, empathetic, thoughtful, and grounded", "confidence": 0.9, "evidence": "Friends describe me as warm, thoughtful, empathetic, and grounded."}],
+          "interests": [{"summary": "hiking, cooking, reading, and yoga", "confidence": 0.95, "evidence": "morning yoga, cooking plant-based meals, and spending weekends hiking or reading"}],
+          "life_goals": [{"summary": "building a balanced, growth-oriented long-term life", "confidence": 0.85, "evidence": "committed, long-term partner who values emotional connection and personal growth"}],
+          "conflict_style": [{"summary": "calm, communicative, and collaborative resolution", "confidence": 0.9, "evidence": "expressing my feelings calmly, and working together to find a solution"}],
+          "provides": [{"summary": "deep loyalty, empathy, and active encouragement", "confidence": 0.95, "evidence": "In a relationship, I bring deep loyalty, empathy, and active encouragement."}],
+          "emotional_needs": [{"summary": "active listening, calm reassurance, and safe vulnerability", "confidence": 0.95, "evidence": "I need a partner who listens actively before jumping into solution mode"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "communicative, emotionally available, and kind", "confidence": 0.95, "evidence": "someone communicative, emotionally available, and kind."}],
+          "partner_values": [{"summary": "integrity, continuous learning, and mutual respect", "confidence": 0.9, "evidence": "values emotional connection and personal growth"}],
+          "relationship_expectations": [{"summary": "committed long-term partnership with strong emotional connection", "confidence": 0.95, "evidence": "looking for a committed, long-term partner"}],
+          "desired_lifestyle": [{"summary": "active, healthy, and growth-oriented daily life", "confidence": 0.85, "evidence": "personal growth and continuous learning"}]
+        }
+      }
+    },
+    {
+      "id": "cp_bob",
+      "category": "complementary",
+      "demographics": {
+        "age": 30,
+        "gender": "male",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7800,
+        "longitude": -122.4100,
+        "preferred_age_min": 25,
+        "preferred_age_max": 33,
+        "preferred_genders": ["female"],
+        "max_distance_km": 50,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "I'm looking for a meaningful, long-term relationship with someone who is thoughtful, empathetic, and enjoys an active life. I thrive with a partner who values open communication.",
+        "q2_emotional_needs": "When my partner is stressed, I listen first and validate their feelings before offering any help. When I'm stressed, I appreciate quiet support and space to process.",
+        "q3_conflict_provides": "I prefer addressing issues early rather than letting them fester. I listen carefully, stay patient, and avoid raising my voice. I bring stability, humor, and strong emotional support.",
+        "q4_lifestyle_values": "I work in software engineering, love outdoor activities like trail running and camping, and enjoy experimenting with new recipes. I value integrity, health, and lifelong learning.",
+        "q5_personality": "Close friends would say I am patient, dependable, upbeat, and a great listener. I think I'm a strong partner because I show up consistently and prioritize my relationship.",
+        "q6_dealbreakers": "Flakiness, lack of ambition or growth mindset, and secretiveness are dealbreakers for me."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "integrity, health, and lifelong learning", "confidence": 0.95, "evidence": "I value integrity, health, and lifelong learning."}],
+          "lifestyle": [{"summary": "active outdoor lifestyle with trail running and camping", "confidence": 0.9, "evidence": "outdoor activities like trail running and camping"}],
+          "personality_signals": [{"summary": "patient, dependable, upbeat, and great listener", "confidence": 0.9, "evidence": "patient, dependable, upbeat, and a great listener"}],
+          "interests": [{"summary": "trail running, camping, cooking, tech", "confidence": 0.9, "evidence": "trail running and camping, and enjoy experimenting with new recipes"}],
+          "life_goals": [{"summary": "building a healthy, stable, long-term future", "confidence": 0.85, "evidence": "meaningful, long-term relationship"}],
+          "conflict_style": [{"summary": "early resolution, patient listening, no voice raising", "confidence": 0.95, "evidence": "I listen carefully, stay patient, and avoid raising my voice."}],
+          "provides": [{"summary": "stability, humor, and strong emotional support", "confidence": 0.95, "evidence": "I bring stability, humor, and strong emotional support."}],
+          "emotional_needs": [{"summary": "quiet support and processing space during stress", "confidence": 0.85, "evidence": "I appreciate quiet support and space to process"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "thoughtful, empathetic, active, and communicative", "confidence": 0.95, "evidence": "someone who is thoughtful, empathetic, and enjoys an active life."}],
+          "partner_values": [{"summary": "open communication, growth mindset, and health", "confidence": 0.9, "evidence": "values open communication"}],
+          "relationship_expectations": [{"summary": "long-term relationship based on mutual priority and support", "confidence": 0.95, "evidence": "meaningful, long-term relationship"}],
+          "desired_lifestyle": [{"summary": "active and healthy lifestyle", "confidence": 0.85, "evidence": "enjoys an active life"}]
+        }
+      }
+    },
+    {
+      "id": "cp_elena",
+      "category": "complementary",
+      "demographics": {
+        "age": 31,
+        "gender": "female",
+        "orientation": "bisexual",
+        "relationship_goal": "long-term",
+        "latitude": 34.0522,
+        "longitude": -118.2437,
+        "preferred_age_min": 28,
+        "preferred_age_max": 38,
+        "preferred_genders": ["male", "female"],
+        "max_distance_km": 60,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "I want a serious partnership leading to marriage and family. I'm drawn to compassionate, grounded people who are ambitious yet humble.",
+        "q2_emotional_needs": "I need emotional presence and physical touch when feeling overwhelmed. Openness about feelings is non-negotiable.",
+        "q3_conflict_provides": "I am direct but warm during discussions. I provide deep emotional safety, organization, and enthusiasm for shared goals.",
+        "q4_lifestyle_values": "Work in architecture, spend time gardening, painting, and hosting dinner parties. Family and creative expression drive me.",
+        "q5_personality": "Friends call me creative, nurturing, organized, and deeply loyal.",
+        "q6_dealbreakers": "Emotional distance, reluctance to discuss the future, and cynicism."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "family, creative expression, and grounding", "confidence": 0.9, "evidence": "Family and creative expression drive me."}],
+          "lifestyle": [{"summary": "creative, family-centered, gardening, painting", "confidence": 0.9, "evidence": "gardening, painting, and hosting dinner parties"}],
+          "personality_signals": [{"summary": "creative, nurturing, organized, deeply loyal", "confidence": 0.9, "evidence": "creative, nurturing, organized, and deeply loyal"}],
+          "interests": [{"summary": "architecture, gardening, painting, dinner parties", "confidence": 0.9, "evidence": "gardening, painting, and hosting dinner parties"}],
+          "life_goals": [{"summary": "marriage, family, and shared creative aspirations", "confidence": 0.95, "evidence": "serious partnership leading to marriage and family"}],
+          "conflict_style": [{"summary": "direct, warm, and constructive communication", "confidence": 0.85, "evidence": "direct but warm during discussions"}],
+          "provides": [{"summary": "emotional safety, organization, and goal enthusiasm", "confidence": 0.9, "evidence": "provide deep emotional safety, organization, and enthusiasm"}],
+          "emotional_needs": [{"summary": "emotional presence, physical touch, and openness", "confidence": 0.9, "evidence": "emotional presence and physical touch when feeling overwhelmed"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "compassionate, grounded, ambitious, humble", "confidence": 0.9, "evidence": "compassionate, grounded people who are ambitious yet humble"}],
+          "partner_values": [{"summary": "commitment to family and emotional openness", "confidence": 0.9, "evidence": "Openness about feelings is non-negotiable"}],
+          "relationship_expectations": [{"summary": "serious partnership leading to family", "confidence": 0.95, "evidence": "serious partnership leading to marriage and family"}],
+          "desired_lifestyle": [{"summary": "family-oriented and socially engaged lifestyle", "confidence": 0.8, "evidence": "hosting dinner parties"}]
+        }
+      }
+    },
+    {
+      "id": "cp_felix",
+      "category": "complementary",
+      "demographics": {
+        "age": 33,
+        "gender": "male",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 34.0600,
+        "longitude": -118.2500,
+        "preferred_age_min": 27,
+        "preferred_age_max": 35,
+        "preferred_genders": ["female"],
+        "max_distance_km": 60,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "Looking for a lifetime partner to build a home and family with. I align best with warm, creative, and expressive partners.",
+        "q2_emotional_needs": "I value physical affection and open conversation when facing challenges.",
+        "q3_conflict_provides": "I stay calm and practical. I offer steadfast reliability, warmth, and strong encouragement for my partner's work.",
+        "q4_lifestyle_values": "Civil engineer who loves woodworking, cooking, and hosting friends. Value family, craft, and stability.",
+        "q5_personality": "Described as grounded, warm, dependable, and practical.",
+        "q6_dealbreakers": "Inauthenticity, avoidant behavior, and lack of desire for family."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "family, craftsmanship, and stability", "confidence": 0.9, "evidence": "Value family, craft, and stability."}],
+          "lifestyle": [{"summary": "grounded home life, woodworking, cooking", "confidence": 0.9, "evidence": "woodworking, cooking, and hosting friends"}],
+          "personality_signals": [{"summary": "grounded, warm, dependable, practical", "confidence": 0.9, "evidence": "grounded, warm, dependable, and practical"}],
+          "interests": [{"summary": "woodworking, culinary arts, home improvement", "confidence": 0.9, "evidence": "woodworking, cooking, and hosting friends"}],
+          "life_goals": [{"summary": "building a home and raising a family", "confidence": 0.95, "evidence": "lifetime partner to build a home and family with"}],
+          "conflict_style": [{"summary": "calm, practical, and solution-focused", "confidence": 0.85, "evidence": "I stay calm and practical"}],
+          "provides": [{"summary": "steadfast reliability, warmth, and encouragement", "confidence": 0.9, "evidence": "steadfast reliability, warmth, and strong encouragement"}],
+          "emotional_needs": [{"summary": "physical affection and open discussion", "confidence": 0.9, "evidence": "physical affection and open conversation"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "warm, creative, and emotionally expressive", "confidence": 0.95, "evidence": "warm, creative, and expressive partners"}],
+          "partner_values": [{"summary": "family-focused, authentic, and communicative", "confidence": 0.9, "evidence": "build a home and family with"}],
+          "relationship_expectations": [{"summary": "lifetime partnership toward marriage and family", "confidence": 0.95, "evidence": "lifetime partner to build a home and family with"}],
+          "desired_lifestyle": [{"summary": "warm, community-focused home life", "confidence": 0.85, "evidence": "hosting friends"}]
+        }
+      }
+    },
+    {
+      "id": "sc_ian",
+      "category": "conflict_clash",
+      "demographics": {
+        "age": 29,
+        "gender": "male",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "preferred_age_min": 25,
+        "preferred_age_max": 33,
+        "preferred_genders": ["female"],
+        "max_distance_km": 40,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "Looking for an active partner who loves bouldering and outdoor adventure.",
+        "q2_emotional_needs": "I need immediate intense talk when upset.",
+        "q3_conflict_provides": "When there is conflict, I get urgent and demand we hash it out right this second until it is resolved.",
+        "q4_lifestyle_values": "Rock climber and software dev. Bouldering 4 days a week.",
+        "q5_personality": "Energetic, passionate, hyper-focused.",
+        "q6_dealbreakers": "Sedentary lifestyle."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "adventure, athletic performance, resolution", "confidence": 0.9, "evidence": "bouldering and outdoor adventure"}],
+          "lifestyle": [{"summary": "bouldering 4 days a week, outdoors", "confidence": 0.95, "evidence": "Bouldering 4 days a week"}],
+          "personality_signals": [{"summary": "energetic, passionate, hyper-focused", "confidence": 0.85, "evidence": "Energetic, passionate, hyper-focused"}],
+          "interests": [{"summary": "rock climbing, bouldering, outdoor sports", "confidence": 0.95, "evidence": "bouldering and outdoor adventure"}],
+          "life_goals": [{"summary": "active outdoor lifestyle with long-term partner", "confidence": 0.8, "evidence": "Looking for an active partner"}],
+          "conflict_style": [{"summary": "anxious pursuer requiring immediate forced resolution", "confidence": 0.95, "evidence": "demand we hash it out right this second"}],
+          "provides": [{"summary": "high energy and athletic companionship", "confidence": 0.85, "evidence": "bouldering 4 days a week"}],
+          "emotional_needs": [{"summary": "immediate intense dialogue when anxious", "confidence": 0.9, "evidence": "need immediate intense talk when upset"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "athletic, energetic boulderer", "confidence": 0.9, "evidence": "loves bouldering and outdoor adventure"}],
+          "partner_values": [{"summary": "fitness and immediate conflict engagement", "confidence": 0.85, "evidence": "hash it out right this second"}],
+          "relationship_expectations": [{"summary": "active long-term relationship", "confidence": 0.85, "evidence": "Looking for an active partner"}],
+          "desired_lifestyle": [{"summary": "outdoor athletic lifestyle", "confidence": 0.9, "evidence": "Bouldering 4 days a week"}]
+        }
+      }
+    },
+    {
+      "id": "sc_julia",
+      "category": "conflict_clash",
+      "demographics": {
+        "age": 28,
+        "gender": "female",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7800,
+        "longitude": -122.4100,
+        "preferred_age_min": 26,
+        "preferred_age_max": 34,
+        "preferred_genders": ["male"],
+        "max_distance_km": 40,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "Looking for an outdoor-loving partner who climbs and hikes.",
+        "q2_emotional_needs": "I need complete silence and space when overwhelmed.",
+        "q3_conflict_provides": "When conflict starts, I completely shut down, walk away, and refuse to speak for days until I feel ready.",
+        "q4_lifestyle_values": "Climber and graphic designer. Weekends spent bouldering in Yosemite.",
+        "q5_personality": "Independent, quiet, artistic.",
+        "q6_dealbreakers": "Aggressive confrontation."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "independence, solitude, outdoor freedom", "confidence": 0.9, "evidence": "bouldering in Yosemite... quiet"}],
+          "lifestyle": [{"summary": "bouldering, graphic design, outdoor trips", "confidence": 0.95, "evidence": "bouldering in Yosemite"}],
+          "personality_signals": [{"summary": "independent, quiet, artistic", "confidence": 0.9, "evidence": "Independent, quiet, artistic"}],
+          "interests": [{"summary": "climbing, bouldering, design", "confidence": 0.95, "evidence": "climbs and hikes"}],
+          "life_goals": [{"summary": "outdoor climbing lifestyle with partner", "confidence": 0.8, "evidence": "outdoor-loving partner"}],
+          "conflict_style": [{"summary": "stonewaller who shuts down and isolates for days", "confidence": 0.95, "evidence": "completely shut down, walk away, and refuse to speak for days"}],
+          "provides": [{"summary": "artistic aesthetic and climbing buddy", "confidence": 0.8, "evidence": "Climber and graphic designer"}],
+          "emotional_needs": [{"summary": "complete silence and space without pressure", "confidence": 0.95, "evidence": "need complete silence and space when overwhelmed"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "climbing lover who respects space", "confidence": 0.9, "evidence": "outdoor-loving partner who climbs"}],
+          "partner_values": [{"summary": "independence and quiet demeanor", "confidence": 0.85, "evidence": "Independent, quiet"}],
+          "relationship_expectations": [{"summary": "low-pressure long-term relationship", "confidence": 0.85, "evidence": "Looking for an outdoor-loving partner"}],
+          "desired_lifestyle": [{"summary": "outdoor climbing trips", "confidence": 0.9, "evidence": "bouldering in Yosemite"}]
+        }
+      }
+    },
+    {
+      "id": "db_eve",
+      "category": "dealbreaker",
+      "demographics": {
+        "age": 29,
+        "gender": "female",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "preferred_age_min": 26,
+        "preferred_age_max": 35,
+        "preferred_genders": ["male"],
+        "max_distance_km": 50,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "Looking for a health-conscious, non-smoking partner for a long-term relationship.",
+        "q2_emotional_needs": "Clear communication and consideration.",
+        "q3_conflict_provides": "Calm, reasonable discussion.",
+        "q4_lifestyle_values": "Clean living, wellness, fitness.",
+        "q5_personality": "Disciplined, caring, health-focused.",
+        "q6_dealbreakers": "Smoking of any kind is an absolute non-negotiable dealbreaker. I cannot tolerate tobacco or vaping."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "clean living and health", "confidence": 0.95, "evidence": "Clean living, wellness, fitness."}],
+          "lifestyle": [{"summary": "wellness and fitness centered", "confidence": 0.9, "evidence": "Clean living, wellness, fitness"}],
+          "personality_signals": [{"summary": "disciplined, caring, health-focused", "confidence": 0.9, "evidence": "Disciplined, caring, health-focused"}],
+          "interests": [{"summary": "fitness, wellness", "confidence": 0.9, "evidence": "wellness, fitness"}],
+          "life_goals": [{"summary": "healthy long-term life", "confidence": 0.85, "evidence": "long-term relationship"}],
+          "conflict_style": [{"summary": "calm and reasonable", "confidence": 0.85, "evidence": "Calm, reasonable discussion"}],
+          "provides": [{"summary": "care and health discipline", "confidence": 0.85, "evidence": "Disciplined, caring"}],
+          "emotional_needs": [{"summary": "consideration and clear talk", "confidence": 0.85, "evidence": "Clear communication and consideration"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "health-conscious non-smoker", "confidence": 0.95, "evidence": "health-conscious, non-smoking partner"}],
+          "partner_values": [{"summary": "wellness and non-smoking lifestyle", "confidence": 0.95, "evidence": "Smoking of any kind is an absolute non-negotiable dealbreaker"}],
+          "relationship_expectations": [{"summary": "long-term healthy relationship", "confidence": 0.9, "evidence": "long-term relationship"}],
+          "desired_lifestyle": [{"summary": "smoke-free clean environment", "confidence": 0.95, "evidence": "cannot tolerate tobacco or vaping"}]
+        }
+      }
+    },
+    {
+      "id": "db_frank",
+      "category": "dealbreaker",
+      "demographics": {
+        "age": 30,
+        "gender": "male",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7800,
+        "longitude": -122.4100,
+        "preferred_age_min": 25,
+        "preferred_age_max": 33,
+        "preferred_genders": ["female"],
+        "max_distance_km": 50,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "Looking for a relaxed partner who accepts me as I am.",
+        "q2_emotional_needs": "Low pressure and easygoing vibe.",
+        "q3_conflict_provides": "I prefer to avoid drama.",
+        "q4_lifestyle_values": "Musician and bartender. I smoke cigarettes daily and love nightlife.",
+        "q5_personality": "Easygoing, artistic, night owl.",
+        "q6_dealbreakers": "Overly controlling partners."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "artistic freedom and relaxed lifestyle", "confidence": 0.9, "evidence": "Easygoing, artistic"}],
+          "lifestyle": [{"summary": "nightlife, music, heavy daily tobacco smoker", "confidence": 0.95, "evidence": "I smoke cigarettes daily and love nightlife."}],
+          "personality_signals": [{"summary": "easygoing, artistic, night owl", "confidence": 0.9, "evidence": "Easygoing, artistic, night owl"}],
+          "interests": [{"summary": "music, nightlife, mixology", "confidence": 0.9, "evidence": "Musician and bartender"}],
+          "life_goals": [{"summary": "relaxed artistic partnership", "confidence": 0.8, "evidence": "relaxed partner"}],
+          "conflict_style": [{"summary": "drama avoidance", "confidence": 0.8, "evidence": "prefer to avoid drama"}],
+          "provides": [{"summary": "relaxed easygoing energy", "confidence": 0.85, "evidence": "Low pressure and easygoing vibe"}],
+          "emotional_needs": [{"summary": "acceptance and freedom", "confidence": 0.85, "evidence": "accepts me as I am"}]
+        },
+        "wants": {
+          "partner_traits": [{"summary": "relaxed and non-judgmental", "confidence": 0.9, "evidence": "relaxed partner who accepts me"}],
+          "partner_values": [{"summary": "flexibility and chill vibe", "confidence": 0.85, "evidence": "avoid drama"}],
+          "relationship_expectations": [{"summary": "low-pressure long-term bond", "confidence": 0.85, "evidence": "long-term relationship"}],
+          "desired_lifestyle": [{"summary": "nightlife friendly", "confidence": 0.85, "evidence": "love nightlife"}]
+        }
+      }
+    },
+    {
+      "id": "vg_oliver",
+      "category": "vague",
+      "demographics": {
+        "age": 28,
+        "gender": "male",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "preferred_age_min": 24,
+        "preferred_age_max": 32,
+        "preferred_genders": ["female"],
+        "max_distance_km": 50,
+        "required_relationship_goal": null
+      },
+      "question_responses": {
+        "q1_intent_partner": "Just seeing what happens. Looking for someone cool.",
+        "q2_emotional_needs": "I don't know, normal stuff.",
+        "q3_conflict_provides": "Whatever, I guess.",
+        "q4_lifestyle_values": "Hang out, watch TV, work.",
+        "q5_personality": "Nice guy.",
+        "q6_dealbreakers": "Bad vibes."
+      },
+      "profile": {
+        "self": {
+          "values": [],
+          "lifestyle": [{"summary": "watching TV and hanging out", "confidence": 0.5, "evidence": "Hang out, watch TV"}],
+          "personality_signals": [{"summary": "nice guy", "confidence": 0.5, "evidence": "Nice guy"}],
+          "interests": [],
+          "life_goals": [],
+          "conflict_style": [],
+          "provides": [],
+          "emotional_needs": []
+        },
+        "wants": {
+          "partner_traits": [{"summary": "cool person", "confidence": 0.5, "evidence": "someone cool"}],
+          "partner_values": [],
+          "relationship_expectations": [],
+          "desired_lifestyle": []
+        }
+      }
+    },
+    {
+      "id": "geo_quinn",
+      "category": "filter_edge_case",
+      "demographics": {
+        "age": 29,
+        "gender": "male",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 47.6062,
+        "longitude": -122.3321,
+        "preferred_age_min": 25,
+        "preferred_age_max": 33,
+        "preferred_genders": ["female"],
+        "max_distance_km": 30,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "Looking for a long-term partner in Seattle.",
+        "q2_emotional_needs": "Good communication.",
+        "q3_conflict_provides": "Calm talks.",
+        "q4_lifestyle_values": "Tech, coffee, hiking.",
+        "q5_personality": "Friendly.",
+        "q6_dealbreakers": "Dishonesty."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "honesty", "confidence": 0.9, "evidence": "Dishonesty"}],
+          "lifestyle": [{"summary": "hiking and coffee in Seattle", "confidence": 0.9, "evidence": "coffee, hiking"}],
+          "personality_signals": [{"summary": "friendly", "confidence": 0.9, "evidence": "Friendly"}],
+          "interests": [{"summary": "hiking, tech, coffee", "confidence": 0.9, "evidence": "Tech, coffee, hiking"}],
+          "life_goals": [],
+          "conflict_style": [{"summary": "calm", "confidence": 0.85, "evidence": "Calm talks"}],
+          "provides": [],
+          "emotional_needs": []
+        },
+        "wants": {
+          "partner_traits": [{"summary": "communicative female partner", "confidence": 0.9, "evidence": "Good communication"}],
+          "partner_values": [],
+          "relationship_expectations": [{"summary": "long-term relationship in Seattle", "confidence": 0.9, "evidence": "long-term partner in Seattle"}],
+          "desired_lifestyle": []
+        }
+      }
+    },
+    {
+      "id": "geo_ryan",
+      "category": "filter_edge_case",
+      "demographics": {
+        "age": 28,
+        "gender": "female",
+        "orientation": "straight",
+        "relationship_goal": "long-term",
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "preferred_age_min": 25,
+        "preferred_age_max": 33,
+        "preferred_genders": ["male"],
+        "max_distance_km": 30,
+        "required_relationship_goal": "long-term"
+      },
+      "question_responses": {
+        "q1_intent_partner": "Looking for a long-term partner in SF Bay Area.",
+        "q2_emotional_needs": "Empathy.",
+        "q3_conflict_provides": "Open talk.",
+        "q4_lifestyle_values": "Design and yoga.",
+        "q5_personality": "Kind.",
+        "q6_dealbreakers": "Lies."
+      },
+      "profile": {
+        "self": {
+          "values": [{"summary": "honesty", "confidence": 0.9, "evidence": "Lies"}],
+          "lifestyle": [{"summary": "yoga and design", "confidence": 0.9, "evidence": "Design and yoga"}],
+          "personality_signals": [{"summary": "kind", "confidence": 0.9, "evidence": "Kind"}],
+          "interests": [{"summary": "yoga, design", "confidence": 0.9, "evidence": "Design and yoga"}],
+          "life_goals": [],
+          "conflict_style": [{"summary": "open", "confidence": 0.85, "evidence": "Open talk"}],
+          "provides": [],
+          "emotional_needs": []
+        },
+        "wants": {
+          "partner_traits": [{"summary": "empathic male partner", "confidence": 0.9, "evidence": "Empathy"}],
+          "partner_values": [],
+          "relationship_expectations": [{"summary": "long-term relationship in SF", "confidence": 0.9, "evidence": "long-term partner in SF"}],
+          "desired_lifestyle": []
+        }
+      }
+    }
+  ]
+}

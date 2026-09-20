@@ -154,6 +154,55 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProfileResponse'
 
+  /profiles/{user_id}/embeddings:
+    post:
+      summary: Enqueue Profile Embedding Generation Job
+      description: Creates an asynchronous embedding job in PostgreSQL, publishes it to RabbitMQ, and returns HTTP 202 Accepted with job metadata.
+      tags: [Profiles]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Embedding job enqueued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    get:
+      summary: Get Profile Embedding Status & Source Text
+      description: Returns boolean indicators for vector presence (`has_self_embedding`, `has_wants_embedding`), canonical source text, and update timestamp.
+      tags: [Profiles]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Embedding status retrieved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: { type: string, format: uuid }
+                  has_self_embedding: { type: boolean, example: true }
+                  has_wants_embedding: { type: boolean, example: true }
+                  embedding_source_text: { type: object }
+                  updated_at: { type: string, format: date-time }
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
   # ==========================================
   # ONBOARDING ENDPOINTS (/onboarding/*)
   # ==========================================

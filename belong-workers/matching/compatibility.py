@@ -1,9 +1,10 @@
 import json
 import logging
 import os
-from typing import Dict, Any, Optional, TypedDict
-from langchain_core.messages import SystemMessage, HumanMessage
+from typing import Any, Dict, Optional, TypedDict, cast
+from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, END
+from langgraph.graph.state import CompiledStateGraph
 
 from config import settings
 from matching.schemas import PairwiseCompatibilityOutput
@@ -72,9 +73,9 @@ def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
         structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput)
         
         prompt_text = state.get("prompt_text", "")
-        response: PairwiseCompatibilityOutput = structured_llm.invoke([
+        response = cast(PairwiseCompatibilityOutput, structured_llm.invoke([
             HumanMessage(content=prompt_text)
-        ])
+        ]))
 
         return {"parsed_output": response, "error": None}
     except Exception as e:
@@ -96,8 +97,8 @@ def validation_node(state: PairwiseState) -> Dict[str, Any]:
 
 # --- Build LangGraph Workflow ---
 
-def build_compatibility_graph() -> StateGraph:
-    workflow = StateGraph(PairwiseState)
+def build_compatibility_graph() -> CompiledStateGraph:
+    workflow = StateGraph(PairwiseState)  # type: ignore[type-var]
 
     workflow.add_node("format_prompt", format_prompt_node)
     workflow.add_node("llm_reasoning", llm_reasoning_node)
@@ -110,7 +111,7 @@ def build_compatibility_graph() -> StateGraph:
 
     return workflow.compile()
 
-compatibility_agent = build_compatibility_graph()
+compatibility_agent: CompiledStateGraph = build_compatibility_graph()
 
 class PairwiseCompatibilityAgent:
     """Interface class to invoke the LangGraph pairwise reasoning graph."""
