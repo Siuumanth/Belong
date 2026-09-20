@@ -3,10 +3,12 @@ services:
     image: pgvector/pgvector:pg16
     container_name: belong-postgres
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: belong
-      POSTGRES_USER: belong_user
-      POSTGRES_PASSWORD: belong_password
+      POSTGRES_DB: ${POSTGRES_DB:-belong}
+      POSTGRES_USER: ${POSTGRES_USER:-belong_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-belong_password}
     ports:
       - "5432:5432"
     volumes:
@@ -14,7 +16,7 @@ services:
       - ./belong-api/db/migrations:/docker-entrypoint-initdb.d/01-belong:ro
       - ./auth/migrations:/docker-entrypoint-initdb.d/00-auth:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U belong_user -d belong"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-belong_user} -d ${POSTGRES_DB:-belong}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,12 +26,14 @@ services:
     image: rabbitmq:3.13-management
     container_name: belong-rabbitmq
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "5672:5672"
       - "15672:15672"   # management UI
     environment:
-      RABBITMQ_DEFAULT_USER: belong
-      RABBITMQ_DEFAULT_PASS: belong_password
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-belong}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-belong_password}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -43,23 +47,25 @@ services:
       dockerfile: Dockerfile
     container_name: belong-api
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DB: belong
-      POSTGRES_USER: belong_user
-      POSTGRES_PASSWORD: belong_password
-      DATABASE_URL: postgresql://belong_user:belong_password@postgres:5432/belong
-      RABBITMQ_URL: amqp://belong:belong_password@rabbitmq:5672/
-      RABBITMQ_EXCHANGE: belong.jobs
+      POSTGRES_DB: ${POSTGRES_DB:-belong}
+      POSTGRES_USER: ${POSTGRES_USER:-belong_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-belong_password}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-belong_user}:${POSTGRES_PASSWORD:-belong_password}@postgres:5432/${POSTGRES_DB:-belong}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-belong}:${RABBITMQ_DEFAULT_PASS:-belong_password}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-belong.jobs}
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
       LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      USE_LOCAL_EMBEDDINGS: "true"
+      USE_LOCAL_EMBEDDINGS: ${USE_LOCAL_EMBEDDINGS:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,20 +78,25 @@ services:
       dockerfile: Dockerfile
     container_name: belong-workers
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_DB: belong
-      POSTGRES_USER: belong_user
-      POSTGRES_PASSWORD: belong_password
-      RABBITMQ_URL: amqp://belong:belong_password@rabbitmq:5672/
-      RABBITMQ_EXCHANGE: belong.jobs
-      RABBITMQ_QUEUE_EMBEDDING: belong.embedding
-      RABBITMQ_QUEUE_MATCHING: belong.matching
+      POSTGRES_DB: ${POSTGRES_DB:-belong}
+      POSTGRES_USER: ${POSTGRES_USER:-belong_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-belong_password}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-belong_user}:${POSTGRES_PASSWORD:-belong_password}@postgres:5432/${POSTGRES_DB:-belong}
+      RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER:-belong}:${RABBITMQ_DEFAULT_PASS:-belong_password}@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-belong.jobs}
+      RABBITMQ_QUEUE_EMBEDDING: ${RABBITMQ_QUEUE_EMBEDDING:-belong.embedding}
+      RABBITMQ_QUEUE_MATCHING: ${RABBITMQ_QUEUE_MATCHING:-belong.matching}
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
       LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
-      USE_LOCAL_EMBEDDINGS: "true"
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      USE_LOCAL_EMBEDDINGS: ${USE_LOCAL_EMBEDDINGS:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -100,13 +111,15 @@ services:
       dockerfile: Dockerfile
     container_name: belong-auth
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "9001:9001"
     environment:
       PORT: 9001
-      AUTH_POSTGRES_URL_DEV: postgres://belong_user:belong_password@postgres:5432/belong?sslmode=disable
+      AUTH_POSTGRES_URL_DEV: postgres://${POSTGRES_USER:-belong_user}:${POSTGRES_PASSWORD:-belong_password}@postgres:5432/${POSTGRES_DB:-belong}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-chubsmanprodude}
-      JWT_EXPIRES_IN: 5h
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-5h}
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,12 +130,14 @@ services:
       dockerfile: Dockerfile
     container_name: belong-gateway
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "9000:9000"
     environment:
       PORT: 9000
-      AUTH_SERVICE_URL: http://belong-auth:9001
-      BELONG_SERVICE_URL: http://belong-api:8000
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://belong-auth:9001}
+      BELONG_SERVICE_URL: ${BELONG_SERVICE_URL:-http://belong-api:8000}
       JWT_SECRET: ${JWT_SECRET:-chubsmanprodude}
     depends_on:
       auth:
