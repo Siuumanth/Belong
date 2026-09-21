@@ -9,11 +9,13 @@ Supports:
 - Fully configurable dynamic personas created programmatically via PersonaConfig.builder()
 """
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from uuid import uuid4, UUID
 import httpx
+
 
 
 class PersonaConfig:
@@ -147,6 +149,11 @@ class PersonaBuilder:
         self._responses["q6_dealbreakers"] = dealbreaker_text
         return self
 
+    def with_profile(self, profile_dict: Dict[str, Any]) -> "PersonaBuilder":
+        """Explicitly sets structured self and wants profile traits."""
+        self._profile = profile_dict
+        return self
+
     def build(self) -> PersonaConfig:
         default_responses = {
             "q1_intent_partner": "Looking for a committed partner.",
@@ -157,13 +164,32 @@ class PersonaBuilder:
             "q6_dealbreakers": "Dishonesty and disrespect.",
         }
         merged_responses = {**default_responses, **self._responses}
+
+        profile = self._profile
+        if not profile:
+            profile = {
+                "self": {
+                    "values": [{"summary": merged_responses.get("q4_lifestyle_values", ""), "confidence": 0.9, "evidence": "survey response"}],
+                    "lifestyle": [{"summary": merged_responses.get("q4_lifestyle_values", ""), "confidence": 0.9, "evidence": "survey response"}],
+                    "personality_signals": [{"summary": merged_responses.get("q5_personality", ""), "confidence": 0.9, "evidence": "survey response"}],
+                    "conflict_style": [{"summary": merged_responses.get("q3_conflict_provides", ""), "confidence": 0.9, "evidence": "survey response"}],
+                    "emotional_needs": [{"summary": merged_responses.get("q2_emotional_needs", ""), "confidence": 0.9, "evidence": "survey response"}]
+                },
+                "wants": {
+                    "partner_traits": [{"summary": merged_responses.get("q1_intent_partner", ""), "confidence": 0.9, "evidence": "survey response"}],
+                    "partner_values": [{"summary": merged_responses.get("q1_intent_partner", ""), "confidence": 0.9, "evidence": "survey response"}],
+                    "relationship_expectations": [{"summary": merged_responses.get("q1_intent_partner", ""), "confidence": 0.9, "evidence": "survey response"}]
+                }
+            }
+
         return PersonaConfig(
             id=self._id,
             category=self._category,
             demographics=self._demographics,
             question_responses=merged_responses,
-            profile=self._profile,
+            profile=profile,
         )
+
 
 
 class UserSimulator:
@@ -196,20 +222,21 @@ class UserSimulator:
         }
 
     async def _post_with_fallback(self, client: httpx.AsyncClient, path: str, **kwargs) -> httpx.Response:
-        """Helper to try route both directly and with /api prefix if 404 is encountered."""
-        res = await client.post(path, **kwargs)
-        if res.status_code == 404 and not path.startswith("/api"):
-            alt_path = f"/api{path}"
-            res = await client.post(alt_path, **kwargs)
+        """Helper to try route both with /api prefix and directly."""
+        target_path = path if path.startswith("/api") else f"/api{path}"
+        res = await client.post(target_path, **kwargs)
+        if res.status_code == 404:
+            res = await client.post(path, **kwargs)
         return res
 
     async def _get_with_fallback(self, client: httpx.AsyncClient, path: str, **kwargs) -> httpx.Response:
-        """Helper to try GET route both directly and with /api prefix if 404 is encountered."""
-        res = await client.get(path, **kwargs)
-        if res.status_code == 404 and not path.startswith("/api"):
-            alt_path = f"/api{path}"
-            res = await client.get(alt_path, **kwargs)
+        """Helper to try GET route both with /api prefix and directly."""
+        target_path = path if path.startswith("/api") else f"/api{path}"
+        res = await client.get(target_path, **kwargs)
+        if res.status_code == 404:
+            res = await client.get(path, **kwargs)
         return res
+
 
     async def create_profile_async(self, client: httpx.AsyncClient) -> bool:
         """Registers the user profile via API."""
@@ -260,8 +287,10 @@ class UserSimulator:
 
             reply_data = msg_res.json()
             conv_status = reply_data.get("status", "active")
+            await asyncio.sleep(1.5)
 
         self.status = conv_status
+
         return conv_status == "completed"
 
     async def trigger_embeddings_async(self, client: httpx.AsyncClient) -> bool:

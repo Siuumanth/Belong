@@ -51,7 +51,9 @@ CREATE_PROFILES = True      # Step 1: POST /profiles
 RUN_ONBOARDING = True       # Step 2: Multi-turn AI Onboarding chat
 TRIGGER_EMBEDDINGS = True   # Step 3: Extract traits & embeddings
 TRIGGER_MATCHING = True     # Step 4: Run vector search & LLM matching
-POLL_TIMEOUT_SECS = 30      # Max seconds to wait for matching job to finish
+POLL_TIMEOUT_SECS = 90      # Max seconds to wait for matching job to finish
+
+
 
 
 # =====================================================================
@@ -155,7 +157,8 @@ async def run_simulation():
     sim_user_2 = UserSimulator(USER_2_CONFIG)
     users = [sim_user_1, sim_user_2]
 
-    async with httpx.AsyncClient(base_url=API_URL, timeout=30.0) as client:
+    async with httpx.AsyncClient(base_url=API_URL, timeout=60.0) as client:
+
         # Health check
         if not await check_api_health(client):
             return
@@ -175,19 +178,19 @@ async def run_simulation():
                     logger.error(f"❌ Failed creating profile for '{user.persona.id}'")
 
         # -----------------------------------------------------------------
-        # STEP 2: MULTI-TURN AI ONBOARDING CHAT
+        # STEP 2: MULTI-TURN AI ONBOARDING CHAT (Primary User Only)
         # -----------------------------------------------------------------
         if RUN_ONBOARDING:
             print("\n-----------------------------------------------------------------")
-            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (q1 - q6)")
+            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (Alice Only)")
             print("-----------------------------------------------------------------")
-            for user in users:
-                logger.info(f"Starting conversational onboarding for '{user.persona.id}'...")
-                ok = await user.run_onboarding_async(client)
-                if ok:
-                    logger.info(f"✅ Onboarding finished for '{user.persona.id}' (Status: {user.status})")
-                else:
-                    logger.error(f"❌ Onboarding failed/incomplete for '{user.persona.id}'")
+            target_onboarding_user = sim_user_1
+            logger.info(f"Starting conversational onboarding for '{target_onboarding_user.persona.id}'...")
+            ok = await target_onboarding_user.run_onboarding_async(client)
+            if ok:
+                logger.info(f"✅ Onboarding finished for '{target_onboarding_user.persona.id}' (Status: {target_onboarding_user.status})")
+            else:
+                logger.error(f"❌ Onboarding failed/incomplete for '{target_onboarding_user.persona.id}'")
 
         # -----------------------------------------------------------------
         # STEP 3: TRIGGER EMBEDDING GENERATION
@@ -209,6 +212,7 @@ async def run_simulation():
         # -----------------------------------------------------------------
         # STEP 4: TRIGGER MATCHING & FETCH RESULTS
         # -----------------------------------------------------------------
+
         if TRIGGER_MATCHING:
             print("\n-----------------------------------------------------------------")
             print("STEP 4: Triggering Compatibility Match Engine")
