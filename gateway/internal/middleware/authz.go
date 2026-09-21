@@ -4,6 +4,7 @@ package middleware
 
 import (
 	"net/http"
+	"os"
 
 	"gateway/internal/utils"
 )
@@ -11,7 +12,12 @@ import (
 func NewAuthZ() Middleware {
 	return utils.MiddlewareFunc(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// blank handler for now
+			disableAuth := os.Getenv("DISABLE_AUTH") == "true" || os.Getenv("DISABLE_AUTH") == "1"
+			if disableAuth {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			authCtx := r.Context().Value(utils.AuthContextKey)
 			if authCtx == nil {
 				http.Error(w, "authentication required, gw", http.StatusUnauthorized)
@@ -22,3 +28,4 @@ func NewAuthZ() Middleware {
 		})
 	})
 }
+

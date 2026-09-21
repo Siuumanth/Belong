@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from typing import Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
@@ -19,7 +20,24 @@ logger = logging.getLogger(__name__)
 def get_llm():
     """Factory function to get the configured LLM client."""
     provider = settings.LLM_PROVIDER.lower()
-    if provider == "google":
+    if provider == "groq":
+        api_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
+        try:
+            from langchain_groq import ChatGroq
+            return ChatGroq(
+                model=settings.LLM_MODEL,
+                temperature=settings.LLM_TEMPERATURE,
+                groq_api_key=api_key
+            )
+        except (ImportError, ModuleNotFoundError):
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(
+                model=settings.LLM_MODEL,
+                temperature=settings.LLM_TEMPERATURE,
+                api_key=api_key or "missing_key",
+                base_url="https://api.groq.com/openai/v1"
+            )
+    elif provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=settings.LLM_MODEL,
@@ -39,6 +57,7 @@ def get_llm():
         )
     else:
         raise ValueError(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
+
 
 def get_message_content(response: Any) -> str:
     """Safely extract string content from LangChain AI response object or list."""

@@ -14,7 +14,8 @@ import (
 )
 
 func main() {
-	godotenv.Load() // loads .env from root
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../.env")
 
 	fmt.Println("=========================================")
 	fmt.Println("       Starting Belong Auth Service       ")

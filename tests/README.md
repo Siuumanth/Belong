@@ -144,3 +144,23 @@ CLI script that runs full multi-turn onboarding dialogues for all synthetic pers
   ```bash
   python tests/run_onboarding_simulation.py
   ```
+
+---
+
+## 🔒 Gateway Authentication Bypass (`DISABLE_AUTH=true`)
+
+When testing through the **API Gateway** (port `9000`), JWT authentication can be temporarily bypassed by setting `DISABLE_AUTH=true`.
+
+1. **Enable in `.env` or Environment**:
+   ```env
+   DISABLE_AUTH=true
+   ```
+2. **Gateway Behavior with `DISABLE_AUTH=true`**:
+   - Skips JWT token signature verification.
+   - Allows unauthenticated calls to protected `/profiles`, `/onboarding`, and `/matches` routes.
+   - Preserves client-supplied `X-User-ID` headers so `UserSimulator` actors can simulate specific user IDs through the Gateway.
+3. **Run Simulation Tests through Gateway**:
+   ```bash
+   BELONG_API_URL=http://localhost:9000 pytest -m simulation -v
+   ```
+

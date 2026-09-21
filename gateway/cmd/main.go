@@ -30,12 +30,21 @@ func main() {
 	fmt.Println("=========================================")
 
 	metrics.Init()
-	godotenv.Load()
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load("../.env")
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "9000"
 	}
+
+	disableAuth := os.Getenv("DISABLE_AUTH") == "true" || os.Getenv("DISABLE_AUTH") == "1"
+	if disableAuth {
+		fmt.Println("[CONFIG] DISABLE_AUTH=true (Gateway JWT Verification Bypass ACTIVE)")
+	} else {
+		fmt.Println("[CONFIG] DISABLE_AUTH=false (JWT Authentication Enforced)")
+	}
+
 
 	rl := MW.NewBasicRateLimiter(100000, time.Minute)
 	authz := MW.NewAuthZ()

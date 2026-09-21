@@ -120,6 +120,7 @@ services:
       AUTH_POSTGRES_URL_DEV: postgres://${POSTGRES_USER:-belong_user}:${POSTGRES_PASSWORD:-belong_password}@postgres:5432/${POSTGRES_DB:-belong}?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-chubsmanprodude}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-5h}
+      DISABLE_AUTH: ${DISABLE_AUTH:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,11 +140,13 @@ services:
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://belong-auth:9001}
       BELONG_SERVICE_URL: ${BELONG_SERVICE_URL:-http://belong-api:8000}
       JWT_SECRET: ${JWT_SECRET:-chubsmanprodude}
+      DISABLE_AUTH: ${DISABLE_AUTH:-false}
     depends_on:
       auth:
         condition: service_started
       belong-api:
         condition: service_started
+
 
 volumes:
   postgres_data:

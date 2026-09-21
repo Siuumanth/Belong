@@ -20,6 +20,8 @@ func NewJWT() Middleware {
 	return utils.MiddlewareFunc(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+			disableAuth := os.Getenv("DISABLE_AUTH") == "true" || os.Getenv("DISABLE_AUTH") == "1"
+
 			// Extract the "Bearer" token from the request
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
@@ -29,6 +31,10 @@ func NewJWT() Middleware {
 
 			const prefix = "Bearer "
 			if !strings.HasPrefix(authHeader, prefix) {
+				if disableAuth {
+					next.ServeHTTP(w, r)
+					return
+				}
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return // invalid header format
 			}
@@ -37,6 +43,10 @@ func NewJWT() Middleware {
 			// now we decode jwt to check validity
 			jwtSecret := os.Getenv("JWT_SECRET")
 			if jwtSecret == "" {
+				if disableAuth {
+					next.ServeHTTP(w, r)
+					return
+				}
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -52,6 +62,11 @@ func NewJWT() Middleware {
 				return []byte(jwtSecret), nil
 			})
 			if err != nil {
+				if disableAuth {
+					zlog.L.Warn("JWT validation error ignored (DISABLE_AUTH=true)", zap.Error(err))
+					next.ServeHTTP(w, r)
+					return
+				}
 				zlog.L.Error("JWT middleware error", zap.Error(err))
 				switch {
 				case errors.Is(err, jwt.ErrTokenExpired):
