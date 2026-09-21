@@ -36,6 +36,7 @@ class StructuredProfileJSON(BaseModel):
 
 class ProfileCreate(BaseModel):
     user_id: UUID
+    name: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
     orientation: Optional[str] = None
@@ -50,6 +51,7 @@ class ProfileCreate(BaseModel):
     profile: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
     orientation: Optional[str] = None
@@ -65,6 +67,7 @@ class ProfileUpdate(BaseModel):
 
 class ProfileResponse(BaseModel):
     user_id: UUID
+    name: Optional[str] = None
     age: Optional[int] = None
     gender: Optional[str] = None
     orientation: Optional[str] = None
@@ -80,6 +83,7 @@ class ProfileResponse(BaseModel):
     extraction_version: str = "v1"
     created_at: datetime
     updated_at: datetime
+
 
     class Config:
         from_attributes = True

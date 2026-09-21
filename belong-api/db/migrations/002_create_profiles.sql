@@ -3,7 +3,9 @@
 
 CREATE TABLE IF NOT EXISTS profiles (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT,
     age INT,
+
     gender TEXT,
     orientation TEXT,
     latitude DOUBLE PRECISION,

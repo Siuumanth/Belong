@@ -5,7 +5,9 @@ from pydantic import BaseModel, Field
 class CandidateMatch(BaseModel):
     """Represents a retrieved candidate from Stage 1 retrieval."""
     user_id: UUID
+    name: Optional[str] = None
     age: Optional[int] = None
+
     gender: Optional[str] = None
     orientation: Optional[str] = None
     relationship_goal: Optional[str] = None

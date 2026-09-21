@@ -24,14 +24,17 @@ class PersonaConfig:
     def __init__(
         self,
         id: str,
+        name: Optional[str] = None,
         category: str = "custom",
         demographics: Optional[Dict[str, Any]] = None,
         question_responses: Optional[Dict[str, str]] = None,
         profile: Optional[Dict[str, Any]] = None,
     ):
         self.id = id
+        self.name = name
         self.category = category
         self.demographics = demographics or {
+            "name": name,
             "age": 28,
             "gender": "other",
             "orientation": "straight",
@@ -44,6 +47,8 @@ class PersonaConfig:
             "max_distance_km": 50,
             "required_relationship_goal": "long-term",
         }
+        if name and "name" not in self.demographics:
+            self.demographics["name"] = name
         self.question_responses = question_responses or {
             "q1_intent_partner": "Looking for a committed, communicative, long-term partner.",
             "q2_emotional_needs": "I value calm reassurance, active listening, and open vulnerability.",
@@ -57,13 +62,16 @@ class PersonaConfig:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PersonaConfig":
         """Instantiates a PersonaConfig from a dictionary (e.g. from personas.json)."""
+        demo = data.get("demographics", {})
         return cls(
             id=data.get("id", str(uuid4())),
+            name=data.get("name") or (demo.get("name") if isinstance(demo, dict) else None),
             category=data.get("category", "custom"),
-            demographics=data.get("demographics"),
+            demographics=demo,
             question_responses=data.get("question_responses"),
             profile=data.get("profile"),
         )
+
 
     @classmethod
     def builder(cls, persona_id: str) -> "PersonaBuilder":
@@ -86,6 +94,7 @@ class PersonaBuilder:
 
     def __init__(self, persona_id: str):
         self._id = persona_id
+        self._name: Optional[str] = None
         self._category = "custom"
         self._demographics: Dict[str, Any] = {
             "age": 28,
@@ -102,6 +111,11 @@ class PersonaBuilder:
         }
         self._responses: Dict[str, str] = {}
         self._profile: Dict[str, Any] = {}
+
+    def with_name(self, name: str) -> "PersonaBuilder":
+        self._name = name
+        self._demographics["name"] = name
+        return self
 
     def with_category(self, category: str) -> "PersonaBuilder":
         self._category = category
@@ -184,6 +198,7 @@ class PersonaBuilder:
 
         return PersonaConfig(
             id=self._id,
+            name=self._name,
             category=self._category,
             demographics=self._demographics,
             question_responses=merged_responses,
@@ -207,6 +222,7 @@ class UserSimulator:
         demo = self.persona.demographics
         return {
             "user_id": self.user_id,
+            "name": self.persona.name or demo.get("name"),
             "age": demo.get("age", 25),
             "gender": demo.get("gender", "other"),
             "orientation": demo.get("orientation", "straight"),

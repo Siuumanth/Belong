@@ -12,17 +12,17 @@ class ProfileRepository:
             async with conn.cursor(row_factory=dict_row) as cur:
                 query = """
                     INSERT INTO profiles (
-                        user_id, age, gender, orientation, latitude, longitude,
+                        user_id, name, age, gender, orientation, latitude, longitude,
                         relationship_goal, preferred_age_min, preferred_age_max,
                         max_distance_km, preferred_genders, required_relationship_goal,
                         profile
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s,
                         %s, %s, %s,
                         %s
                     )
-                    RETURNING user_id, age, gender, orientation, latitude, longitude,
+                    RETURNING user_id, name, age, gender, orientation, latitude, longitude,
                               relationship_goal, preferred_age_min, preferred_age_max,
                               max_distance_km, preferred_genders, required_relationship_goal,
                               profile, extraction_version, created_at, updated_at;
@@ -31,6 +31,7 @@ class ProfileRepository:
                     query,
                     (
                         str(data.user_id),
+                        data.name,
                         data.age,
                         data.gender,
                         data.orientation,
@@ -54,7 +55,7 @@ class ProfileRepository:
         async with get_db_connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
                 query = """
-                    SELECT user_id, age, gender, orientation, latitude, longitude,
+                    SELECT user_id, name, age, gender, orientation, latitude, longitude,
                            relationship_goal, preferred_age_min, preferred_age_max,
                            max_distance_km, preferred_genders, required_relationship_goal,
                            profile, extraction_version, created_at, updated_at
@@ -74,6 +75,7 @@ class ProfileRepository:
         
         # Explicit field mapping
         fields = [
+            ("name", patch.name),
             ("age", patch.age),
             ("gender", patch.gender),
             ("orientation", patch.orientation),
@@ -110,7 +112,7 @@ class ProfileRepository:
             UPDATE profiles
             SET {set_clause}
             WHERE user_id = %s
-            RETURNING user_id, age, gender, orientation, latitude, longitude,
+            RETURNING user_id, name, age, gender, orientation, latitude, longitude,
                       relationship_goal, preferred_age_min, preferred_age_max,
                       max_distance_km, preferred_genders, required_relationship_goal,
                       profile, extraction_version, created_at, updated_at;
@@ -124,6 +126,7 @@ class ProfileRepository:
                 if not row:
                     return None
                 return ProfileResponse(**row)
+
 
     @staticmethod
     async def update_profile_embeddings(

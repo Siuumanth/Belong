@@ -164,7 +164,7 @@ class CandidateRetriever:
                 where_clause = " AND ".join(conditions)
 
                 retrieval_query = f"""
-                    SELECT p.user_id, p.age, p.gender, p.orientation, p.relationship_goal,
+                    SELECT p.user_id, p.name, p.age, p.gender, p.orientation, p.relationship_goal,
                            p.latitude, p.longitude, p.profile,
                            {haversine_sql} AS distance_km,
                            (p.self_embedding <=> %(wants_vec)s::vector) AS cosine_distance,
@@ -199,8 +199,10 @@ class CandidateRetriever:
 
             candidates.append(CandidateMatch(
                 user_id=UUID(str(row["user_id"])),
+                name=row.get("name"),
                 age=row.get("age"),
                 gender=row.get("gender"),
+
                 orientation=row.get("orientation"),
                 relationship_goal=row.get("relationship_goal"),
                 latitude=row.get("latitude"),

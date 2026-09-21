@@ -63,6 +63,7 @@ POLL_TIMEOUT_SECS = 90      # Max seconds to wait for matching job to finish
 # USER 1: Custom Persona
 USER_1_CONFIG = (
     PersonaConfig.builder("custom_user_alice")
+    .with_name("Alice")
     .with_category("test_custom")
     .with_age(28, preferred_min=24, preferred_max=35)
     .with_gender("female", preferred_genders=["male"])
@@ -82,6 +83,7 @@ USER_1_CONFIG = (
 # USER 2: Custom Candidate Persona
 USER_2_CONFIG = (
     PersonaConfig.builder("custom_user_bob")
+    .with_name("Bob")
     .with_category("test_custom")
     .with_age(30, preferred_min=23, preferred_max=32)
     .with_gender("male", preferred_genders=["female"])
