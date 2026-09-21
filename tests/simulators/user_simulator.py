@@ -303,7 +303,7 @@ class UserSimulator:
 
             reply_data = msg_res.json()
             conv_status = reply_data.get("status", "active")
-            await asyncio.sleep(1.5)
+            await asyncio.sleep(4.0)
 
         self.status = conv_status
 

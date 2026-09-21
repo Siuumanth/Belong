@@ -184,15 +184,15 @@ async def run_simulation():
         # -----------------------------------------------------------------
         if RUN_ONBOARDING:
             print("\n-----------------------------------------------------------------")
-            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (Alice Only)")
+            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (All Users)")
             print("-----------------------------------------------------------------")
-            target_onboarding_user = sim_user_1
-            logger.info(f"Starting conversational onboarding for '{target_onboarding_user.persona.id}'...")
-            ok = await target_onboarding_user.run_onboarding_async(client)
-            if ok:
-                logger.info(f"✅ Onboarding finished for '{target_onboarding_user.persona.id}' (Status: {target_onboarding_user.status})")
-            else:
-                logger.error(f"❌ Onboarding failed/incomplete for '{target_onboarding_user.persona.id}'")
+            for user in users:
+                logger.info(f"Starting conversational onboarding for '{user.persona.id}'...")
+                ok = await user.run_onboarding_async(client)
+                if ok:
+                    logger.info(f"✅ Onboarding finished for '{user.persona.id}' (Status: {user.status})")
+                else:
+                    logger.error(f"❌ Onboarding failed/incomplete for '{user.persona.id}'")
 
         # -----------------------------------------------------------------
         # STEP 3: TRIGGER EMBEDDING GENERATION
