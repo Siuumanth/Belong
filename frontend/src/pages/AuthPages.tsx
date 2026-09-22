@@ -41,9 +41,9 @@ export function LoginPage() {
           {busy ? "Signing in…" : "Sign in"}
         </Button>
       </form>
-      <p className="mt-6 text-sm text-zinc-500">
+      <p className="mt-6 text-sm text-slate-500">
         New here?{" "}
-        <Link className="text-gold hover:underline" to="/signup">
+        <Link className="text-blue hover:underline" to="/signup">
           Create an account
         </Link>
       </p>
@@ -77,22 +77,22 @@ export function SignupPage() {
     <AuthShell title="Join Belong" subtitle="A few details, then we learn who you are.">
       <form className="space-y-4" onSubmit={onSubmit}>
         <Field label="Username">
-          <input className={inputClass} value={username} onChange={(e) => setUsername(e.target.value)} required />
+          <input className={inputClass} type="text" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
         </Field>
         <Field label="Email">
-          <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input className={inputClass} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </Field>
         <Field label="Password">
-          <input className={inputClass} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input className={inputClass} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </Field>
         <ErrorText message={error} />
         <Button type="submit" disabled={busy}>
           {busy ? "Creating…" : "Create account"}
         </Button>
       </form>
-      <p className="mt-6 text-sm text-zinc-500">
+      <p className="mt-6 text-sm text-slate-500">
         Already have an account?{" "}
-        <Link className="text-gold hover:underline" to="/login">
+        <Link className="text-blue hover:underline" to="/login">
           Sign in
         </Link>
       </p>

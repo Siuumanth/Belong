@@ -41,8 +41,8 @@ function GenderChips({
             onClick={() => toggle(g)}
             className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
               active
-                ? "border-gold bg-gold/15 text-gold"
-                : "border-line text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+                ? "border-blue bg-blue/15 text-blue"
+                : "border-line text-slate-500 hover:border-zinc-500 hover:text-slate-300"
             }`}
           >
             {g}
@@ -89,7 +89,7 @@ function GeoButton({
         type="button"
         disabled={busy || loading}
         onClick={locate}
-        className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-zinc-400 hover:border-gold/40 hover:text-gold disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-slate-400 hover:border-blue/40 hover:text-blue disabled:opacity-50"
       >
         <svg
           className={loading ? "animate-spin" : ""}
@@ -122,7 +122,7 @@ function Section({
 }) {
   return (
     <div>
-      <p className="mb-3 text-xs uppercase tracking-widest text-zinc-600">
+      <p className="mb-3 text-xs uppercase tracking-widest text-slate-600">
         {title}
       </p>
       <div className="rounded-2xl border border-line bg-panel p-5">
@@ -201,7 +201,7 @@ export function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex h-40 items-center justify-center text-zinc-600 text-sm">
+      <div className="flex h-40 items-center justify-center text-slate-600 text-sm">
         Loading profile…
       </div>
     );
@@ -216,7 +216,7 @@ export function ProfilePage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl">Your profile</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             Hard filters used for retrieval. Your personality comes from the conversation.
           </p>
         </div>
@@ -224,7 +224,7 @@ export function ProfilePage() {
           <button
             type="button"
             onClick={() => navigate("/onboarding")}
-            className="shrink-0 rounded-full border border-gold/40 px-4 py-1.5 text-sm text-gold hover:bg-gold/10"
+            className="shrink-0 rounded-full border border-blue/40 px-4 py-1.5 text-sm text-blue hover:bg-blue/10"
           >
             Start onboarding →
           </button>
@@ -331,9 +331,9 @@ export function ProfilePage() {
                   step={5}
                   value={form.max_distance_km ?? 25}
                   onChange={(e) => set("max_distance_km", Number(e.target.value))}
-                  style={{ accentColor: "var(--color-gold)" }}
+                  style={{ accentColor: "var(--color-blue)" }}
                 />
-                <span className="w-16 shrink-0 text-right text-sm text-zinc-300">
+                <span className="w-16 shrink-0 text-right text-sm text-slate-300">
                   {form.max_distance_km ?? 25} km
                 </span>
               </div>
@@ -390,7 +390,7 @@ export function ProfilePage() {
           <button
             type="submit"
             disabled={busy}
-            className="rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink hover:bg-[#e0b88a] disabled:opacity-50"
+            className="rounded-full bg-blue px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-dim disabled:opacity-50"
           >
             {busy ? "Saving…" : existing ? "Update profile" : "Create profile"}
           </button>
@@ -401,7 +401,7 @@ export function ProfilePage() {
                 void navigator.clipboard.writeText(userId);
                 setNotice("User ID copied.");
               }}
-              className="rounded-full border border-line px-4 py-2 text-sm text-zinc-400 hover:border-gold/40 hover:text-gold"
+              className="rounded-full border border-line px-4 py-2 text-sm text-slate-400 hover:border-blue/40 hover:text-blue"
             >
               Copy user ID
             </button>
@@ -416,10 +416,10 @@ export function ProfilePage() {
       {/* Extracted signals */}
       {hasSignals && (
         <Section title="Extracted signals">
-          <p className="mb-3 text-xs text-zinc-500">
+          <p className="mb-3 text-xs text-slate-500">
             Built from your onboarding conversation.
           </p>
-          <pre className="overflow-auto rounded-lg bg-ink p-4 text-xs leading-relaxed text-zinc-400">
+          <pre className="overflow-auto rounded-lg bg-ink p-4 text-xs leading-relaxed text-slate-400">
             {JSON.stringify(existing!.profile, null, 2)}
           </pre>
         </Section>

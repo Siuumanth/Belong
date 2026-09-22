@@ -7,11 +7,37 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/auth": { target: "http://localhost:9000", changeOrigin: true },
-      "/profiles": { target: "http://localhost:9000", changeOrigin: true },
-      "/onboarding": { target: "http://localhost:9000", changeOrigin: true },
-      "/matches": { target: "http://localhost:9000", changeOrigin: true },
-      "/health": { target: "http://localhost:9000", changeOrigin: true },
+      // Auth service: Go on :9001 — strip the /auth prefix
+      "/auth": {
+        target: "http://localhost:9001",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/auth/, ""),
+      },
+      // Python API: FastAPI on :8000 — strip the leading slash and let /api prefix through
+      "/profiles": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => `/api${path}`,
+      },
+      "/onboarding": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => `/api${path}`,
+      },
+      "/matches": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => `/api${path}`,
+      },
+      "/embeddings": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => `/api${path}`,
+      },
+      "/health": {
+        target: "http://localhost:9001",
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -16,7 +16,7 @@ const VERDICT_STYLES: Record<string, { dot: string; label: string; text: string 
     text: "Partial alignment",
   },
   conflict: { dot: "bg-rose-400", label: "text-rose-400", text: "Conflict" },
-  unclear: { dot: "bg-zinc-500", label: "text-zinc-500", text: "Unclear" },
+  unclear: { dot: "bg-zinc-500", label: "text-slate-500", text: "Unclear" },
 };
 
 function verdictStyle(v?: string) {
@@ -24,7 +24,7 @@ function verdictStyle(v?: string) {
   return (
     VERDICT_STYLES[key] ?? {
       dot: "bg-zinc-500",
-      label: "text-zinc-500",
+      label: "text-slate-500",
       text: v ?? "unclear",
     }
   );
@@ -50,13 +50,13 @@ function DimensionRow({
         className="flex w-full items-center gap-3 px-4 py-3 text-left"
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${style.dot}`} />
-        <span className="flex-1 text-sm capitalize text-zinc-200">
+        <span className="flex-1 text-sm capitalize text-slate-200">
           {name.replaceAll("_", " ")}
         </span>
         <span className={`text-xs ${style.label}`}>{style.text}</span>
         {hasEvidence && (
           <svg
-            className={`h-3.5 w-3.5 shrink-0 text-zinc-600 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`h-3.5 w-3.5 shrink-0 text-slate-600 transition-transform ${open ? "rotate-180" : ""}`}
             viewBox="0 0 12 12"
             fill="none"
             stroke="currentColor"
@@ -67,15 +67,15 @@ function DimensionRow({
         )}
       </button>
       {open && hasEvidence && (
-        <div className="border-t border-line/40 px-4 py-3 space-y-2 text-xs text-zinc-500">
+        <div className="border-t border-line/40 px-4 py-3 space-y-2 text-xs text-slate-500">
           {result.evidence_a && (
             <p>
-              <span className="text-zinc-400">You: </span>"{result.evidence_a}"
+              <span className="text-slate-400">You: </span>"{result.evidence_a}"
             </p>
           )}
           {result.evidence_b && (
             <p>
-              <span className="text-zinc-400">Them: </span>"{result.evidence_b}"
+              <span className="text-slate-400">Them: </span>"{result.evidence_b}"
             </p>
           )}
         </div>
@@ -102,7 +102,7 @@ function TagList({
         {items.map((item) => (
           <span
             key={item}
-            className="rounded-full border border-line px-3 py-1 text-xs text-zinc-400"
+            className="rounded-full border border-line px-3 py-1 text-xs text-slate-400"
           >
             {item}
           </span>
@@ -142,8 +142,8 @@ function MatchCard({ match, index }: { match: MatchResultItem; index: number }) 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wide text-zinc-500">Match</p>
-          <p className="mt-1 font-mono text-xs text-zinc-600 break-all">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Match</p>
+          <p className="mt-1 font-mono text-xs text-slate-600 break-all">
             {match.candidate_id}
           </p>
         </div>
@@ -190,7 +190,7 @@ function MatchCard({ match, index }: { match: MatchResultItem; index: number }) 
       <TagList
         label="Needs more info"
         items={match.uncertainties}
-        tone="text-zinc-500"
+        tone="text-slate-500"
       />
     </article>
   );
@@ -225,14 +225,14 @@ function WaitScreen({ jobStatus }: { jobStatus: string }) {
     <div className="flex flex-col items-center justify-center gap-6 py-20 text-center">
       {/* Pulsing ring */}
       <div className="relative flex h-16 w-16 items-center justify-center">
-        <div className="absolute inset-0 animate-ping rounded-full bg-gold/20" />
-        <div className="relative h-10 w-10 rounded-full bg-gold/30 flex items-center justify-center text-gold text-lg">
+        <div className="absolute inset-0 animate-ping rounded-full bg-blue/20" />
+        <div className="relative h-10 w-10 rounded-full bg-blue/30 flex items-center justify-center text-blue text-lg">
           ✦
         </div>
       </div>
       <div>
-        <p className="font-display text-xl text-gold">Finding your matches</p>
-        <p className="mt-2 h-5 text-sm text-zinc-500 transition-all duration-300">
+        <p className="font-display text-xl text-blue">Finding your matches</p>
+        <p className="mt-2 h-5 text-sm text-slate-500 transition-all duration-300">
           {label}
         </p>
       </div>
@@ -308,7 +308,7 @@ export function MatchesPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl">Matches</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             Hard filters → vector recall → pairwise reasoning. No fake scores.
           </p>
         </div>
@@ -316,7 +316,7 @@ export function MatchesPage() {
           type="button"
           onClick={runMatch}
           disabled={isPolling}
-          className="rounded-full bg-gold px-5 py-2 text-sm font-medium text-ink hover:bg-[#e0b88a] disabled:opacity-50"
+          className="rounded-full bg-blue px-5 py-2 text-sm font-medium text-white hover:bg-blue-dim disabled:opacity-50"
         >
           {isPolling ? "Running…" : matches.length > 0 ? "Refresh matches" : "Find matches"}
         </button>
@@ -333,10 +333,10 @@ export function MatchesPage() {
       {/* Empty state */}
       {!isPolling && hasLoaded && matches.length === 0 && (
         <div className="rounded-2xl border border-dashed border-line p-12 text-center">
-          <p className="text-zinc-500">No matches yet.</p>
-          <p className="mt-1 text-sm text-zinc-600">
+          <p className="text-slate-500">No matches yet.</p>
+          <p className="mt-1 text-sm text-slate-600">
             Complete your profile and onboarding first, then hit{" "}
-            <span className="text-zinc-400">Find matches</span>.
+            <span className="text-slate-400">Find matches</span>.
           </p>
         </div>
       )}

@@ -33,6 +33,11 @@ func main() {
 	}
 	fmt.Println("[OK] Connected to PostgreSQL Database.")
 
+	if err := database.RunMigrations(db); err != nil {
+		fmt.Printf("[ERROR] Migrations Failed: %v\n", err)
+		panic(err)
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "9001"

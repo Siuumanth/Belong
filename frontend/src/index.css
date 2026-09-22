@@ -3,11 +3,16 @@
 @theme {
   --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --color-ink: #0c0b0a;
-  --color-panel: #161412;
-  --color-line: #2a2622;
-  --color-gold: #d4a574;
-  --color-gold-dim: #8a6a45;
+
+  /* Base surfaces — deep navy */
+  --color-ink:   #0b0f1a;
+  --color-panel: #111827;
+  --color-line:  #1e2d45;
+
+  /* Brand blue — sampled from logo */
+  --color-blue:      #2952e3;
+  --color-blue-dim:  #1a3aad;
+  --color-blue-soft: #2952e320;
 }
 
 html,
@@ -19,7 +24,7 @@ body,
 body {
   margin: 0;
   background: var(--color-ink);
-  color: #f4efe8;
+  color: #e8edf8;
   font-family: var(--font-sans);
 }
 

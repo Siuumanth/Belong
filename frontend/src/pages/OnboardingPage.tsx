@@ -34,15 +34,15 @@ function Bubble({ msg, visible }: { msg: ChatMessage; visible: boolean }) {
       } ${isUser ? "justify-end" : "justify-start"}`}
     >
       {!isUser && (
-        <div className="mr-2 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold/20 text-xs text-gold">
+        <div className="mr-2 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue/20 text-xs text-blue">
           B
         </div>
       )}
       <div
         className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
           isUser
-            ? "rounded-br-sm bg-gold/20 text-zinc-100"
-            : "rounded-bl-sm bg-[#1e1b18] text-zinc-200"
+            ? "rounded-br-sm bg-blue/20 text-slate-100"
+            : "rounded-bl-sm bg-[#131c2e] text-slate-200"
         }`}
       >
         {msg.content}
@@ -59,7 +59,7 @@ function ProgressBar({ count }: { count: number }) {
   return (
     <div className="h-0.5 w-full bg-line">
       <div
-        className="h-full bg-gold/60 transition-all duration-700"
+        className="h-full bg-blue/60 transition-all duration-700"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -70,12 +70,12 @@ function ProgressBar({ count }: { count: number }) {
 function CompletionScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gold/15 text-3xl">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue/15 text-3xl">
         ✦
       </div>
       <div>
-        <h2 className="font-display text-2xl text-gold">You're all set</h2>
-        <p className="mt-2 max-w-xs text-sm text-zinc-400">
+        <h2 className="font-display text-2xl text-blue">You're all set</h2>
+        <p className="mt-2 max-w-xs text-sm text-slate-400">
           Your signals have been captured. We're building your compatibility
           profile now.
         </p>
@@ -83,7 +83,7 @@ function CompletionScreen({ onContinue }: { onContinue: () => void }) {
       <button
         type="button"
         onClick={onContinue}
-        className="rounded-full bg-gold px-6 py-2.5 text-sm font-medium text-ink hover:bg-[#e0b88a]"
+        className="rounded-full bg-blue px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-dim"
       >
         See my matches →
       </button>
@@ -228,8 +228,8 @@ export function OnboardingPage() {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center gap-8 text-center">
         <div>
-          <p className="font-display text-4xl text-gold">Let's get to know you</p>
-          <p className="mt-3 max-w-sm text-sm text-zinc-400">
+          <p className="font-display text-4xl text-blue">Let's get to know you</p>
+          <p className="mt-3 max-w-sm text-sm text-slate-400">
             A short conversation — six topics, no checklists. Just tell us
             what's true for you.
           </p>
@@ -239,7 +239,7 @@ export function OnboardingPage() {
           type="button"
           onClick={startSession}
           disabled={busy}
-          className="rounded-full bg-gold px-8 py-3 text-sm font-medium text-ink hover:bg-[#e0b88a] disabled:opacity-50"
+          className="rounded-full bg-blue px-8 py-3 text-sm font-medium text-white hover:bg-blue-dim disabled:opacity-50"
         >
           {busy ? "Starting…" : "Begin conversation"}
         </button>
@@ -261,13 +261,13 @@ export function OnboardingPage() {
     <div className="mx-auto flex max-w-xl flex-col" style={{ height: "calc(100vh - 80px)" }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-1 pb-3">
-        <p className="text-xs uppercase tracking-widest text-zinc-500">
+        <p className="text-xs uppercase tracking-widest text-slate-500">
           Getting to know you
         </p>
         <button
           type="button"
           onClick={resetSession}
-          className="text-xs text-zinc-600 hover:text-zinc-400"
+          className="text-xs text-slate-600 hover:text-slate-400"
         >
           Start over
         </button>
@@ -283,10 +283,10 @@ export function OnboardingPage() {
         ))}
         {typing && (
           <div className="flex justify-start">
-            <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold/20 text-xs text-gold">
+            <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue/20 text-xs text-blue">
               B
             </div>
-            <div className="rounded-2xl rounded-bl-sm bg-[#1e1b18]">
+            <div className="rounded-2xl rounded-bl-sm bg-[#131c2e]">
               <TypingIndicator />
             </div>
           </div>
@@ -301,7 +301,7 @@ export function OnboardingPage() {
           <textarea
             ref={inputRef}
             rows={2}
-            className="flex-1 resize-none rounded-2xl border border-line bg-[#1a1714] px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-gold/40"
+            className="flex-1 resize-none rounded-2xl border border-line bg-[#0f1729] px-4 py-3 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-blue/40"
             placeholder="Answer in your own words…"
             value={draft}
             disabled={busy}
@@ -316,7 +316,7 @@ export function OnboardingPage() {
           <button
             type="submit"
             disabled={busy || !draft.trim()}
-            className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold text-ink hover:bg-[#e0b88a] disabled:opacity-40"
+            className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue text-white hover:bg-blue-dim disabled:opacity-40"
             aria-label="Send"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -324,7 +324,7 @@ export function OnboardingPage() {
             </svg>
           </button>
         </form>
-        <p className="mt-2 text-center text-xs text-zinc-600">
+        <p className="mt-2 text-center text-xs text-slate-600">
           Enter to send · Shift+Enter for new line
         </p>
       </div>
