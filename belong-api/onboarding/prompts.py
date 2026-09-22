@@ -74,6 +74,30 @@ EMOTIONAL_NEEDS:
 STRICT RULE ON EMPTY CATEGORIES:
 Do NOT move information into another category simply because the intended target field is empty. Empty fields are valid.
 
+CONFIDENCE CALIBRATION RUBRIC:
+Confidence must reflect how strongly the user's actual words support the extracted signal.
+Do NOT default to 0.95 for everything. Apply these bands:
+
+  0.95–1.00 → Explicitly stated, almost word-for-word
+  0.75–0.94 → Strongly supported, minor interpretation required
+  0.50–0.74 → Reasonable inference from context
+  0.25–0.49 → Weak inference — normally should NOT be extracted
+  < 0.25    → Insufficient evidence — do NOT create the signal
+
+CALIBRATION EXAMPLES:
+- "Honesty is one of the most important things to me." → label: "Values honesty", confidence: 0.99, evidence_type: "explicit"
+- "I don't tolerate dishonesty." → label: "Values honesty", confidence: 0.80, evidence_type: "strong_inference"
+  (inferred from a dealbreaker statement, not a direct value claim)
+- "I like hiking." → label: "Enjoys hiking", confidence: 0.99, evidence_type: "explicit"
+  DO NOT extract: label "Values an active lifestyle", confidence: 0.95 — that is an invention
+- "I'm generally a calm person." → label: "Calm personality", confidence: 0.90, evidence_type: "explicit"
+  DO NOT put in self.provides — they did not say they bring this to a partner
+
+EVIDENCE TYPE RULES:
+- "explicit"         → user directly stated this in their own words
+- "strong_inference" → clearly implied by what they said, minor interpretation
+- "weak_inference"   → loose inference; do not use for strong compatibility claims
+
 INSTRUCTIONS:
 1. ONLY extract signals that are EXPLICITLY stated or directly implied by the user's text. DO NOT invent or assume traits.
 2. Return a JSON object where keys correspond to the target path (e.g., "self.emotional_needs", "wants.partner_traits", "constraints.dealbreakers").
@@ -83,7 +107,8 @@ INSTRUCTIONS:
    - "summary": 1 sentence explanation of what they expressed
    - "quote": Exact short excerpt from their response as evidence
    - "question_id": "{question_id}"
-   - "confidence": Float between 0.8 and 1.0
+   - "confidence": Float using the calibration rubric above (do NOT default to 0.95)
+   - "evidence_type": One of "explicit", "strong_inference", or "weak_inference"
 
 FORMAT YOUR OUTPUT EXACTLY AS A JSON OBJECT:
 {{
@@ -94,7 +119,8 @@ FORMAT YOUR OUTPUT EXACTLY AS A JSON OBJECT:
       "summary": "...",
       "quote": "...",
       "question_id": "{question_id}",
-      "confidence": 0.95
+      "confidence": 0.95,
+      "evidence_type": "explicit"
     }}
   ]
 }}

@@ -159,16 +159,30 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
             field_path = item.get("target_field")
             if not field_path:
                 continue
-            
+
+            evidence_type = item.get("evidence_type", "explicit")
+            confidence = item.get("confidence", 0.9)
+
+            # Skip signals with insufficient evidence entirely
+            if confidence < 0.25:
+                logger.debug(f"Dropping signal for {field_path} — confidence {confidence} below threshold")
+                continue
+
             if field_path not in extracted_signals:
                 extracted_signals[field_path] = []
-            
+
+            # Deterministic signal ID: {topic_id}_{field_abbrev}_{index}
+            field_abbrev = field_path.replace(".", "_").replace("self_", "s_").replace("wants_", "w_").replace("constraints_", "c_")
+            signal_id = f"{topic_id}_{field_abbrev}_{len(extracted_signals[field_path]):02d}"
+
             extracted_signals[field_path].append({
+                "id": signal_id,
                 "label": item.get("label", ""),
                 "summary": item.get("summary", ""),
                 "quote": item.get("quote", ""),
                 "question_id": item.get("question_id", topic_id),
-                "confidence": item.get("confidence", 0.9)
+                "confidence": confidence,
+                "evidence_type": evidence_type,
             })
 
     except Exception as e:

@@ -7,7 +7,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
 from config import settings
-from matching.schemas import PairwiseCompatibilityOutput
+from matching.schemas import PairwiseCompatibilityOutput, DimensionDetail
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +82,29 @@ def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
         logger.error(f"Error during pairwise LLM reasoning: {e}", exc_info=True)
         return {"parsed_output": None, "error": str(e)}
 
+def _build_signal_index(profile: Dict[str, Any]) -> Dict[str, str]:
+    """Build a flat {signal_id: quote} index from a structured profile dict.
+    
+    Walks all fields in 'self', 'wants', and 'constraints' and indexes each
+    signal by its 'id' field so the reasoning model's ID citations can be resolved
+    to actual user quotes without regenerating evidence strings.
+    """
+    index: Dict[str, str] = {}
+    for section in ("self", "wants", "constraints"):
+        section_data = profile.get(section, {})
+        if not isinstance(section_data, dict):
+            continue
+        for field_signals in section_data.values():
+            if not isinstance(field_signals, list):
+                continue
+            for signal in field_signals:
+                if isinstance(signal, dict) and "id" in signal:
+                    index[signal["id"]] = signal.get("quote", signal.get("label", ""))
+    return index
+
+
 def validation_node(state: PairwiseState) -> Dict[str, Any]:
-    """Node 3: Validates and ensures verdict consistency."""
+    """Node 3: Validates verdict consistency and resolves evidence IDs to actual quotes."""
     parsed = state.get("parsed_output")
     if not parsed:
         return {"error": state.get("error") or "Failed to parse structured compatibility output."}
@@ -93,7 +114,24 @@ def validation_node(state: PairwiseState) -> Dict[str, Any]:
         logger.warning(f"Normalizing unrecognized overall verdict '{parsed.overall_verdict}' to 'unclear'")
         parsed.overall_verdict = "unclear"
 
-    return {"parsed_output": parsed}
+    # Build signal index for both users so we can resolve ID citations → actual quotes
+    index_a = _build_signal_index(state.get("user_a_profile", {}))
+    index_b = _build_signal_index(state.get("user_b_profile", {}))
+
+    # Attach resolved quotes to state for downstream display (not mutating the Pydantic model)
+    resolved_evidence: Dict[str, Any] = {}
+    for dim_name in ("emotional_needs", "core_values", "lifestyle", "conflict_style"):
+        dim: Optional[DimensionDetail] = getattr(parsed.dimension_results, dim_name, None)
+        if dim is None:
+            continue
+        resolved_evidence[dim_name] = {
+            "verdict": dim.verdict,
+            "reasoning": dim.reasoning,
+            "evidence_a": [{"id": sid, "quote": index_a.get(sid, f"[ID {sid} not found]")} for sid in dim.evidence_a_ids],
+            "evidence_b": [{"id": sid, "quote": index_b.get(sid, f"[ID {sid} not found]")} for sid in dim.evidence_b_ids],
+        }
+
+    return {"parsed_output": parsed, "resolved_evidence": resolved_evidence}
 
 # --- Build LangGraph Workflow ---
 

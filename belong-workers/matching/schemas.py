@@ -35,18 +35,27 @@ class RetrievalOptions(BaseModel):
     require_mutual_relationship_goal: bool = True
 
 class DimensionDetail(BaseModel):
-    """Specific evidence and verdict for a single compatibility dimension."""
+    """Specific evidence and verdict for a single compatibility dimension.
+    
+    Evidence is referenced by signal IDs (the 'id' field on each extracted signal),
+    NOT by free-text strings. This prevents the reasoning model from hallucinating
+    new facts about a user. The application resolves IDs to actual quotes.
+    """
     verdict: str = Field(
         ..., 
         description="Verdict for this dimension: 'strong_alignment', 'partial_alignment', 'unclear', or 'conflict'"
     )
-    evidence_a: str = Field(
-        ..., 
-        description="Direct quote or explicit evidence extracted from User A's profile."
+    evidence_a_ids: List[str] = Field(
+        default_factory=list,
+        description="Signal IDs from User A's profile that support this verdict (e.g. ['q2_emotional_needs_s_emotional_needs_00'])."
     )
-    evidence_b: str = Field(
-        ..., 
-        description="Direct quote or explicit evidence extracted from User B's profile."
+    evidence_b_ids: List[str] = Field(
+        default_factory=list,
+        description="Signal IDs from User B's profile that support this verdict."
+    )
+    reasoning: str = Field(
+        ...,
+        description="1-2 sentence explanation of the verdict based only on the cited signal IDs."
     )
 
 class DimensionResults(BaseModel):
@@ -63,7 +72,18 @@ class PairwiseCompatibilityOutput(BaseModel):
         description="Overall verdict: 'strong_alignment', 'partial_alignment', 'unclear', or 'conflict'"
     )
     dimension_results: DimensionResults
-    strong_alignments: List[str] = Field(default_factory=list, description="Key areas of mutual resonance")
+    complementary_alignments: List[str] = Field(
+        default_factory=list,
+        description="Areas where A's needs/wants are met by B's self (and/or vice versa). This is reciprocal fulfillment — the core product signal."
+    )
+    shared_alignments: List[str] = Field(
+        default_factory=list,
+        description="Areas where both users independently want or value the same thing (similarity, not complementarity)."
+    )
     potential_conflicts: List[str] = Field(default_factory=list, description="Areas of friction or misalignment")
     dealbreaker_violations: List[str] = Field(default_factory=list, description="Hard constraints or dealbreakers triggered")
     uncertainties: List[str] = Field(default_factory=list, description="Areas where info was insufficient to evaluate")
+    reciprocity_score: float = Field(
+        default=0.0,
+        description="0.0–1.0 estimate of how well both partners' needs are mutually fulfilled by the other's self. 1.0 = both directions fully satisfied."
+    )
