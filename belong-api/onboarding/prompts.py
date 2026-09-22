@@ -26,10 +26,59 @@ TARGET DIMENSIONS TO EXTRACT FOR THIS TOPIC ({topic_id}):
 USER RESPONSE:
 "{latest_user_input}"
 
+CATEGORY CLASSIFICATION CONTRACT & RULES:
+- `self.values`: Person explicitly states principles, ethics, or moral stances important to them. (DO NOT put hobbies/activities here)
+- `self.lifestyle`: How they live, daily routines, habits, work-life structure. (DO NOT put one-off hobbies here)
+- `self.interests`: Things they enjoy doing, hobbies, passions. (DO NOT put general personality traits here)
+- `self.life_goals`: Future aspirations, career/family plans. (DO NOT put current relationship preferences here)
+- `self.provides`: What they EXPLICITLY state they bring, give, or contribute to a partner in a relationship. (DO NOT put traits that merely describe themselves)
+- `self.conflict_style`: How they handle disagreements, arguments, or communication under tension. (DO NOT put general personality here)
+- `self.emotional_needs`: What THEY NEED FROM A PARTNER during stress or vulnerability. (DO NOT put what they provide here)
+- `wants.partner_traits`: Desired qualities, personality, or behavioral traits in a partner. (DO NOT put their own traits here)
+
+CRUCIAL SEMANTIC DISTINCTIONS:
+- "I am calm and dependable" -> self.personality_signals
+- "I bring stability and reassurance to a relationship" -> self.provides
+- "I enjoy hiking" -> self.interests
+- "I value an active lifestyle" -> self.lifestyle or self.values (depending on wording)
+
+CATEGORY DISAMBIGUATION EXAMPLES:
+
+VALUES:
+- "Honesty and open communication are non-negotiable for me." -> self.values
+- "I like hiking." -> NOT self.values (put in self.interests)
+
+LIFESTYLE:
+- "I run every morning and cook most of my meals at home." -> self.lifestyle
+- "I prefer an active lifestyle." -> self.lifestyle
+- "I enjoy hiking on weekends." -> self.interests
+
+INTERESTS:
+- "I enjoy hiking, photography and specialty coffee." -> self.interests
+
+LIFE_GOALS:
+- "I want to eventually start my own company and raise a family." -> self.life_goals
+- "I hope to travel extensively in the next few years." -> self.life_goals
+
+PROVIDES:
+- "I'm supportive when my partner is stressed." -> self.provides
+- "I bring patience and emotional stability to a relationship." -> self.provides
+- "I'm calm and dependable." -> self.personality_signals (NOT self.provides unless explicitly framed as what they bring to a partner)
+
+CONFLICT_STYLE:
+- "I listen before responding and try to find practical solutions." -> self.conflict_style
+
+EMOTIONAL_NEEDS:
+- "I need reassurance and space to process when I'm overwhelmed." -> self.emotional_needs
+
+STRICT RULE ON EMPTY CATEGORIES:
+Do NOT move information into another category simply because the intended target field is empty. Empty fields are valid.
+
 INSTRUCTIONS:
 1. ONLY extract signals that are EXPLICITLY stated or directly implied by the user's text. DO NOT invent or assume traits.
 2. Return a JSON object where keys correspond to the target path (e.g., "self.emotional_needs", "wants.partner_traits", "constraints.dealbreakers").
 3. For each extracted signal item, provide:
+   - "target_field": Exact field path (e.g. "self.emotional_needs")
    - "label": Short 2-4 word descriptor (e.g. "Values quality time under stress", "Needs active listener")
    - "summary": 1 sentence explanation of what they expressed
    - "quote": Exact short excerpt from their response as evidence

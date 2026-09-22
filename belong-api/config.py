@@ -69,28 +69,28 @@ Analyze their compatibility across all dimensions according to the required sche
             id="q1_intent_partner",
             topic="Relationship Intent & Partner Traits",
             prompt="What are you looking for in a relationship, and what kind of person tends to be a good fit for you?",
-            targets=["wants.relationship_expectations", "wants.partner_traits"],
-            description="Extract relationship goals, commitment style, and desired qualities in a partner."
+            targets=["wants.relationship_expectations", "wants.partner_traits", "wants.partner_values"],
+            description="Extract relationship goals, commitment style, and desired qualities/values in a partner."
         ),
         QuestionConfig(
             id="q2_emotional_needs",
             topic="Emotional Needs",
-            prompt="What do you most need from a partner when things get stressful or difficult?",
+            prompt="When things get stressful or difficult, what do you need from a partner, and what helps you feel supported?",
             targets=["self.emotional_needs", "wants.partner_traits"],
             description="Extract emotional support style, stress response expectations, and vulnerability needs."
         ),
         QuestionConfig(
             id="q3_conflict_provides",
             topic="Conflict Style & What You Provide",
-            prompt="How do you naturally handle disagreements, differences and what do you bring to a relationship?",
+            prompt="When there's a disagreement, how do you usually handle it? And what do you feel you bring to a relationship as a partner?",
             targets=["self.conflict_style", "self.provides"],
             description="Extract conflict resolution approach, communication tendencies, and personal contributions."
         ),
         QuestionConfig(
             id="q4_lifestyle_values",
             topic="Lifestyle, Values, Interests & Goals",
-            prompt="What does your day-to-day life look like, what do you enjoy, and what kind of life are you building for yourself?",
-            targets=["self.lifestyle", "self.values", "self.interests", "wants.desired_lifestyle"],
+            prompt="What does your day-to-day life look like, what do you enjoy doing, and what values or future goals are important to you?",
+            targets=["self.lifestyle", "self.interests", "self.values", "self.life_goals", "wants.desired_lifestyle"],
             description="Extract daily habits, core principles, hobbies/passions, and future life aspirations."
         ),
         QuestionConfig(
@@ -103,7 +103,7 @@ Analyze their compatibility across all dimensions according to the required sche
         QuestionConfig(
             id="q6_dealbreakers",
             topic="Dealbreakers & Hard Constraints",
-            prompt="What are things that are absolute dealbreakers for you?",
+            prompt="What are non-negotiable dealbreakers or absolute hard constraints for you in a partner or relationship?",
             targets=["constraints.dealbreakers", "wants.partner_values"],
             description="Extract non-negotiables, dealbreakers, and absolute boundaries."
         )

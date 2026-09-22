@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, END
 
@@ -79,21 +79,63 @@ def get_message_content(response: Any) -> str:
         return "".join(parts)
     return str(content)
 
+HIGH_PRIORITY_FIELDS = [
+    {
+        "keys": ["self.provides"],
+        "topic": "What You Provide to a Partner",
+        "prompt": "And separately, what do you feel you bring to a relationship as a partner?",
+    },
+    {
+        "keys": ["self.emotional_needs"],
+        "topic": "Emotional Needs",
+        "prompt": "When you're feeling stressed or overwhelmed, what helps you feel supported by a partner?",
+    },
+    {
+        "keys": ["self.conflict_style"],
+        "topic": "Conflict Style",
+        "prompt": "When there's a disagreement or tension, how do you usually handle it?",
+    },
+    {
+        "keys": ["constraints.dealbreakers"],
+        "topic": "Dealbreakers",
+        "prompt": "Are there any specific dealbreakers or absolute boundaries that are non-negotiable for you in a partner?",
+    },
+    {
+        "keys": ["wants.partner_traits", "wants.relationship_expectations"],
+        "topic": "Partner Traits & Intent",
+        "prompt": "What key traits, values, or expectations are most important to you in a partner?",
+    },
+]
+
+def find_missing_high_priority_field(extracted_signals: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Checks if any high-priority field lacks extracted evidence."""
+    for spec in HIGH_PRIORITY_FIELDS:
+        if not any(len(extracted_signals.get(k, [])) > 0 for k in spec["keys"]):
+            return spec
+    return None
+
 async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
     """Node 1: Extract structured evidence signals from latest user input."""
     user_input = state.get("latest_user_input")
     current_idx = state.get("current_area_index", 0)
     questions = settings.ONBOARDING_QUESTIONS
     
-    if not user_input or current_idx >= len(questions):
+    if not user_input:
         return {}
 
-    question_cfg = questions[current_idx]
+    if current_idx < len(questions):
+        question_cfg = questions[current_idx]
+        topic_id = question_cfg.id
+        target_dimensions = ", ".join(question_cfg.targets)
+    else:
+        topic_id = "adaptive_probe"
+        target_dimensions = "self.provides, self.emotional_needs, self.conflict_style, constraints.dealbreakers, wants.partner_traits, self.values"
+
     prompt = SIGNAL_EXTRACTION_PROMPT.format(
-        topic_id=question_cfg.id,
-        target_dimensions=", ".join(question_cfg.targets),
+        topic_id=topic_id,
+        target_dimensions=target_dimensions,
         latest_user_input=user_input,
-        question_id=question_cfg.id
+        question_id=topic_id
     )
 
     extracted_signals = dict(state.get("extracted_signals", {}))
@@ -125,7 +167,7 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
                 "label": item.get("label", ""),
                 "summary": item.get("summary", ""),
                 "quote": item.get("quote", ""),
-                "question_id": item.get("question_id", question_cfg.id),
+                "question_id": item.get("question_id", topic_id),
                 "confidence": item.get("confidence", 0.9)
             })
 
@@ -135,33 +177,55 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
     return {"extracted_signals": extracted_signals}
 
 async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
-    """Node 2: Evaluate answer depth and generate warm conversational response."""
+    """Node 2: Evaluate answer depth and generate warm conversational response with coverage validation."""
     user_input = state.get("latest_user_input", "")
     current_idx = state.get("current_area_index", 0)
     follow_up_count = state.get("follow_up_count", 0)
     covered_areas = list(state.get("covered_areas", []))
+    extracted_signals = state.get("extracted_signals", {})
     questions = settings.ONBOARDING_QUESTIONS
-    
-    # If all core questions were already covered
-    if current_idx >= len(questions):
-        conclusion_prompt = (
-            "The user has completed all onboarding questions! "
-            "Express warm appreciation, celebrate taking this step for meaningful connection, "
-            "and explain that their profile is now being processed to find great compatibility matches."
-        )
-        llm = get_llm()
-        resp = await llm.ainvoke([
-            SystemMessage(content="You are Belong's warm onboarding assistant."),
-            HumanMessage(content=conclusion_prompt)
-        ])
-        
-        # Save structured profile to profiles table
-        await finalize_profile(state)
+    max_total_probes = settings.MAX_FOLLOW_UPS + 2
 
-        return {
-            "latest_assistant_response": get_message_content(resp),
-            "status": "completed"
-        }
+    # Check if all core questions were already processed
+    if current_idx >= len(questions):
+        missing = find_missing_high_priority_field(extracted_signals)
+        if missing and follow_up_count < max_total_probes:
+            # Trigger adaptive probe for missing high-priority field
+            sys_prompt = CHATBOT_SYSTEM_PROMPT.format(
+                current_topic=missing["topic"],
+                current_question=missing["prompt"],
+                is_follow_up="Yes - targeted adaptive probe for high-priority profile coverage.",
+                latest_user_input=user_input
+            )
+            llm = get_llm()
+            assistant_resp = await llm.ainvoke([
+                SystemMessage(content=sys_prompt),
+                HumanMessage(content=f"User's reply: {user_input}" if user_input else "Continue onboarding.")
+            ])
+            return {
+                "current_area_index": current_idx,
+                "follow_up_count": follow_up_count + 1,
+                "covered_areas": covered_areas,
+                "latest_assistant_response": get_message_content(assistant_resp),
+                "status": "active"
+            }
+        else:
+            # Core questions and coverage checks complete
+            conclusion_prompt = (
+                "The user has completed all onboarding questions! "
+                "Express warm appreciation, celebrate taking this step for meaningful connection, "
+                "and explain that their profile is now being processed to find great compatibility matches."
+            )
+            llm = get_llm()
+            resp = await llm.ainvoke([
+                SystemMessage(content="You are Belong's warm onboarding assistant."),
+                HumanMessage(content=conclusion_prompt)
+            ])
+            await finalize_profile(state)
+            return {
+                "latest_assistant_response": get_message_content(resp),
+                "status": "completed"
+            }
 
     current_q = questions[current_idx]
     
@@ -205,12 +269,17 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
             current_idx = next_idx
         else:
             current_idx = next_idx
-            is_follow_up_str = "No - all questions complete."
-            next_prompt = "Profile complete!"
+            missing = find_missing_high_priority_field(extracted_signals)
+            if missing and new_follow_up_count < max_total_probes:
+                is_follow_up_str = "Yes - targeted adaptive probe for high-priority profile coverage."
+                next_prompt = missing["prompt"]
+            else:
+                is_follow_up_str = "No - all questions complete."
+                next_prompt = "Profile complete!"
 
     # Generate warm chatbot message
     sys_prompt = CHATBOT_SYSTEM_PROMPT.format(
-        current_topic=current_q.topic,
+        current_topic=current_q.topic if current_idx < len(questions) else "Profile Coverage",
         current_question=next_prompt,
         is_follow_up=is_follow_up_str,
         latest_user_input=user_input
@@ -222,7 +291,11 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
         HumanMessage(content=f"User's reply: {user_input}" if user_input else "Start the conversation.")
     ])
 
-    new_status = "completed" if current_idx >= len(questions) and not needs_follow_up else "active"
+    new_status = "active"
+    if current_idx >= len(questions) and not needs_follow_up:
+        missing = find_missing_high_priority_field(extracted_signals)
+        if not missing or new_follow_up_count >= max_total_probes:
+            new_status = "completed"
 
     if new_status == "completed":
         await finalize_profile(state)

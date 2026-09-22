@@ -1,4 +1,5 @@
-from typing import List, Dict, Any, Optional, TypedDict
+from typing import List, Dict, Any, Optional
+from typing_extensions import TypedDict
 
 class OnboardingState(TypedDict, total=False):
     conversation_id: str
