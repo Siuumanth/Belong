@@ -39,9 +39,13 @@ export async function api<T>(
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const token = localStorage.getItem("belong_token");
-  if (opts.auth !== false && token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  const token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("belong_token="))
+    ?.split("=")[1];
+  const decoded = token ? decodeURIComponent(token) : null;
+  if (opts.auth !== false && decoded) {
+    headers.set("Authorization", `Bearer ${decoded}`);
   }
 
   const res = await fetch(path, { ...init, headers });
@@ -159,6 +163,8 @@ export const profileApi = {
     api<Profile>("/profiles", { method: "POST", body: JSON.stringify(body) }),
   update: (userId: string, body: Partial<ProfileWrite>) =>
     api<Profile>(`/profiles/${userId}`, { method: "PATCH", body: JSON.stringify(body) }),
+  triggerEmbedding: (userId: string) =>
+    api<{ job_id: string; status: string }>(`/profiles/${userId}/embeddings`, { method: "POST" }),
 };
 
 export const onboardingApi = {

@@ -16,6 +16,25 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+const COOKIE_NAME = "belong_token";
+
+function setCookie(value: string, days = 30) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Strict`;
+}
+
+function getCookie(): string | null {
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${COOKIE_NAME}=`));
+  if (!match) return null;
+  return decodeURIComponent(match.split("=")[1]);
+}
+
+function deleteCookie() {
+  document.cookie = `${COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Strict`;
+}
+
 function sessionFromToken(token: string, extras?: { username?: string; email?: string }): Session {
   const claims = decodeJwt(token);
   return {
@@ -27,13 +46,13 @@ function sessionFromToken(token: string, extras?: { username?: string; email?: s
 }
 
 function loadSession(): Session | null {
-  const token = localStorage.getItem("belong_token");
+  const token = getCookie();
   if (!token) return null;
   try {
     const session = sessionFromToken(token);
     if (session.userId) return session;
   } catch {
-    localStorage.removeItem("belong_token");
+    deleteCookie();
   }
   return null;
 }
@@ -46,11 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       loginWithToken: (token, extras) => {
         const next = sessionFromToken(token, extras);
-        localStorage.setItem("belong_token", token);
+        setCookie(token);
         setSession(next);
       },
       logout: () => {
-        localStorage.removeItem("belong_token");
+        deleteCookie();
         setSession(null);
       },
     }),

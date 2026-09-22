@@ -2,32 +2,47 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
+// ─── Nav links ────────────────────────────────────────────────────────────────
 const links = [
   { to: "/profile", label: "Profile" },
   { to: "/onboarding", label: "Onboarding" },
   { to: "/matches", label: "Matches" },
 ];
 
+// ─── Layout ───────────────────────────────────────────────────────────────────
 export function Layout() {
   const { session, logout } = useAuth();
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-ink text-[#f4efe8]">
-      <header className="border-b border-line bg-panel/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
-          <div>
-            <p className="font-display text-xl tracking-tight text-gold">Belong</p>
-            <p className="text-xs text-zinc-500">Compatibility, not similarity</p>
-          </div>
+      <header className="sticky top-0 z-20 border-b border-line bg-panel/90 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
+          {/* Logo */}
+          <NavLink to="/profile" className="flex items-center gap-2.5 shrink-0">
+            <img
+              src="/b-logo.png"
+              alt="Belong mark"
+              className="h-8 w-8 rounded-lg object-contain"
+            />
+            <img
+              src="/belong-logo.png"
+              alt="Belong"
+              className="hidden h-5 object-contain sm:block"
+            />
+          </NavLink>
+
+          {/* Nav */}
           <nav className="flex items-center gap-1">
             {links.map((link) => (
               <NavLink
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `rounded-full px-3 py-1.5 text-sm ${
-                    isActive ? "bg-gold/15 text-gold" : "text-zinc-400 hover:text-zinc-200"
+                  `rounded-full px-3 py-1.5 text-sm transition-colors ${
+                    isActive
+                      ? "bg-gold/15 text-gold"
+                      : "text-zinc-400 hover:text-zinc-200"
                   }`
                 }
               >
@@ -35,13 +50,15 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="hidden text-zinc-500 sm:inline">
+
+          {/* User / sign out */}
+          <div className="flex items-center gap-3 text-sm shrink-0">
+            <span className="hidden max-w-[120px] truncate text-xs text-zinc-500 sm:inline">
               {session?.username || session?.email}
             </span>
             <button
               type="button"
-              className="rounded-full border border-line px-3 py-1 text-zinc-400 hover:border-gold/40 hover:text-gold"
+              className="rounded-full border border-line px-3 py-1 text-xs text-zinc-400 hover:border-gold/40 hover:text-gold"
               onClick={() => {
                 logout();
                 navigate("/login");
@@ -52,6 +69,7 @@ export function Layout() {
           </div>
         </div>
       </header>
+
       <main className="mx-auto max-w-5xl px-5 py-8">
         <Outlet />
       </main>
@@ -59,6 +77,32 @@ export function Layout() {
   );
 }
 
+// ─── Auth shell (login / signup pages) ───────────────────────────────────────
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-ink px-4">
+      <div className="mb-8 flex flex-col items-center gap-3">
+        <img src="/b-logo.png" alt="Belong" className="h-14 w-14 rounded-2xl object-contain" />
+        <img src="/belong-logo.png" alt="Belong" className="h-6 object-contain" />
+      </div>
+      <div className="w-full max-w-md rounded-2xl border border-line bg-panel p-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
+        <h1 className="font-display text-2xl">{title}</h1>
+        <p className="mt-1.5 text-sm text-zinc-500">{subtitle}</p>
+        <div className="mt-7">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Primitives ───────────────────────────────────────────────────────────────
 export function Field({
   label,
   children,
@@ -75,7 +119,7 @@ export function Field({
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-gold/50";
+  "w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-gold/50 transition-colors";
 
 export function Button({
   children,
@@ -84,7 +128,7 @@ export function Button({
   return (
     <button
       {...props}
-      className={`rounded-full bg-gold px-4 py-2 text-sm font-medium text-ink hover:bg-[#e0b88a] disabled:opacity-50 ${props.className ?? ""}`}
+      className={`w-full rounded-full bg-gold px-4 py-2.5 text-sm font-medium text-ink hover:bg-[#e0b88a] disabled:opacity-50 transition-colors ${props.className ?? ""}`}
     >
       {children}
     </button>
@@ -98,7 +142,7 @@ export function GhostButton({
   return (
     <button
       {...props}
-      className={`rounded-full border border-line px-4 py-2 text-sm text-zinc-300 hover:border-gold/40 hover:text-gold disabled:opacity-50 ${props.className ?? ""}`}
+      className={`rounded-full border border-line px-4 py-2 text-sm text-zinc-300 hover:border-gold/40 hover:text-gold disabled:opacity-50 transition-colors ${props.className ?? ""}`}
     >
       {children}
     </button>

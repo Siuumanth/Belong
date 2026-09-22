@@ -1,6 +1,6 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Button, ErrorText, Field, inputClass } from "../components/ui";
+import { AuthShell, Button, ErrorText, Field, inputClass } from "../components/ui";
 import { authApi } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -100,23 +100,4 @@ export function SignupPage() {
   );
 }
 
-function AuthShell({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-ink px-4">
-      <div className="w-full max-w-md rounded-2xl border border-line bg-panel p-8 shadow-[0_20px_80px_rgba(0,0,0,0.45)]">
-        <p className="font-display text-2xl text-gold">Belong</p>
-        <h1 className="mt-4 font-display text-3xl">{title}</h1>
-        <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>
-        <div className="mt-8">{children}</div>
-      </div>
-    </div>
-  );
-}
+
