@@ -25,7 +25,9 @@ def calculate_rank_key(
     """
     dealbreaker_penalty = -len(output.dealbreaker_violations)
     verdict_score = VERDICT_RANK.get(output.overall_verdict, 1)
-    net_alignment = len(output.strong_alignments) - len(output.potential_conflicts)
+    # Schema uses complementary_alignments + shared_alignments instead of strong_alignments
+    total_alignments = len(output.complementary_alignments) + len(output.shared_alignments)
+    net_alignment = total_alignments - len(output.potential_conflicts)
 
     return (dealbreaker_penalty, verdict_score, net_alignment, stage1_combined_score)
 

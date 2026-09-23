@@ -13,6 +13,9 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+import time
+
+print(time.localtime())
 
 # Paths
 TESTS_DIR = Path(__file__).parent

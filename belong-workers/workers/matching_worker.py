@@ -91,7 +91,10 @@ class MatchingWorker:
 
                     # Convert dimension_results to jsonable dict
                     dimension_json = json.dumps(output.dimension_results.model_dump())
-                    strong_alignments_json = json.dumps(output.strong_alignments)
+                    # Schema split strong_alignments into complementary + shared; combine for DB column
+                    strong_alignments_json = json.dumps(
+                        output.complementary_alignments + output.shared_alignments
+                    )
                     potential_conflicts_json = json.dumps(output.potential_conflicts)
                     dealbreaker_violations_json = json.dumps(output.dealbreaker_violations)
                     uncertainties_json = json.dumps(output.uncertainties)

@@ -129,10 +129,7 @@ async def poll_job_completion(client: httpx.AsyncClient, job_id: str, max_secs: 
         await asyncio.sleep(interval)
         elapsed += interval
         try:
-            res = await client.get(f"/matches/jobs/{job_id}")
-            if res.status_code == 404:
-                res = await client.get(f"/api/matches/jobs/{job_id}")
-
+            res = await client.get(f"/api/matches/jobs/{job_id}")
             if res.status_code == 200:
                 data = res.json()
                 status = data.get("status", "unknown")
@@ -142,6 +139,8 @@ async def poll_job_completion(client: httpx.AsyncClient, job_id: str, max_secs: 
                 elif status == "failed":
                     logger.error(f"  └─ Job failed: {data.get('error', 'No error detail')}")
                     return False
+            else:
+                logger.warning(f"  └─ Unexpected status code {res.status_code} polling job")
         except Exception as e:
             logger.warning(f"  └─ Error polling job: {e}")
 
@@ -233,9 +232,7 @@ async def run_simulation():
                 print("\n-----------------------------------------------------------------")
                 print(f"STEP 5: Fetching Match Results for User '{target_user.persona.id}'")
                 print("-----------------------------------------------------------------")
-                res = await client.get(f"/matches/{target_user.user_id}")
-                if res.status_code == 404:
-                    res = await client.get(f"/api/matches/{target_user.user_id}")
+                res = await client.get(f"/api/matches/{target_user.user_id}")
 
                 if res.status_code == 200:
                     matches_data = res.json()

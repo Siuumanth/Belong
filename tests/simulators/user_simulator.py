@@ -264,7 +264,13 @@ class UserSimulator:
         return False
 
     async def run_onboarding_async(self, client: httpx.AsyncClient) -> bool:
-        """Simulates multi-turn interactive conversational onboarding."""
+        """Simulates multi-turn interactive conversational onboarding.
+
+        Sends the pre-configured responses in order, then falls back to a
+        generic reply until the server marks the conversation as 'completed'.
+        Capped at MAX_TURNS to prevent infinite loops if the server never
+        completes (e.g. during development).
+        """
         start_res = await self._post_with_fallback(client, "/onboarding/session", json={"user_id": self.user_id})
         if start_res.status_code != 201:
             return False
@@ -272,23 +278,31 @@ class UserSimulator:
         session_data = start_res.json()
         self.conversation_id = session_data["conversation_id"]
 
-        q_keys = [
-            "q1_intent_partner",
-            "q2_emotional_needs",
-            "q3_conflict_provides",
-            "q4_lifestyle_values",
-            "q5_personality",
-            "q6_dealbreakers",
+        # Ordered list of scripted responses — sent one per turn in sequence
+        scripted_responses = [
+            self.persona.question_responses.get("q1_intent_partner", ""),
+            self.persona.question_responses.get("q2_emotional_needs", ""),
+            self.persona.question_responses.get("q3_conflict_provides", ""),
+            self.persona.question_responses.get("q4_lifestyle_values", ""),
+            self.persona.question_responses.get("q5_personality", ""),
+            self.persona.question_responses.get("q6_dealbreakers", ""),
         ]
+        # Fallback reply used for any follow-up probes beyond the scripted set
+        fallback_reply = (
+            "I value open communication, mutual respect, emotional honesty, "
+            "and building a life together with someone who shares my core values."
+        )
 
+        MAX_TURNS = 20
         conv_status = "active"
-        for q_key in q_keys:
+
+        for turn in range(MAX_TURNS):
             if conv_status == "completed":
                 break
 
-            user_msg = self.persona.question_responses.get(
-                q_key, "I value honest communication and balance."
-            )
+            # Use scripted response if available, otherwise generic fallback
+            user_msg = scripted_responses[turn] if turn < len(scripted_responses) else fallback_reply
+
             msg_res = await self._post_with_fallback(
                 client,
                 "/onboarding/message",
@@ -306,7 +320,6 @@ class UserSimulator:
             await asyncio.sleep(4.0)
 
         self.status = conv_status
-
         return conv_status == "completed"
 
     async def trigger_embeddings_async(self, client: httpx.AsyncClient) -> bool:
