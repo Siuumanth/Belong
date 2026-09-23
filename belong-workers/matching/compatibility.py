@@ -55,10 +55,45 @@ def get_llm():
 
 # --- LangGraph Nodes ---
 
+def _slim_profile(profile: Dict[str, Any]) -> Dict[str, Any]:
+    """Strip signal metadata (id, confidence, evidence_type, question_id) from a profile
+    before sending to the LLM. Keeps only label, summary, quote — cuts token count ~50%."""
+    def slim_signals(signals: Any) -> Any:
+        if not isinstance(signals, list):
+            return signals
+        result = []
+        for s in signals:
+            if isinstance(s, dict):
+                result.append({
+                    "id": s.get("id", ""),
+                    "label": s.get("label", ""),
+                    "summary": s.get("summary", ""),
+                    "quote": s.get("quote", ""),
+                })
+            else:
+                result.append(s)
+        return result
+
+    slimmed: Dict[str, Any] = {}
+    for section_key in ("self", "wants", "constraints"):
+        section = profile.get(section_key)
+        if isinstance(section, dict):
+            slimmed[section_key] = {k: slim_signals(v) for k, v in section.items()}
+        elif section is not None:
+            slimmed[section_key] = section
+
+    # Preserve top-level demographic fields (age, gender, relationship_goal)
+    for key in ("age", "gender", "relationship_goal"):
+        if key in profile:
+            slimmed[key] = profile[key]
+
+    return slimmed
+
+
 def format_prompt_node(state: PairwiseState) -> Dict[str, Any]:
     """Node 1: Formats the configurable prompt template with User A and B profiles."""
-    user_a_str = json.dumps(state["user_a_profile"], indent=2)
-    user_b_str = json.dumps(state["user_b_profile"], indent=2)
+    user_a_str = json.dumps(_slim_profile(state["user_a_profile"]), indent=2)
+    user_b_str = json.dumps(_slim_profile(state["user_b_profile"]), indent=2)
 
     prompt = settings.PAIRWISE_REASONING_PROMPT_TEMPLATE.format(
         user_a_profile=user_a_str,

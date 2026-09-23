@@ -378,10 +378,10 @@ class UserSimulator:
     async def run_onboarding_async(self, client: httpx.AsyncClient) -> bool:
         """Simulates multi-turn interactive conversational onboarding.
 
-        Sends the pre-configured responses in order, then falls back to a
-        generic reply until the server marks the conversation as 'completed'.
-        Capped at MAX_TURNS to prevent infinite loops if the server never
-        completes (e.g. during development).
+        Sends scripted responses keyed by the question_id the server returns,
+        so follow-up turns don't shift the index and cause wrong answers.
+        Falls back to a generic reply for adaptive probes beyond the script.
+        Capped at MAX_TURNS to prevent infinite loops.
         """
         start_res = await self._post_with_fallback(client, "/onboarding/session", json={"user_id": self.user_id})
         if start_res.status_code != 201:
@@ -390,31 +390,31 @@ class UserSimulator:
         session_data = start_res.json()
         self.conversation_id = session_data["conversation_id"]
 
-        # Ordered list of scripted responses — sent one per turn in sequence
-        scripted_responses = [
-            self.persona.question_responses.get("q1_intent_partner", ""),
-            self.persona.question_responses.get("q2_emotional_needs", ""),
-            self.persona.question_responses.get("q3_conflict_provides", ""),
-            self.persona.question_responses.get("q4_lifestyle_values", ""),
-            self.persona.question_responses.get("q5_personality", ""),
-            self.persona.question_responses.get("q6_dealbreakers", ""),
-        ]
-        # Fallback reply used for any follow-up probes beyond the scripted set
-        # Specifically answers behavioral provides probe with concrete evidence
+        # Map question_id → scripted response (server echoes question_id in reply)
+        scripted = {
+            "q1_intent_partner":    self.persona.question_responses.get("q1_intent_partner", ""),
+            "q2_emotional_needs":   self.persona.question_responses.get("q2_emotional_needs", ""),
+            "q3_conflict_provides": self.persona.question_responses.get("q3_conflict_provides", ""),
+            "q4_lifestyle_values":  self.persona.question_responses.get("q4_lifestyle_values", ""),
+            "q5_personality":       self.persona.question_responses.get("q5_personality", ""),
+            "q6_dealbreakers":      self.persona.question_responses.get("q6_dealbreakers", ""),
+        }
         fallback_reply = (
             "I naturally support my partner by listening patiently when they are stressed, "
             "offering clear reassurance, and communicating transparently during difficult times."
         )
 
-        MAX_TURNS = 10
+        MAX_TURNS = 20
         conv_status = "active"
+        # Server tells us which question it just asked via question_id in the reply;
+        # seed the first turn so we answer q1 correctly.
+        current_question_id = "q1_intent_partner"
 
         for turn in range(MAX_TURNS):
             if conv_status == "completed":
                 break
 
-            # Use scripted response if available, otherwise generic fallback
-            user_msg = scripted_responses[turn] if turn < len(scripted_responses) else fallback_reply
+            user_msg = scripted.get(current_question_id, fallback_reply)
 
             msg_res = await self._post_with_fallback(
                 client,
@@ -430,6 +430,11 @@ class UserSimulator:
 
             reply_data = msg_res.json()
             conv_status = reply_data.get("status", "active")
+            # Advance to whatever question the server says is next
+            next_qid = reply_data.get("question_id")
+            if next_qid:
+                current_question_id = next_qid
+
             await asyncio.sleep(6.0)
 
         self.status = conv_status

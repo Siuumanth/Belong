@@ -30,6 +30,7 @@ class SendMessageResponse(BaseModel):
     status: str
     current_area_index: int
     follow_up_count: int
+    question_id: Optional[str] = None
 
 class ConversationDetailsResponse(BaseModel):
     conversation_id: UUID
@@ -158,12 +159,21 @@ async def send_message(payload: SendMessageRequest, background_tasks: Background
         }
         await publisher.publish_job(routing_key="embedding", payload=mq_payload)
 
+    # Determine question_id for next turn so the simulator can route correctly
+    next_idx = new_state.get("current_area_index", 0)
+    next_question_id = (
+        settings.ONBOARDING_QUESTIONS[next_idx].id
+        if next_idx < len(settings.ONBOARDING_QUESTIONS)
+        else None
+    )
+
     return SendMessageResponse(
         conversation_id=payload.conversation_id,
         assistant_response=assistant_reply,
         status=new_status,
         current_area_index=new_state.get("current_area_index", 0),
-        follow_up_count=new_state.get("follow_up_count", 0)
+        follow_up_count=new_state.get("follow_up_count", 0),
+        question_id=next_question_id
     )
 
 @router.get("/{conversation_id}", response_model=ConversationDetailsResponse)
