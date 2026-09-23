@@ -103,8 +103,9 @@ class CandidateRetriever:
                         params["user_pref_genders"] = user_pref_genders
 
                     if user_gender:
+                        # @> is the JSONB array-contains operator; ? only works for object keys
                         conditions.append(
-                            "(p.preferred_genders = '[]'::jsonb OR p.preferred_genders ? %(user_gender)s)"
+                            "(p.preferred_genders = '[]'::jsonb OR p.preferred_genders @> jsonb_build_array(%(user_gender)s::text))"
                         )
                         params["user_gender"] = user_gender
 

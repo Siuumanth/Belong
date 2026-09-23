@@ -67,15 +67,47 @@ USER_1_CONFIG = (
     .with_category("test_custom")
     .with_age(28, preferred_min=24, preferred_max=35)
     .with_gender("female", preferred_genders=["male"])
-    .with_location(latitude=37.7749, longitude=-122.4194, max_distance_km=50) # San Francisco
+    .with_location(latitude=37.7749, longitude=-122.4194, max_distance_km=50)  # San Francisco
     .with_relationship_goal("long-term", required_goal="long-term")
     .with_responses(
-        q1_intent_partner="I am looking for a partner who values deep communication, emotional honesty, and active living.",
-        q2_emotional_needs="I need active listening, emotional safety, and shared quality time.",
-        q3_conflict_provides="I stay calm, listen carefully, and resolve conflicts through open conversation.",
-        q4_lifestyle_values="Morning yoga, hiking, tech product design, healthy eating, and reading.",
-        q5_personality="Friends describe me as empathetic, articulate, organized, and optimistic.",
-        q6_dealbreakers="Smoking of any kind, substance abuse, and dishonesty are non-negotiable dealbreakers."
+        q1_intent_partner=(
+            "honestly I'm just tired of situationships lol. I want someone who actually "
+            "wants to build something real — like talks about the future, checks in on me, "
+            "that kind of thing. communication is huge for me, and I need someone who's "
+            "emotionally present, not just physically around."
+        ),
+        q2_emotional_needs=(
+            "when I'm stressed I go pretty quiet and I need someone who notices and just... "
+            "sits with me? not trying to fix it immediately. I really appreciate when my "
+            "partner says something like 'I'm here' without me having to ask. words of "
+            "affirmation are genuinely important to me, I feel more secure when I hear them."
+        ),
+        q3_conflict_provides=(
+            "I don't like fighting but I won't avoid a hard conversation either. I usually "
+            "take an hour or two to cool down first, then I'll bring it up. I try to say "
+            "'I felt...' instead of blaming. when my partner is going through something, "
+            "I show up — I cook for them, check in more often, just make sure they know "
+            "I'm paying attention."
+        ),
+        q4_lifestyle_values=(
+            "I do morning yoga most days, like 5-6 times a week. I work in product design "
+            "so I spend a lot of time at a screen which is why I try to stay active. "
+            "weekends are usually a hike or farmers market, maybe a bookstore. I'm "
+            "plant-based and pretty into cooking. I care a lot about being consistent — "
+            "like doing small things well over time."
+        ),
+        q5_personality=(
+            "my friends say I'm a lot — in a good way I think? I'm pretty intense when "
+            "I care about something, very organized, and I overthink sometimes but I'm "
+            "self-aware about it. I'm warm and I genuinely love people. I probably make "
+            "a good partner because I actually pay attention to the small stuff."
+        ),
+        q6_dealbreakers=(
+            "smoking is a hard no, I have asthma. also anyone who uses substances "
+            "regularly — I'm fine with a drink socially but that's about it. and "
+            "dishonesty in any form, even white lies about small things. if I can't trust "
+            "what you say, it's done."
+        ),
     )
     .build()
 )
@@ -87,15 +119,48 @@ USER_2_CONFIG = (
     .with_category("test_custom")
     .with_age(30, preferred_min=23, preferred_max=32)
     .with_gender("male", preferred_genders=["female"])
-    .with_location(latitude=37.7800, longitude=-122.4100, max_distance_km=50) # Near SF
+    .with_location(latitude=37.7800, longitude=-122.4100, max_distance_km=50)  # Near SF
     .with_relationship_goal("long-term", required_goal="long-term")
     .with_responses(
-        q1_intent_partner="Seeking a committed relationship built on mutual growth, trust, and adventure.",
-        q2_emotional_needs="I value patience, mutual respect, and clear reassurance during stressful times.",
-        q3_conflict_provides="I approach issues thoughtfully and focus on finding pragmatic solutions.",
-        q4_lifestyle_values="Trail running, coffee brewing, software engineering, and weekend trips.",
-        q5_personality="Dependable, grounded, calm, and intellectually curious.",
-        q6_dealbreakers="Arrogance, disrespect, and lack of accountability."
+        q1_intent_partner=(
+            "I want something that actually lasts. I've had fun, I've dated around, "
+            "but at this point I want someone I can genuinely grow with — someone who's "
+            "curious, takes care of themselves, and doesn't play games. trust is the "
+            "baseline for me, everything else builds from there."
+        ),
+        q2_emotional_needs=(
+            "when I'm stressed I get kind of quiet and withdrawn — I usually need an hour "
+            "to process before I can talk about it. what helps is if my partner doesn't "
+            "push too hard but also doesn't disappear. just knowing they're around is "
+            "enough. I'm the opposite when she's stressed — I'm pretty good at just "
+            "listening without jumping to solutions."
+        ),
+        q3_conflict_provides=(
+            "I try to deal with things pretty quickly rather than letting them sit. "
+            "I stay calm, I don't raise my voice — I just hate that. I'd rather have "
+            "a slightly awkward conversation than let something fester for a week. "
+            "I think I'm good at making my partner feel stable, like I'm not going anywhere "
+            "even when things are hard."
+        ),
+        q4_lifestyle_values=(
+            "trail running is my thing — I do a half marathon most weekends. I'm a software "
+            "engineer so weekdays are pretty heads-down but I try to get outside every day. "
+            "I got into coffee brewing during covid and now I take it a bit too seriously. "
+            "I value people who actually have ambition and keep growing, professionally "
+            "or personally, I don't really care which."
+        ),
+        q5_personality=(
+            "pretty chill, pretty reliable. I show up when I say I will. I'm curious about "
+            "a lot of things — I'll read a book about almost anything. my friends say I'm "
+            "a good listener which I think is true, I genuinely care what people have to say. "
+            "I can be a bit reserved at first but I warm up fast."
+        ),
+        q6_dealbreakers=(
+            "I can't do arrogance, like someone who can never admit they're wrong. "
+            "and dishonesty — not just big lies, the small habitual ones are worse honestly. "
+            "also someone who's totally stagnant, just not interested in improving anything "
+            "about themselves."
+        ),
     )
     .build()
 )
@@ -158,7 +223,7 @@ async def run_simulation():
     sim_user_2 = UserSimulator(USER_2_CONFIG)
     users = [sim_user_1, sim_user_2]
 
-    async with httpx.AsyncClient(base_url=API_URL, timeout=60.0) as client:
+    async with httpx.AsyncClient(base_url=API_URL, timeout=120.0) as client:
 
         # Health check
         if not await check_api_health(client):

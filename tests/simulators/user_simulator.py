@@ -50,12 +50,12 @@ class PersonaConfig:
         if name and "name" not in self.demographics:
             self.demographics["name"] = name
         self.question_responses = question_responses or {
-            "q1_intent_partner": "Looking for a committed, communicative, long-term partner.",
-            "q2_emotional_needs": "I value calm reassurance, active listening, and open vulnerability.",
-            "q3_conflict_provides": "I handle disagreements calmly through collaborative dialogue.",
-            "q4_lifestyle_values": "Active, healthy lifestyle, continuous learning, and outdoor activities.",
-            "q5_personality": "Empathetic, warm, grounded, and dependable.",
-            "q6_dealbreakers": "Dishonesty and disrespect are non-negotiable dealbreakers.",
+            "q1_intent_partner": "I want something real and long-term — someone emotionally available who actually communicates.",
+            "q2_emotional_needs": "I need someone who checks in when things are hard and doesn't disappear. reassurance matters to me.",
+            "q3_conflict_provides": "I take a bit of time to cool down then I talk it out. I try not to raise my voice. I show up for my partner when they're struggling.",
+            "q4_lifestyle_values": "I stay pretty active, I like being outside, and I try to take care of my health. I value consistency.",
+            "q5_personality": "I'm warm, pretty reliable, and I notice the small things. good listener.",
+            "q6_dealbreakers": "Dishonesty and disrespect are non-negotiable for me.",
         }
         self.profile = profile or {}
 
@@ -170,12 +170,12 @@ class PersonaBuilder:
 
     def build(self) -> PersonaConfig:
         default_responses = {
-            "q1_intent_partner": "Looking for a committed partner.",
-            "q2_emotional_needs": "I value calm reassurance.",
-            "q3_conflict_provides": "I handle disagreements calmly.",
-            "q4_lifestyle_values": "Active, healthy lifestyle.",
-            "q5_personality": "Warm and dependable.",
-            "q6_dealbreakers": "Dishonesty and disrespect.",
+            "q1_intent_partner": "I want something real and long-term — someone emotionally available who actually communicates.",
+            "q2_emotional_needs": "I need someone who checks in when things are hard and doesn't disappear. reassurance matters to me.",
+            "q3_conflict_provides": "I take a bit of time to cool down then I talk it out. I try not to raise my voice. I show up for my partner when they're struggling.",
+            "q4_lifestyle_values": "I stay pretty active, I like being outside, and I try to take care of my health. I value consistency.",
+            "q5_personality": "I'm warm, pretty reliable, and I notice the small things. good listener.",
+            "q6_dealbreakers": "Dishonesty and disrespect are non-negotiable for me.",
         }
         merged_responses = {**default_responses, **self._responses}
 
@@ -430,7 +430,7 @@ class UserSimulator:
 
             reply_data = msg_res.json()
             conv_status = reply_data.get("status", "active")
-            await asyncio.sleep(4.0)
+            await asyncio.sleep(6.0)
 
         self.status = conv_status
         return conv_status == "completed"

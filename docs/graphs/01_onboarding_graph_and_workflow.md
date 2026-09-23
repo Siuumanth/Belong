@@ -11,6 +11,7 @@ The conversational onboarding uses a **stateless, turn-by-turn request model**. 
 ```mermaid
 sequenceDiagram
     autonumber
+
     actor User as User / Client
     participant API as FastAPI (routes/onboarding.py)
     participant DB as PostgreSQL (conversations, messages)
@@ -18,48 +19,58 @@ sequenceDiagram
     participant LLM as Groq / Llama-3.3-70B
     participant MQ as RabbitMQ (belong.embedding)
 
-    User->>API: POST /api/onboarding/message {conversation_id, message}
-    API->>DB: Fetch conversation progress & extracted_signals
-    API->>DB: INSERT into conversation_messages (role='user')
+    User->>API: POST /api/onboarding/message<br/>{conversation_id, message}
+    API->>DB: Fetch conversation progress and extracted_signals
+    API->>DB: INSERT conversation_messages<br/>(role = user)
     API->>Graph: onboarding_graph.ainvoke(current_state)
-    
+
     rect rgb(240, 245, 255)
         Note over Graph,LLM: Step 1: extract_signals_node
-        Graph->>LLM: Prompt with question_text + target_dimensions + user input
-        LLM-->>Graph: JSON with atomic signals (label, summary, quote, confidence)
-        Graph->>Graph: Merge signals into state; clear active probe
+
+        Graph->>LLM: Prompt with question_text, target_dimensions and user input
+        LLM-->>Graph: JSON with atomic signals<br/>(label, summary, quote, confidence)
+        Graph->>Graph: Merge signals into state
+        Graph->>Graph: Clear active probe
     end
 
     rect rgb(245, 255, 240)
         Note over Graph,LLM: Step 2: generate_response_node
+
         Graph->>Graph: Check coverage against freshly merged signals
-        alt Core questions active & user answer vague
+
+        alt Core questions active and answer is vague
             Graph->>LLM: Vagueness check prompt
-            LLM-->>Graph: {"needs_follow_up": true}
-            Graph->>Graph: Increment follow_up_count (capped at 2)
+            LLM-->>Graph: needs_follow_up = true
+            Graph->>Graph: Increment follow_up_count<br/>(maximum 2)
+
         else Core questions complete (current_idx >= 6)
-            alt Missing high-priority field AND follow_up_count < 2
-                Graph->>Graph: Select missing field (e.g. self.provides behavioral probe)
-                Graph->>Graph: Increment follow_up_count, mark probe:{field} in covered_areas
-            else Coverage passed OR follow_up_count >= 2
-                Graph->>Graph: Mark status='completed'
-                Graph->>DB: finalize_profile() writes atomic profile to profiles table
+
+            alt Missing high-priority field and follow_up_count < 2
+                Graph->>Graph: Select missing field
+                Graph->>Graph: Generate targeted behavioral probe
+                Graph->>Graph: Increment follow_up_count
+                Graph->>Graph: Mark probe field in covered_areas
+
+            else Coverage passed or follow_up_count >= 2
+                Graph->>Graph: Mark status = completed
+                Graph->>DB: finalize_profile()<br/>Write atomic profile to profiles
             end
         end
-        Graph->>LLM: Generate warm acknowledgment + next prompt
+
+        Graph->>LLM: Generate warm acknowledgment and next prompt
         LLM-->>Graph: Chatbot reply string
     end
 
-    Graph-->>API: new_state {status, extracted_signals, assistant_response, ...}
-    API->>DB: INSERT into conversation_messages (role='assistant')
-    API->>DB: UPDATE conversations state & status
-    
-    opt If status == 'completed'
-        API->>DB: Create job record (type='embedding', status='pending')
-        API->>MQ: Publish job payload to 'belong.embedding'
+    Graph-->>API: new_state<br/>(status, extracted_signals, assistant_response, ...)
+    API->>DB: INSERT conversation_messages<br/>(role = assistant)
+    API->>DB: UPDATE conversations state and status
+
+    opt Status is completed
+        API->>DB: Create embedding job<br/>(type = embedding, status = pending)
+        API->>MQ: Publish job to belong.embedding
     end
 
-    API-->>User: HTTP 200 {assistant_response, status, follow_up_count}
+    API-->>User: HTTP 200<br/>{assistant_response, status, follow_up_count}
 ```
 
 ### Explanation of Diagram 1

@@ -17,12 +17,12 @@
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "I'm looking for a committed, long-term partner who values emotional connection and personal growth. A good fit for me is someone communicative, emotionally available, and kind.",
-        "q2_emotional_needs": "When things get stressful, I need a partner who listens actively before jumping into solution mode, offers calm reassurance, and creates a safe space for vulnerability.",
-        "q3_conflict_provides": "I handle disagreements by taking a breath, expressing my feelings calmly, and working together to find a solution. In a relationship, I bring deep loyalty, empathy, and active encouragement.",
-        "q4_lifestyle_values": "My daily life involves working in product design, morning yoga, cooking plant-based meals, and spending weekends hiking or reading. I value honesty, continuous learning, and balance.",
-        "q5_personality": "Friends describe me as warm, thoughtful, empathetic, and grounded. I make a good partner because I am a reliable communicator and genuinely invest in supporting my partner's dreams.",
-        "q6_dealbreakers": "Absolute dealbreakers for me are dishonesty, smoking/substance abuse, disrespect, and an unwillingness to communicate during tough times."
+        "q1_intent_partner": "honestly I'm kinda done with dating casually at this point — I want something real. I need someone who's emotionally available, not just texting back. like, checks in, talks about the future, actually shows up. communication is everything for me.",
+        "q2_emotional_needs": "when I'm stressed I tend to go quiet, and I need someone who can read that and not push me to talk right away. a simple 'hey I'm here' goes a long way. I feel most secure when my partner verbally reassures me — words of affirmation honestly matter more than I'd like to admit lol.",
+        "q3_conflict_provides": "I don't love conflict but I won't ghost it either. I usually need like an hour to settle, then I'll come back and talk it out. I try not to blame, I use 'I felt...' a lot. and when my partner is having a rough time I show up — I'll cook for them, check in more, just make sure they feel seen.",
+        "q4_lifestyle_values": "I do morning yoga most days — probably 5 or 6 times a week, it keeps me sane. I work in product design which is a lot of screen time so I really need that movement. weekends I'm usually hiking, at the farmers market, or in a bookstore. I eat plant-based and I love cooking. I care a lot about consistency — like doing small things well.",
+        "q5_personality": "my friends say I'm a lot, in a good way I hope. I'm pretty intense when I care about something, very organized, I overthink but I know it. I'm genuinely warm though — I love people, I notice the small things, and I think that makes me a good partner.",
+        "q6_dealbreakers": "smoking is a hard no — I have asthma so it's literally a health thing. any regular substance use is also off the table. and dishonesty in any form, even the small stuff. if I can't trust what you're telling me, we're done."
       },
       "profile": {
         "self": {
@@ -60,12 +60,12 @@
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "I'm looking for a meaningful, long-term relationship with someone who is thoughtful, empathetic, and enjoys an active life. I thrive with a partner who values open communication.",
-        "q2_emotional_needs": "When my partner is stressed, I listen first and validate their feelings before offering any help. When I'm stressed, I appreciate quiet support and space to process.",
-        "q3_conflict_provides": "I prefer addressing issues early rather than letting them fester. I listen carefully, stay patient, and avoid raising my voice. I bring stability, humor, and strong emotional support.",
-        "q4_lifestyle_values": "I work in software engineering, love outdoor activities like trail running and camping, and enjoy experimenting with new recipes. I value integrity, health, and lifelong learning.",
-        "q5_personality": "Close friends would say I am patient, dependable, upbeat, and a great listener. I think I'm a strong partner because I show up consistently and prioritize my relationship.",
-        "q6_dealbreakers": "Flakiness, lack of ambition or growth mindset, and secretiveness are dealbreakers for me."
+        "q1_intent_partner": "I want something that lasts. I've had the casual thing, I've done the 'let's see where it goes' thing — I'm past that. I want someone I can actually grow with. someone curious, takes care of themselves, doesn't play games. trust first, everything else builds from there.",
+        "q2_emotional_needs": "I get pretty quiet when I'm stressed — I need an hour or so to sit with it before I can talk. what helps is if my partner doesn't push but doesn't vanish either. just knowing they're around is enough. and I'm kind of the opposite when she's going through something — I'm good at just listening, I don't jump straight into fix-it mode.",
+        "q3_conflict_provides": "I'd rather deal with something quickly than let it rot for a week. I stay calm, I don't raise my voice — I genuinely hate that. I'd rather have a slightly awkward conversation than a cold shoulder. I think what I bring to a relationship is stability — my partner knows I'm not going anywhere even when things are hard.",
+        "q4_lifestyle_values": "trail running is my main thing — I do a half marathon most weekends. software engineer so weekdays I'm pretty heads-down, but I make myself get outside every day. I got into coffee brewing during covid and now I take it way too seriously. I value people who are actually growing — professionally, personally, either one.",
+        "q5_personality": "pretty chill, pretty reliable. I show up when I say I will. I'm curious about a lot of things — I'll read a book on almost anything. my friends say I'm a good listener and I think that's true, I actually care what people have to say. I can be reserved at first but I warm up fast.",
+        "q6_dealbreakers": "arrogance is a big one — like someone who literally can't admit they're wrong ever. and dishonesty, not just the obvious stuff, the small habitual ones are worse honestly. also someone who's totally checked out from growing, just not interested in improving anything."
       },
       "profile": {
         "self": {
@@ -103,12 +103,12 @@
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "I want a serious partnership leading to marriage and family. I'm drawn to compassionate, grounded people who are ambitious yet humble.",
-        "q2_emotional_needs": "I need emotional presence and physical touch when feeling overwhelmed. Openness about feelings is non-negotiable.",
-        "q3_conflict_provides": "I am direct but warm during discussions. I provide deep emotional safety, organization, and enthusiasm for shared goals.",
-        "q4_lifestyle_values": "Work in architecture, spend time gardening, painting, and hosting dinner parties. Family and creative expression drive me.",
-        "q5_personality": "Friends call me creative, nurturing, organized, and deeply loyal.",
-        "q6_dealbreakers": "Emotional distance, reluctance to discuss the future, and cynicism."
+        "q1_intent_partner": "I'm at a point in my life where I really do want marriage and a family — that's not something I'm vague about anymore. I want someone who's warm, has real ambition but doesn't let it make them cold, and actually wants to build something together. compassion is non-negotiable for me.",
+        "q2_emotional_needs": "when I'm overwhelmed I really need physical presence — a hug, someone sitting next to me. I can't do the text-from-across-the-room support lol. and I need someone who's willing to talk about how they actually feel, not just 'I'm fine'. emotional openness is huge.",
+        "q3_conflict_provides": "I'm direct — I'll say what's bothering me pretty quickly, but I try to stay warm about it. I'm not a passive-aggressive person. and what I think I bring to a relationship is real stability — I'm the person who keeps things organized, remembers dates, cheers loudly for my partner's goals. I get genuinely excited about their work.",
+        "q4_lifestyle_values": "I'm an architect so creativity is kind of my whole life. outside of work I garden, I paint — watercolor mostly — and I love hosting, like a proper dinner party maybe once a month. family is really central to me. I grew up in a big one and I want that again.",
+        "q5_personality": "my friends would say I'm creative, very nurturing, sometimes annoyingly organized — I make lists for everything. and loyal to a fault. I think I'm a good partner because I make people feel genuinely cared for.",
+        "q6_dealbreakers": "emotional distance is the big one — if someone shuts down every time things get hard, I can't do it. same with people who avoid talking about the future, that avoidance stresses me out. and cynicism, like a general 'everything sucks' worldview — I can't live in that."
       },
       "profile": {
         "self": {
@@ -146,12 +146,12 @@
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "Looking for a lifetime partner to build a home and family with. I align best with warm, creative, and expressive partners.",
-        "q2_emotional_needs": "I value physical affection and open conversation when facing challenges.",
-        "q3_conflict_provides": "I stay calm and practical. I offer steadfast reliability, warmth, and strong encouragement for my partner's work.",
-        "q4_lifestyle_values": "Civil engineer who loves woodworking, cooking, and hosting friends. Value family, craft, and stability.",
-        "q5_personality": "Described as grounded, warm, dependable, and practical.",
-        "q6_dealbreakers": "Inauthenticity, avoidant behavior, and lack of desire for family."
+        "q1_intent_partner": "long-term partner, build a home together, probably kids at some point — that's the plan. I do best with someone who's warm, creative, a little expressive. I tend to be the quieter steady one so I appreciate someone who brings some color to things.",
+        "q2_emotional_needs": "when things get hard I want physical closeness more than words — just a hand on the shoulder or sitting together. and I need someone who's willing to actually open up about what's going on with them. I don't do well with stonewalling.",
+        "q3_conflict_provides": "I'm calm in conflict — maybe too calm sometimes, my ex said I seemed unbothered when I really wasn't. I try to stay practical and focus on what we can actually do about the problem. I think what I consistently bring is showing up — my partner can count on me, I'm very reliable and I genuinely root for them.",
+        "q4_lifestyle_values": "civil engineer — I spend a lot of time problem-solving on-site. outside of that I'm in my garage doing woodworking, or in the kitchen trying new recipes. I host friends pretty often, usually around food. family matters a lot to me, it's just kind of what I'm oriented around.",
+        "q5_personality": "grounded, warm, pretty practical. people tend to come to me when things go sideways because I don't panic. my friends would say dependable, which I take as a compliment. I'm not flashy but I'm consistent.",
+        "q6_dealbreakers": "inauthenticity — if I feel like I'm getting a performance instead of a real person, I can't trust that. also avoidant behavior, like someone who physically disappears when conflict comes up. and someone who's sure they never want a family — that's a life direction thing I can't work around."
       },
       "profile": {
         "self": {
