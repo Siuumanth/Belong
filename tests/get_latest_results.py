@@ -169,6 +169,8 @@ def fetch_and_print_latest_data():
             user_b_id,
             dimension_results,
             strong_alignments,
+            complementary_alignments,
+            shared_alignments,
             potential_conflicts,
             dealbreaker_violations,
             uncertainties,
@@ -191,8 +193,12 @@ def fetch_and_print_latest_data():
         print(f"Created At      : {r.get('created_at')}")
         print("\nDimension Results:")
         print(json.dumps(r.get("dimension_results"), indent=2))
-        print("\nStrong Alignments:")
-        print(json.dumps(r.get("strong_alignments"), indent=2))
+        print("\nComplementary Alignments (Reciprocal Fulfillment):")
+        print(json.dumps(r.get("complementary_alignments") or [], indent=2))
+        print("\nShared Alignments (Similarity):")
+        print(json.dumps(r.get("shared_alignments") or [], indent=2))
+        print("\nStrong Alignments (Combined):")
+        print(json.dumps(r.get("strong_alignments") or [], indent=2))
         print("\nPotential Conflicts:")
         print(json.dumps(r.get("potential_conflicts"), indent=2))
         print("\nDealbreaker Violations:")

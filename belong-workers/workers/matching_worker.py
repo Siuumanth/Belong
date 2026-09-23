@@ -91,7 +91,9 @@ class MatchingWorker:
 
                     # Convert dimension_results to jsonable dict
                     dimension_json = json.dumps(output.dimension_results.model_dump())
-                    # Schema split strong_alignments into complementary + shared; combine for DB column
+                    complementary_alignments_json = json.dumps(output.complementary_alignments)
+                    shared_alignments_json = json.dumps(output.shared_alignments)
+                    # Keep strong_alignments as combined list for backward compatibility
                     strong_alignments_json = json.dumps(
                         output.complementary_alignments + output.shared_alignments
                     )
@@ -102,15 +104,17 @@ class MatchingWorker:
                     upsert_sql = """
                         INSERT INTO compatibility_results (
                             user_a_id, user_b_id, dimension_results,
-                            strong_alignments, potential_conflicts,
-                            dealbreaker_violations, uncertainties,
+                            strong_alignments, complementary_alignments, shared_alignments,
+                            potential_conflicts, dealbreaker_violations, uncertainties,
                             reasoning_version, updated_at
                         )
-                        VALUES (%s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', CURRENT_TIMESTAMP)
+                        VALUES (%s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', CURRENT_TIMESTAMP)
                         ON CONFLICT (user_a_id, user_b_id, reasoning_version)
                         DO UPDATE SET
                             dimension_results = EXCLUDED.dimension_results,
                             strong_alignments = EXCLUDED.strong_alignments,
+                            complementary_alignments = EXCLUDED.complementary_alignments,
+                            shared_alignments = EXCLUDED.shared_alignments,
                             potential_conflicts = EXCLUDED.potential_conflicts,
                             dealbreaker_violations = EXCLUDED.dealbreaker_violations,
                             uncertainties = EXCLUDED.uncertainties,
@@ -123,6 +127,8 @@ class MatchingWorker:
                             str(user_b_id),
                             dimension_json,
                             strong_alignments_json,
+                            complementary_alignments_json,
+                            shared_alignments_json,
                             potential_conflicts_json,
                             dealbreaker_violations_json,
                             uncertainties_json

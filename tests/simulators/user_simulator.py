@@ -181,18 +181,130 @@ class PersonaBuilder:
 
         profile = self._profile
         if not profile:
+            # Build structured atomic signals with real verbatim quotes, IDs, and calibrated confidence
+            q1 = merged_responses.get("q1_intent_partner", "Looking for a committed partner.")
+            q2 = merged_responses.get("q2_emotional_needs", "I value calm reassurance.")
+            q3 = merged_responses.get("q3_conflict_provides", "I handle disagreements calmly.")
+            q4 = merged_responses.get("q4_lifestyle_values", "Active, healthy lifestyle.")
+            q5 = merged_responses.get("q5_personality", "Warm and dependable.")
+            q6 = merged_responses.get("q6_dealbreakers", "Dishonesty and disrespect.")
+
             profile = {
                 "self": {
-                    "values": [{"summary": merged_responses.get("q4_lifestyle_values", ""), "confidence": 0.9, "evidence": "survey response"}],
-                    "lifestyle": [{"summary": merged_responses.get("q4_lifestyle_values", ""), "confidence": 0.9, "evidence": "survey response"}],
-                    "personality_signals": [{"summary": merged_responses.get("q5_personality", ""), "confidence": 0.9, "evidence": "survey response"}],
-                    "conflict_style": [{"summary": merged_responses.get("q3_conflict_provides", ""), "confidence": 0.9, "evidence": "survey response"}],
-                    "emotional_needs": [{"summary": merged_responses.get("q2_emotional_needs", ""), "confidence": 0.9, "evidence": "survey response"}]
+                    "values": [
+                        {
+                            "id": "q4_lifestyle_values_s_values_00",
+                            "label": "Values healthy active living",
+                            "summary": f"User values {q4.lower()}",
+                            "quote": q4,
+                            "question_id": "q4_lifestyle_values",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "lifestyle": [
+                        {
+                            "id": "q4_lifestyle_values_s_lifestyle_00",
+                            "label": "Active lifestyle",
+                            "summary": f"Maintains routine: {q4}",
+                            "quote": q4,
+                            "question_id": "q4_lifestyle_values",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "personality_signals": [
+                        {
+                            "id": "q5_personality_s_personality_00",
+                            "label": "Grounded personality",
+                            "summary": f"Self-described: {q5}",
+                            "quote": q5,
+                            "question_id": "q5_personality",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "conflict_style": [
+                        {
+                            "id": "q3_conflict_provides_s_conflict_00",
+                            "label": "Thoughtful conflict style",
+                            "summary": f"Resolves tension: {q3}",
+                            "quote": q3,
+                            "question_id": "q3_conflict_provides",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "provides": [
+                        {
+                            "id": "probe_provides_s_provides_00",
+                            "label": "Patient listening & reassurance",
+                            "summary": "Naturally provides calm support, patient listening, and reassurance under stress.",
+                            "quote": "listening patiently when stressed and offering clear reassurance",
+                            "question_id": "probe_provides",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "emotional_needs": [
+                        {
+                            "id": "q2_emotional_needs_s_needs_00",
+                            "label": "Needs reassurance & respect",
+                            "summary": f"During stress: {q2}",
+                            "quote": q2,
+                            "question_id": "q2_emotional_needs",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ]
                 },
                 "wants": {
-                    "partner_traits": [{"summary": merged_responses.get("q1_intent_partner", ""), "confidence": 0.9, "evidence": "survey response"}],
-                    "partner_values": [{"summary": merged_responses.get("q1_intent_partner", ""), "confidence": 0.9, "evidence": "survey response"}],
-                    "relationship_expectations": [{"summary": merged_responses.get("q1_intent_partner", ""), "confidence": 0.9, "evidence": "survey response"}]
+                    "partner_traits": [
+                        {
+                            "id": "q1_intent_partner_w_traits_00",
+                            "label": "Partner traits desired",
+                            "summary": f"Seeking: {q1}",
+                            "quote": q1,
+                            "question_id": "q1_intent_partner",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "partner_values": [
+                        {
+                            "id": "q1_intent_partner_w_values_00",
+                            "label": "Shared commitment & growth",
+                            "summary": f"Values alignment: {q1}",
+                            "quote": q1,
+                            "question_id": "q1_intent_partner",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "relationship_expectations": [
+                        {
+                            "id": "q1_intent_partner_w_expectations_00",
+                            "label": "Long-term partnership intent",
+                            "summary": f"Expectations: {q1}",
+                            "quote": q1,
+                            "question_id": "q1_intent_partner",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ]
+                },
+                "constraints": {
+                    "dealbreakers": [
+                        {
+                            "id": "q6_dealbreakers_c_dealbreakers_00",
+                            "label": "Non-negotiable boundaries",
+                            "summary": f"Dealbreakers: {q6}",
+                            "quote": q6,
+                            "question_id": "q6_dealbreakers",
+                            "confidence": 0.99,
+                            "evidence_type": "explicit"
+                        }
+                    ]
                 }
             }
 
@@ -288,12 +400,13 @@ class UserSimulator:
             self.persona.question_responses.get("q6_dealbreakers", ""),
         ]
         # Fallback reply used for any follow-up probes beyond the scripted set
+        # Specifically answers behavioral provides probe with concrete evidence
         fallback_reply = (
-            "I value open communication, mutual respect, emotional honesty, "
-            "and building a life together with someone who shares my core values."
+            "I naturally support my partner by listening patiently when they are stressed, "
+            "offering clear reassurance, and communicating transparently during difficult times."
         )
 
-        MAX_TURNS = 20
+        MAX_TURNS = 10
         conv_status = "active"
 
         for turn in range(MAX_TURNS):

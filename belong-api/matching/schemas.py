@@ -67,6 +67,8 @@ class MatchCandidateResponse(BaseModel):
     overall_verdict: str
     dimension_results: Dict[str, Any]
     strong_alignments: List[str]
+    complementary_alignments: List[str] = Field(default_factory=list)
+    shared_alignments: List[str] = Field(default_factory=list)
     potential_conflicts: List[str]
     dealbreaker_violations: List[str]
     uncertainties: List[str]

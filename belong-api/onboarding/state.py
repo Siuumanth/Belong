@@ -1,5 +1,4 @@
-from typing import List, Dict, Any, Optional
-from typing_extensions import TypedDict
+from typing import List, Dict, Any, Optional, TypedDict
 
 class OnboardingState(TypedDict, total=False):
     conversation_id: str
@@ -10,4 +9,6 @@ class OnboardingState(TypedDict, total=False):
     extracted_signals: Dict[str, Any]
     latest_user_input: Optional[str]
     latest_assistant_response: Optional[str]
+    active_probe_field: Optional[str]
+    active_probe_prompt: Optional[str]
     status: str

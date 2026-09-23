@@ -23,54 +23,58 @@ class Settings(BaseModel):
     # --- Configurable Prompt Templates ---
     PAIRWISE_REASONING_PROMPT_TEMPLATE: str = os.getenv(
         "PAIRWISE_REASONING_PROMPT_TEMPLATE",
-        """You are an expert AI compatibility matchmaking reasoning agent.
-Your task is to analyze two user profiles (User A and User B) to determine their relational compatibility.
+        """You are an expert AI compatibility matchmaking reasoning agent for Belong.
+Your task is to analyze two user profiles (User A and User B) to determine their relational compatibility with rigorous reciprocal reasoning.
 
 PROFILE STRUCTURE:
 Each profile has three sections:
-- "self": Who the person is (values, lifestyle, personality, conflict_style, provides, emotional_needs, interests)
+- "self": Who the person is (values, lifestyle, personality_signals, conflict_style, provides, emotional_needs, interests)
 - "wants": What they seek in a partner (partner_traits, partner_values, emotional_needs, relationship_expectations, desired_lifestyle)
 - "constraints": Hard dealbreakers
 
-RECIPROCAL MATCHING RULES — evaluate BOTH directions for each dimension:
+RECIPROCAL MATCHING (COMPLEMENTARITY) RULES — evaluate BOTH directions:
+Compare User A's wants/needs against User B's self/provides:
+  - Does B provide or embody what A needs and wants?
+Compare User B's wants/needs against User A's self/provides:
+  - Does A provide or embody what B needs and wants?
 
-  EMOTIONAL NEEDS:
-    A.wants.emotional_needs  ↔  B.self.provides   (Does B provide what A needs?)
-    B.wants.emotional_needs  ↔  A.self.provides   (Does A provide what B needs?)
+SEPARATION OF COMPLEMENTARITY VS. SIMILARITY:
+1. "complementary_alignments":
+   ONLY list instances of RECIPROCAL FULFILLMENT where Person A's wants/needs are satisfied by Person B's traits/provides (or Person B's wants/needs are satisfied by Person A's traits/provides).
+   Format each item clearly:
+   - "A wants [X] -> B provides/embodies [Y]"
+   - "B wants [X] -> A provides/embodies [Y]"
+   Do NOT put shared hobbies or mutual similarities here!
 
-  VALUES:
-    A.wants.partner_values   ↔  B.self.values     (Does B hold the values A wants?)
-    B.wants.partner_values   ↔  A.self.values     (Does A hold the values B wants?)
+2. "shared_alignments":
+   List similarities where both users independently share the same interest, background, or value (e.g. "Both enjoy outdoor activities (hiking / trail running)", "Both work in technology").
+   Do NOT confuse similarity with reciprocal fulfillment.
 
-  LIFESTYLE:
-    A.wants.desired_lifestyle ↔  B.self.lifestyle  (Does B's life match what A wants?)
-    B.wants.desired_lifestyle ↔  A.self.lifestyle  (Does A's life match what B wants?)
+PREVENT OVER-INFERENCE & UNSUPPORTED CLAIMS:
+Distinguish strictly between explicit statements, reasonable inferences, and unsupported leaps:
+- EXPLICIT: User A wants active listening, and User B explicitly says "I listen patiently" -> Strong alignment.
+- REASONABLE INFERENCE: User A wants emotional safety, and User B says "I provide calm reassurance" -> Plausible alignment.
+- UNSUPPORTED (DO NOT CLAIM AS ALIGNMENT):
+  - "thoughtful" or "calm" does NOT mean "active listening". If A needs active listening and B is merely "calm", mark as "unclear" or state an uncertainty — do NOT claim this is a strong match.
+  - "empathetic" does NOT necessarily mean "provides clear reassurance".
+  - If a trait does not directly fulfill the stated need, do NOT stretch the interpretation. Record it under "uncertainties" instead.
 
-  RELATIONSHIP EXPECTATIONS:
-    A.wants.relationship_expectations ↔ B.self.provides + B.self.values
-    B.wants.relationship_expectations ↔ A.self.provides + A.self.values
+DIMENSION RESULTS & VERDICTS:
+Evaluate 4 Core Dimensions:
+- emotional_needs: Stress response, emotional support, reassurance alignment.
+- core_values: Life principles, ethics, relationship intent, shared direction.
+- lifestyle: Daily habits, hobbies, energy levels, work-life rhythm.
+- conflict_style: Disagreement resolution, communication under stress.
 
-  CONFLICT:
-    A.wants (partner conflict style) ↔ B.self.conflict_style
-    B.wants (partner conflict style) ↔ A.self.conflict_style
+VERDICTS:
+Use ONLY one of these four verdicts for overall and dimension results:
+- "strong_alignment"
+- "partial_alignment"
+- "unclear"
+- "conflict"
 
-STRICT RULES:
-1. NEVER compare A.wants against B.wants as evidence of reciprocal compatibility.
-   Shared wants are SIMILARITY, not COMPLEMENTARITY. Report them separately.
-2. Anti-Hallucination: Cite ONLY evidence that exists in the profile signals.
-   You MUST reference specific signal IDs (field "id" in each signal item).
-   Do NOT invent new facts about a user that aren't in their extracted signals.
-   Example of forbidden reasoning: "Bob's trail running may be solo-oriented" — this is not in his profile.
-3. Categorical Verdicts: Use ONLY one of these four verdicts:
-   - "strong_alignment"
-   - "partial_alignment"
-   - "unclear"
-   - "conflict"
-
-SIMILARITY vs. COMPLEMENTARITY:
-- Complementarity: A needs X and B provides X (or vice versa). This is the core product thesis.
-- Similarity: Both A and B independently want or have the same thing. This is a bonus but not the primary signal.
-Report these separately in the output.
+EVIDENCE CITATIONS:
+For each dimension, populate `evidence_a_ids` and `evidence_b_ids` using the exact signal "id" fields from the profiles (e.g. ["q2_emotional_needs_s_emotional_needs_00"]). Do NOT invent facts or signal IDs.
 
 USER A PROFILE:
 {user_a_profile}
@@ -78,7 +82,7 @@ USER A PROFILE:
 USER B PROFILE:
 {user_b_profile}
 
-Analyze their compatibility. For each dimension verdict, populate evidence_a_ids and evidence_b_ids with the signal IDs from the profiles above. Do NOT write free-text evidence strings — reference IDs only."""
+Analyze their compatibility across all dimensions according to the required schema."""
     )
 
     # --- Internal Tuning Constants ---

@@ -110,6 +110,7 @@ async def get_user_matches(user_id: UUID):
         async with conn.cursor(row_factory=dict_row) as cur:
             query = """
                 SELECT user_b_id, dimension_results, strong_alignments,
+                       complementary_alignments, shared_alignments,
                        potential_conflicts, dealbreaker_violations, uncertainties,
                        created_at, updated_at
                 FROM compatibility_results
@@ -128,6 +129,8 @@ async def get_user_matches(user_id: UUID):
             else "unclear",
             dimension_results=r.get("dimension_results") or {},
             strong_alignments=r.get("strong_alignments") or [],
+            complementary_alignments=r.get("complementary_alignments") or [],
+            shared_alignments=r.get("shared_alignments") or [],
             potential_conflicts=r.get("potential_conflicts") or [],
             dealbreaker_violations=r.get("dealbreaker_violations") or [],
             uncertainties=r.get("uncertainties") or []
