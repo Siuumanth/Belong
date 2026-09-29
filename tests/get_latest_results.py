@@ -30,7 +30,11 @@ class TeeOutput:
         self.stdout = sys.stdout
 
     def write(self, data: str):
-        self.stdout.write(data)
+        try:
+            self.stdout.write(data)
+        except UnicodeEncodeError:
+            enc = getattr(self.stdout, 'encoding', 'utf-8') or 'utf-8'
+            self.stdout.write(data.encode(enc, errors='replace').decode(enc, errors='replace'))
         self.file.write(data)
 
     def flush(self):
@@ -50,13 +54,23 @@ def run_psql_query(query_sql: str):
         json_query
     ]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        out = res.stdout.strip()
+        # Use UTF-8 encoding explicitly and handle errors gracefully
+        res = subprocess.run(cmd, capture_output=True, text=False, check=True)
+        out = res.stdout.decode('utf-8', errors='replace')  # Replace invalid chars instead of crashing
+        if out is None:
+            return []
+        out = out.strip()
         if not out or out == "null":
             return []
         return json.loads(out)
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing psql command: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON from psql output: {e}")
+        return None
     except Exception as e:
-        print(f"Error executing psql query via docker: {e}")
+        print(f"Unexpected error in run_psql_query: {e}")
         return None
 
 
@@ -79,11 +93,21 @@ def print_user_conversation(user_id: str):
         LIMIT 1
     """
     conv_list = run_psql_query(conv_sql)
-    if not conv_list or not conv_list[0].get("messages"):
+    
+    # Check if query failed or returned empty
+    if conv_list is None:
+        print("   Onboarding Dialogue: (Error fetching conversation from database)\n")
+        return
+    
+    if not conv_list or len(conv_list) == 0:
         print("   Onboarding Dialogue: (No conversation recorded for this profile)\n")
         return
-
+    
     conv = conv_list[0]
+    if not conv or not conv.get("messages"):
+        print("   Onboarding Dialogue: (No messages found for this conversation)\n")
+        return
+
     messages = conv.get("messages", [])
     print(f"   Conversation ID : {conv.get('conversation_id')}")
     print(f"   Status          : {conv.get('status')}")

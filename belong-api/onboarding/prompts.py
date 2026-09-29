@@ -40,6 +40,30 @@ CATEGORY CLASSIFICATION CONTRACT & RULES:
 - `wants.partner_traits`: Desired qualities, personality, or behavioral traits in a partner.
 - `wants.partner_values`: Explicit values, principles, or ethics they require in a partner. DISTINCT from traits.
 - `wants.relationship_expectations`: Explicit statements about what kind of relationship or future they want (e.g. long-term, talks about the future, commitment). DISTINCT from traits or values.
+- `constraints.dealbreakers`: Absolute non-negotiables, hard boundaries, things they WILL NOT accept in a partner. DISTINCT from preferences.
+
+DEALBREAKER IDENTIFICATION (CRITICAL):
+Route to `constraints.dealbreakers` when user language includes ANY of these patterns:
+- "hard no", "dealbreaker", "non-negotiable", "absolute boundary", "must not", "will not accept"
+- "I can't do [X]", "I won't date someone who [X]", "I can't be with someone who [X]"
+- "if [condition], it's done/over/a dealbreaker"
+- "[X] is a no-go", "[X] is not acceptable"
+- Phrases indicating rejection/elimination: "arrogance is out", "dishonesty ends it"
+
+Examples of DEALBREAKERS (→ constraints.dealbreakers):
+✓ "smoking is a hard no" → constraints.dealbreakers
+✓ "I can't do arrogance" → constraints.dealbreakers  
+✓ "dishonesty in any form" → constraints.dealbreakers
+✓ "if I can't trust you, it's done" → constraints.dealbreakers
+✓ "someone who's totally stagnant" (in context of what they CAN'T do) → constraints.dealbreakers
+
+Examples of VALUES/PREFERENCES (NOT dealbreakers):
+✓ "I value honesty" → wants.partner_values (positive trait desired)
+✓ "I prefer someone active" → wants.partner_traits (preference, not hard boundary)
+✓ "trust is important to me" → wants.partner_values (positive value)
+
+IMPORTANT: If the user says BOTH what they value AND what they cannot accept, extract BOTH:
+"I value honesty. I can't do dishonesty" → wants.partner_values + constraints.dealbreakers
 
 ATOMIC EXTRACTION — WANTS FIELDS:
 When the user says something like "I want someone who communicates, is emotionally present, and wants to build something real":
@@ -55,7 +79,64 @@ If the question asked is probing what the user naturally does, brings, or contri
 ATOMIC EXTRACTION REQUIREMENT:
 Extract individual, discrete signals for each distinct concept mentioned.
 DO NOT combine multiple unrelated habits, hobbies, or traits into a single giant blob summary!
-For example, if the user says: "Trail running, coffee brewing, software engineering, and weekend trips":
+
+SPECIAL RULES FOR Q4 (LIFESTYLE/VALUES/INTERESTS):
+When the question targets lifestyle, values, interests, or life goals, extract ACROSS ALL APPLICABLE DIMENSIONS:
+
+LIFESTYLE (self.lifestyle) - Extract patterns of HOW they live:
+- Recurring routines, habits (daily/weekly patterns)
+- Work structure, time management
+- Diet/health choices that are lifestyle patterns
+Examples:
+  "I do yoga 5-6 times a week" → self.lifestyle (routine)
+  "weekdays are heads-down" → self.lifestyle (work pattern)
+  "I try to get outside every day" → self.lifestyle (daily habit)
+  "I'm plant-based" → self.lifestyle (dietary pattern)
+
+INTERESTS (self.interests) - Extract WHAT they enjoy doing:
+- Hobbies, activities, pastimes
+- Things they pursue for enjoyment
+Examples:
+  "trail running is my thing" → self.interests
+  "I got into coffee brewing" → self.interests
+  "hiking or farmers market" → self.interests
+  "I love reading" → self.interests
+
+VALUES (self.values) - Extract principles they explicitly state matter:
+- Moral/ethical stances
+- Qualities they care about in people
+- Life philosophy statements
+Examples:
+  "I value people who have ambition" → self.values
+  "I care about being consistent" → self.values
+  "continuous growth matters to me" → self.values
+  "honesty is fundamental" → self.values
+
+LIFE GOALS (self.life_goals) - Extract future aspirations:
+- Career goals, family plans
+- Things they're working toward
+- Future-oriented statements
+Examples:
+  "planning to start a business" → self.life_goals
+  "want to travel more in the next few years" → self.life_goals
+  "hoping to own a home" → self.life_goals
+
+CRITICAL: One answer to Q4 should produce signals across MULTIPLE dimensions.
+DO NOT extract only to self.interests and ignore lifestyle/values just because interests were mentioned first.
+Extract ALL dimensions with evidence in the answer.
+
+Example extraction from: "Trail running is my thing — I do a half marathon most weekends. I'm a software engineer so weekdays are heads-down but I try to get outside every day. I got into coffee brewing. I value people who have ambition and keep growing."
+
+Should produce:
+- self.interests: "Trail running" (hobby)
+- self.lifestyle: "Half marathon most weekends" (routine)
+- self.lifestyle: "Software engineer weekdays heads-down" (work pattern) 
+- self.lifestyle: "Try to get outside every day" (daily habit)
+- self.interests: "Coffee brewing" (hobby)
+- self.values: "Value ambition and continuous growth" (principle)
+
+For atomic extraction from other questions:
+If the user says: "Trail running, coffee brewing, software engineering, and weekend trips":
 - Signal 1: target_field: "self.interests", label: "Enjoys trail running", quote: "Trail running", summary: "The user enjoys trail running."
 - Signal 2: target_field: "self.interests", label: "Coffee brewing", quote: "coffee brewing", summary: "The user is passionate about coffee brewing."
 - Signal 3: target_field: "self.lifestyle", label: "Software engineering career", quote: "software engineering", summary: "Works in software engineering."
@@ -80,26 +161,44 @@ EVIDENCE TYPE RULES:
 
 INSTRUCTIONS:
 1. ONLY extract signals that are EXPLICITLY stated or directly supported by the user's text. DO NOT invent or assume traits.
-2. Return a JSON object with a list of extracted atomic items.
+2. EXTRACT MULTIPLE ATOMIC ITEMS (2-6 items) whenever the user mentions multiple habits, values, desires, or traits. NEVER combine multiple distinct ideas into a single item or single summary.
 3. For each extracted signal item, provide:
-   - "target_field": Exact field path (e.g. "self.emotional_needs", "self.provides", "self.lifestyle")
-   - "label": Short 2-4 word descriptor (e.g. "Enjoys trail running", "Needs active listener")
-   - "summary": 1 concise sentence explanation of what they expressed
-   - "quote": Exact verbatim excerpt from their response as evidence
+   - "target_field": Exact field path (e.g. "self.emotional_needs", "self.provides", "self.lifestyle", "self.interests", "self.values")
+   - "label": Short 2-4 word descriptor (e.g. "Morning yoga routine", "Plant-based diet", "Values consistency")
+   - "summary": 1 short concise sentence (6-12 words max) explaining the specific item
+   - "quote": SHORT 2-6 WORD EXACT VERBATIM PHRASE from the user's text as evidence (e.g. "morning yoga", "plant-based", "trail running"). NEVER copy the entire response paragraph or multi-sentence text as the quote!
    - "question_id": "{question_id}"
    - "confidence": Float using the calibration rubric above (0.50 to 1.0)
    - "evidence_type": One of "explicit", "strong_inference", or "weak_inference"
 
-FORMAT YOUR OUTPUT EXACTLY AS A JSON OBJECT:
+FORMAT YOUR OUTPUT EXACTLY AS A JSON OBJECT WITH MULTIPLE ATOMIC ITEMS:
 {{
   "extracted_items": [
     {{
       "target_field": "self.interests",
       "label": "Trail running",
-      "summary": "The user regularly does trail running.",
-      "quote": "Trail running",
+      "summary": "The user enjoys trail running.",
+      "quote": "trail running",
       "question_id": "{question_id}",
       "confidence": 0.98,
+      "evidence_type": "explicit"
+    }},
+    {{
+      "target_field": "self.lifestyle",
+      "label": "Half marathon weekends",
+      "summary": "Runs half marathons on weekends.",
+      "quote": "half marathon most weekends",
+      "question_id": "{question_id}",
+      "confidence": 0.95,
+      "evidence_type": "explicit"
+    }},
+    {{
+      "target_field": "self.values",
+      "label": "Values ambition",
+      "summary": "Values partners with ambition and growth.",
+      "quote": "ambition and keep growing",
+      "question_id": "{question_id}",
+      "confidence": 0.95,
       "evidence_type": "explicit"
     }}
   ]

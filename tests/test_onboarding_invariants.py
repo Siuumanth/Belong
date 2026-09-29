@@ -115,6 +115,60 @@ def test_coverage_missing_when_signals_have_no_confidence_key():
 
 
 # ---------------------------------------------------------------------------
+# Dealbreaker Extraction Tests
+# ---------------------------------------------------------------------------
+
+def test_dealbreaker_keywords_should_route_to_constraints():
+    """Ensures that dealbreaker keywords route signals to constraints.dealbreakers, not wants.partner_values."""
+    # This is a conceptual test - actual extraction would need the full LLM pipeline
+    # But we can verify the prompt includes the rules
+    from onboarding.prompts import SIGNAL_EXTRACTION_PROMPT
+    
+    assert "constraints.dealbreakers" in SIGNAL_EXTRACTION_PROMPT
+    assert "hard no" in SIGNAL_EXTRACTION_PROMPT.lower()
+    assert "dealbreaker" in SIGNAL_EXTRACTION_PROMPT.lower()
+    assert "non-negotiable" in SIGNAL_EXTRACTION_PROMPT.lower()
+
+
+def test_q6_targets_dealbreakers():
+    """Ensures Q6 configuration explicitly targets constraints.dealbreakers."""
+    q6 = next((q for q in settings.ONBOARDING_QUESTIONS if q.id == "q6_dealbreakers"), None)
+    assert q6 is not None
+    assert "constraints.dealbreakers" in q6.targets
+    assert "dealbreaker" in q6.prompt.lower() or "constraint" in q6.prompt.lower()
+
+
+# ---------------------------------------------------------------------------
+# Q4 Multi-Dimension Extraction Tests
+# ---------------------------------------------------------------------------
+
+def test_q4_targets_multiple_lifestyle_dimensions():
+    """Ensures Q4 configuration targets lifestyle, interests, values, and life_goals."""
+    q4 = next((q for q in settings.ONBOARDING_QUESTIONS if q.id == "q4_lifestyle_values"), None)
+    assert q4 is not None
+    
+    # Must target all key dimensions
+    assert "self.lifestyle" in q4.targets
+    assert "self.interests" in q4.targets
+    assert "self.values" in q4.targets
+    assert "self.life_goals" in q4.targets
+
+
+def test_q4_extraction_rules_in_prompt():
+    """Ensures extraction prompt includes specific Q4 multi-dimension guidance."""
+    from onboarding.prompts import SIGNAL_EXTRACTION_PROMPT
+    
+    # Check for Q4-specific guidance
+    assert "LIFESTYLE" in SIGNAL_EXTRACTION_PROMPT.upper()
+    assert "INTERESTS" in SIGNAL_EXTRACTION_PROMPT.upper()
+    assert "VALUES" in SIGNAL_EXTRACTION_PROMPT.upper()
+    assert "LIFE GOALS" in SIGNAL_EXTRACTION_PROMPT.upper() or "LIFE_GOALS" in SIGNAL_EXTRACTION_PROMPT.upper()
+    
+    # Check for multi-dimension extraction guidance
+    assert "multiple dimensions" in SIGNAL_EXTRACTION_PROMPT.lower() or "all applicable dimensions" in SIGNAL_EXTRACTION_PROMPT.lower()
+
+
+# ---------------------------------------------------------------------------
 # Bug fix #1 — off-topic probe answer must not loop; hard cap must complete
 # ---------------------------------------------------------------------------
 

@@ -27,6 +27,7 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
+                max_tokens=4096,
                 groq_api_key=api_key
             )
         except (ImportError, ModuleNotFoundError):
@@ -34,6 +35,7 @@ def get_llm():
             return ChatOpenAI(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
+                max_tokens=4096,
                 api_key=api_key or "missing_key",
                 base_url="https://api.groq.com/openai/v1"
             )
@@ -185,6 +187,7 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
 
     # NOTE: do NOT re-assign extracted_signals here — we already have the cleaned copy above.
 
+    items = []  # Initialize to avoid UnboundLocalError if extraction fails
     try:
         llm = get_llm()
         response = await llm.ainvoke([HumanMessage(content=prompt)])
@@ -213,16 +216,38 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
                 logger.debug(f"Dropping signal for {field_path} — confidence {confidence} below 0.50 threshold")
                 continue
 
+            quote = item.get("quote", "").strip()
+            if not quote or quote.lower() == "survey response":
+                quote = user_input[:80]
+            elif len(quote) > 80:
+                quote = quote[:80].rsplit(" ", 1)[0]
+
+            # Deduplication check: skip if exact label or quote already extracted for THIS field_path
+            quote_clean = quote.strip().lower()
+            label_clean = item.get("label", "").strip().lower()
+
+            already_exists = False
+            # Check within the same field_path
+            existing_sigs = extracted_signals.get(field_path, [])
+            for existing_sig in existing_sigs:
+                if not isinstance(existing_sig, dict):
+                    continue
+                existing_label = existing_sig.get("label", "").strip().lower()
+                existing_quote = existing_sig.get("quote", "").strip().lower()
+                if (label_clean and existing_label and label_clean == existing_label) or (quote_clean and existing_quote and quote_clean == existing_quote):
+                    already_exists = True
+                    break
+
+            if already_exists:
+                logger.info(f"Skipping duplicate signal '{item.get('label')}' for field {field_path}")
+                continue
+
             if field_path not in extracted_signals:
                 extracted_signals[field_path] = []
 
             # Deterministic signal ID: {topic_id}_{field_abbrev}_{index}
             field_abbrev = field_path.replace(".", "_").replace("self_", "s_").replace("wants_", "w_").replace("constraints_", "c_")
             signal_id = f"{topic_id}_{field_abbrev}_{len(extracted_signals[field_path]):02d}"
-
-            quote = item.get("quote", "")
-            if not quote or quote.lower() == "survey response":
-                quote = user_input[:120]
 
             extracted_signals[field_path].append({
                 "id": signal_id,
@@ -236,6 +261,29 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error in extract_signals_node: {e}")
+
+    # Validation logging for critical fields
+    logger.info(f"Extraction for {topic_id}: extracted {len(items)} items across {len(extracted_signals)} dimensions")
+    
+    # Check for dealbreaker keywords if this was Q6
+    if topic_id == "q6_dealbreakers":
+        dealbreaker_count = len(extracted_signals.get("constraints.dealbreakers", []))
+        logger.info(f"Q6 dealbreaker extraction: {dealbreaker_count} dealbreakers extracted")
+        
+        if dealbreaker_count == 0:
+            # Check for dealbreaker keywords in user input
+            dealbreaker_keywords = ["hard no", "dealbreaker", "can't do", "won't accept", "it's done", "non-negotiable"]
+            found_keywords = [kw for kw in dealbreaker_keywords if kw in user_input.lower()]
+            if found_keywords:
+                logger.warning(f"Q6 answer contains dealbreaker keywords {found_keywords} but extracted 0 dealbreakers!")
+    
+    # Check for multi-dimension extraction on Q4
+    if topic_id == "q4_lifestyle_values":
+        dimensions_extracted = [k for k in ["self.lifestyle", "self.interests", "self.values", "self.life_goals"] 
+                                if extracted_signals.get(k)]
+        logger.info(f"Q4 extracted dimensions: {dimensions_extracted}")
+        if len(dimensions_extracted) < 2:
+            logger.warning(f"Q4 only extracted {len(dimensions_extracted)} dimensions, expected at least 2")
 
     return {
         "extracted_signals": extracted_signals,
@@ -288,7 +336,9 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
             new_follow_up_count = follow_up_count + 1
             assert new_follow_up_count <= MAX_FOLLOWUPS, f"follow_up_count {new_follow_up_count} exceeded MAX_FOLLOWUPS {MAX_FOLLOWUPS}"
             probe_field = missing["keys"][0]
-            covered_areas.append(f"probe:{probe_field}")
+            for k in missing.get("keys", []):
+                if f"probe:{k}" not in covered_areas:
+                    covered_areas.append(f"probe:{k}")
             extracted_signals["_active_probe"] = {"field": probe_field, "prompt": missing["prompt"]}
 
             sys_prompt = CHATBOT_SYSTEM_PROMPT.format(
@@ -396,7 +446,9 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
                 new_follow_up_count += 1
                 assert new_follow_up_count <= MAX_FOLLOWUPS, f"follow_up_count {new_follow_up_count} exceeded MAX_FOLLOWUPS {MAX_FOLLOWUPS}"
                 probe_field = missing["keys"][0]
-                covered_areas.append(f"probe:{probe_field}")
+                for k in missing.get("keys", []):
+                    if f"probe:{k}" not in covered_areas:
+                        covered_areas.append(f"probe:{k}")
                 extracted_signals["_active_probe"] = {"field": probe_field, "prompt": missing["prompt"]}
                 is_follow_up_str = "Yes - targeted adaptive probe for high-priority profile coverage."
                 next_prompt = missing["prompt"]
@@ -445,6 +497,7 @@ async def finalize_profile(state: OnboardingState):
 
     try:
         from uuid import UUID
+        from jobs.repository import job_repository
         user_id = UUID(user_id_str)
         signals = state.get("extracted_signals", {})
 

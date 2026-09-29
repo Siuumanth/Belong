@@ -12,7 +12,7 @@ class QuestionConfig(BaseModel):
 class Settings(BaseModel):
     # --- External / Environment-Sourced ---
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")  # LLM backend: groq, google, openai, anthropic
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")  # Model used for extraction & reasoning
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")  # Model used for extraction & reasoning
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))  # Creativity vs determinism
     GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY", None)  # Groq API key
     EMBEDDING_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")  # Sentence transformer model for vector embeddings

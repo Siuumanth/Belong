@@ -16,7 +16,7 @@ class WorkerSettings:
 
     # LLM (Groq default)
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
@@ -82,7 +82,9 @@ USER A PROFILE:
 USER B PROFILE:
 {user_b_profile}
 
-Analyze their compatibility across all dimensions according to the required schema."""
+Analyze their compatibility across all dimensions according to the required schema.
+
+Return your response as a valid JSON object matching the required output schema."""
     )
 
     # Embeddings

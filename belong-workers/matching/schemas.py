@@ -53,8 +53,8 @@ class DimensionDetail(BaseModel):
         default_factory=list,
         description="Signal IDs from User B's profile that support this verdict."
     )
-    reasoning: str = Field(
-        ...,
+    reasoning: Optional[str] = Field(
+        default="",
         description="1-2 sentence explanation of the verdict based only on the cited signal IDs."
     )
 

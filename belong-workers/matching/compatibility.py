@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from typing import Any, Dict, Optional, TypedDict, cast
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
@@ -28,6 +28,7 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
+                max_tokens=4096,
                 groq_api_key=api_key
             )
         except (ImportError, ModuleNotFoundError):
@@ -35,6 +36,7 @@ def get_llm():
             return ChatOpenAI(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
+                max_tokens=4096,
                 api_key=api_key or "missing_key",
                 base_url="https://api.groq.com/openai/v1"
             )
@@ -92,8 +94,8 @@ def _slim_profile(profile: Dict[str, Any]) -> Dict[str, Any]:
 
 def format_prompt_node(state: PairwiseState) -> Dict[str, Any]:
     """Node 1: Formats the configurable prompt template with User A and B profiles."""
-    user_a_str = json.dumps(_slim_profile(state["user_a_profile"]), indent=2)
-    user_b_str = json.dumps(_slim_profile(state["user_b_profile"]), indent=2)
+    user_a_str = json.dumps(_slim_profile(state["user_a_profile"]), separators=(',', ':'))
+    user_b_str = json.dumps(_slim_profile(state["user_b_profile"]), separators=(',', ':'))
 
     prompt = settings.PAIRWISE_REASONING_PROMPT_TEMPLATE.format(
         user_a_profile=user_a_str,
@@ -105,10 +107,13 @@ def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
     """Node 2: Invokes Groq LLM with structured output constraint."""
     try:
         llm = get_llm()
-        structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput)
+        # Use json_mode instead of tool calling — tool calling truncates JSON
+        # for models like openai/gpt-oss-120b on Groq's free tier.
+        structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput, method="json_mode")
         
         prompt_text = state.get("prompt_text", "")
         response = cast(PairwiseCompatibilityOutput, structured_llm.invoke([
+            SystemMessage(content="You are an expert AI compatibility reasoning agent for Belong. Return your analysis strictly as a valid JSON object matching the required schema."),
             HumanMessage(content=prompt_text)
         ]))
 
