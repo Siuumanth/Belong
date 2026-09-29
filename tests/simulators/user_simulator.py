@@ -399,6 +399,9 @@ class UserSimulator:
             "q5_personality":       self.persona.question_responses.get("q5_personality", ""),
             "q6_dealbreakers":      self.persona.question_responses.get("q6_dealbreakers", ""),
         }
+        # Sent when the server is in adaptive-probe phase (question_id == "probe" or None).
+        # Describes what the user naturally does for a partner — covers self.provides,
+        # self.emotional_needs, and self.conflict_style, the most common probe targets.
         fallback_reply = (
             "I naturally support my partner by listening patiently when they are stressed, "
             "offering clear reassurance, and communicating transparently during difficult times."
@@ -414,7 +417,12 @@ class UserSimulator:
             if conv_status == "completed":
                 break
 
-            user_msg = scripted.get(current_question_id, fallback_reply)
+            # Use scripted answer for core questions; fallback for probe turns.
+            # "probe" sentinel or None both mean the system is in adaptive-probe phase.
+            if current_question_id in scripted:
+                user_msg = scripted[current_question_id]
+            else:
+                user_msg = fallback_reply
 
             msg_res = await self._post_with_fallback(
                 client,
@@ -430,10 +438,16 @@ class UserSimulator:
 
             reply_data = msg_res.json()
             conv_status = reply_data.get("status", "active")
-            # Advance to whatever question the server says is next
+            # Advance to whatever question the server says is next.
+            # "probe" means adaptive follow-up phase — keep as "probe" so the
+            # next loop iteration sends fallback_reply instead of re-sending a
+            # stale core answer.
+            # None means completed (no next question).
             next_qid = reply_data.get("question_id")
-            if next_qid:
+            if next_qid is not None:
                 current_question_id = next_qid
+            # If next_qid is None the conversation is completing — loop exits on
+            # conv_status == "completed" at the top of the next iteration.
 
             await asyncio.sleep(6.0)
 

@@ -159,13 +159,17 @@ async def send_message(payload: SendMessageRequest, background_tasks: Background
         }
         await publisher.publish_job(routing_key="embedding", payload=mq_payload)
 
-    # Determine question_id for next turn so the simulator can route correctly
+    # Determine question_id for next turn so the simulator can route correctly.
+    # When current_area_index >= len(questions) the system is in the adaptive-probe
+    # phase.  Return "probe" as a sentinel so the client/simulator knows to send a
+    # generic supports-oriented reply instead of re-sending a scripted core answer.
     next_idx = new_state.get("current_area_index", 0)
-    next_question_id = (
-        settings.ONBOARDING_QUESTIONS[next_idx].id
-        if next_idx < len(settings.ONBOARDING_QUESTIONS)
-        else None
-    )
+    if next_idx < len(settings.ONBOARDING_QUESTIONS):
+        next_question_id = settings.ONBOARDING_QUESTIONS[next_idx].id
+    elif new_status == "active":
+        next_question_id = "probe"   # adaptive follow-up — client should use fallback reply
+    else:
+        next_question_id = None      # completed
 
     return SendMessageResponse(
         conversation_id=payload.conversation_id,

@@ -126,7 +126,10 @@ def fetch_and_print_latest_data():
             preferred_genders,
             required_relationship_goal,
             created_at,
-            profile
+            profile,
+            self_embedding::text AS self_embedding,
+            wants_embedding::text AS wants_embedding,
+            embedding_source_text
         FROM profiles
         ORDER BY created_at DESC
         LIMIT 2
@@ -152,6 +155,41 @@ def fetch_and_print_latest_data():
             print(f"Created At         : {p.get('created_at')}")
             print("\nExtracted Profile JSON:")
             print(json.dumps(p.get("profile"), indent=2))
+
+            # print("\n--------------------------------------------------------------------------------")
+            # print("VECTOR EMBEDDINGS")
+            # print("--------------------------------------------------------------------------------")
+            
+            # self_emb_raw = p.get("self_embedding")
+            # if self_emb_raw:
+            #     try:
+            #         self_vec = json.loads(self_emb_raw) if isinstance(self_emb_raw, str) else self_emb_raw
+            #         print(f"Self Embedding ({len(self_vec)}-dim vector):")
+            #         print(self_vec)
+            #     except Exception:
+            #         print(f"Self Embedding: {self_emb_raw}")
+            # else:
+            #     print("Self Embedding: None (Not generated)")
+
+            # wants_emb_raw = p.get("wants_embedding")
+            # if wants_emb_raw:
+            #     try:
+            #         wants_vec = json.loads(wants_emb_raw) if isinstance(wants_emb_raw, str) else wants_emb_raw
+            #         print(f"\nWant Embedding ({len(wants_vec)}-dim vector):")
+            #         print(wants_vec)
+            #     except Exception:
+            #         print(f"\nWant Embedding: {wants_emb_raw}")
+            # else:
+            #     print("\nWant Embedding: None (Not generated)")
+
+            emb_source = p.get("embedding_source_text")
+            if emb_source and isinstance(emb_source, dict):
+                if emb_source.get("self_text"):
+                    print("\nSelf Embedding Source Text:")
+                    print(emb_source.get("self_text"))
+                if emb_source.get("wants_text"):
+                    print("\nWant Embedding Source Text:")
+                    print(emb_source.get("wants_text"))
 
             print("\n--------------------------------------------------------------------------------")
             print(f"ONBOARDING DIALOGUE FOR PROFILE #{idx} ({user_name})")

@@ -38,6 +38,16 @@ CATEGORY CLASSIFICATION CONTRACT & RULES:
 - `self.conflict_style`: How they handle disagreements, arguments, or communication under tension.
 - `self.emotional_needs`: What THEY NEED FROM A PARTNER during stress or vulnerability.
 - `wants.partner_traits`: Desired qualities, personality, or behavioral traits in a partner.
+- `wants.partner_values`: Explicit values, principles, or ethics they require in a partner. DISTINCT from traits.
+- `wants.relationship_expectations`: Explicit statements about what kind of relationship or future they want (e.g. long-term, talks about the future, commitment). DISTINCT from traits or values.
+
+ATOMIC EXTRACTION — WANTS FIELDS:
+When the user says something like "I want someone who communicates, is emotionally present, and wants to build something real":
+- Extract ONE signal per distinct idea, not one giant blob across all three wants fields.
+- "communicates" → wants.partner_traits, label: "Good communicator"
+- "emotionally present" → wants.partner_traits, label: "Emotionally present"
+- "build something real / long-term" → wants.relationship_expectations, label: "Wants serious commitment"
+- DO NOT copy the entire sentence as the quote for wants.partner_values AND wants.relationship_expectations AND wants.partner_traits simultaneously.
 
 QUESTION CONTEXT FOR PROVIDES:
 If the question asked is probing what the user naturally does, brings, or contributes to a partner (e.g. how they support, communicate with, or show up for a partner), and the user answers describing how they show up or what they offer (e.g. "I listen patiently", "I communicate openly", "I offer reassurance", "I value open communication, mutual respect, emotional honesty"), extract these into `self.provides` (e.g. label: "Provides open communication and emotional honesty", summary: "Offers open communication, mutual respect, and emotional honesty to a partner").

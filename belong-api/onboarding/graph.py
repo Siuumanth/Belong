@@ -107,8 +107,20 @@ HIGH_PRIORITY_FIELDS = [
     },
 ]
 
+# Minimum confidence for a signal to count as covering a high-priority dimension.
+# Signals below this are too weak (likely off-topic or low-quality extraction) and
+# should not suppress an adaptive probe for that dimension.
+COVERAGE_MIN_CONFIDENCE: float = 0.75
+
+
 def find_missing_high_priority_field(extracted_signals: Dict[str, Any], covered_areas: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
-    """Checks if any high-priority field lacks extracted evidence and hasn't been probed yet."""
+    """Checks if any high-priority field lacks at least one confident signal and hasn't been probed yet.
+
+    A field is considered 'covered' only when it has at least one signal with
+    confidence >= COVERAGE_MIN_CONFIDENCE.  A bare len > 0 check is insufficient
+    because off-topic answers can produce low-confidence extractions that falsely
+    suppress follow-up probes for genuinely missing dimensions.
+    """
     covered = covered_areas or []
     for spec in HIGH_PRIORITY_FIELDS:
         primary_key = spec["keys"][0]
@@ -116,14 +128,18 @@ def find_missing_high_priority_field(extracted_signals: Dict[str, Any], covered_
         if f"probe:{primary_key}" in covered:
             continue
 
-        has_signal = False
+        has_confident_signal = False
         for k in spec["keys"]:
             signals = extracted_signals.get(k, [])
-            if signals and len(signals) > 0:
-                has_signal = True
+            if any(
+                float(s.get("confidence", 0.0)) >= COVERAGE_MIN_CONFIDENCE
+                for s in signals
+                if isinstance(s, dict)
+            ):
+                has_confident_signal = True
                 break
 
-        if not has_signal:
+        if not has_confident_signal:
             return spec
     return None
 
@@ -132,17 +148,20 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
     user_input = state.get("latest_user_input")
     current_idx = state.get("current_area_index", 0)
     questions = settings.ONBOARDING_QUESTIONS
-    extracted_signals = dict(state.get("extracted_signals", {}))
 
-    active_probe = extracted_signals.pop("_active_probe", {})
+    # Build a clean working copy — pop _active_probe so it is never re-persisted as a
+    # signal and never double-counted on subsequent turns.
+    extracted_signals = dict(state.get("extracted_signals", {}))
+    active_probe = extracted_signals.pop("_active_probe", {})  # remove from working copy NOW
+
     active_probe_field = state.get("active_probe_field") or active_probe.get("field")
     active_probe_prompt = state.get("active_probe_prompt") or active_probe.get("prompt")
-    
+
     if not user_input:
         return {"extracted_signals": extracted_signals}
 
     if active_probe_field:
-        # User just answered an adaptive follow-up probe!
+        # User just answered an adaptive follow-up probe
         topic_id = f"probe_{active_probe_field.replace('.', '_')}"
         target_dimensions = active_probe_field
         question_text = active_probe_prompt or "What are some things you naturally do for a partner?"
@@ -164,7 +183,7 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
         question_id=topic_id
     )
 
-    extracted_signals = dict(state.get("extracted_signals", {}))
+    # NOTE: do NOT re-assign extracted_signals here — we already have the cleaned copy above.
 
     try:
         llm = get_llm()
@@ -412,43 +431,59 @@ async def generate_response_node(state: OnboardingState) -> Dict[str, Any]:
     }
 
 async def finalize_profile(state: OnboardingState):
-    """Compiles extracted signals into the user's profile database record."""
+    """Compiles extracted signals into the user's profile database record.
+
+    Wrapped defensively: any persistence error is logged but never re-raised so
+    that the onboarding graph always transitions to 'completed' status regardless
+    of transient DB issues.  The embedding worker will re-read the profile later;
+    if finalization genuinely failed the job will surface as 'failed' at that stage.
+    """
     user_id_str = state.get("user_id")
     if not user_id_str:
+        logger.warning("finalize_profile called with no user_id in state — skipping.")
         return
-    
-    from uuid import UUID
-    user_id = UUID(user_id_str)
-    signals = state.get("extracted_signals", {})
-    
-    # Structure profile into self/wants/constraints format
-    profile_json = {
-        "self": {
-            "values": signals.get("self.values", []),
-            "lifestyle": signals.get("self.lifestyle", []),
-            "personality_signals": signals.get("self.personality_signals", []),
-            "interests": signals.get("self.interests", []),
-            "life_goals": signals.get("self.life_goals", []),
-            "conflict_style": signals.get("self.conflict_style", []),
-            "provides": signals.get("self.provides", []),
-            "emotional_needs": signals.get("self.emotional_needs", []),
-        },
-        "wants": {
-            "partner_traits": signals.get("wants.partner_traits", []),
-            "partner_values": signals.get("wants.partner_values", []),
-            "relationship_expectations": signals.get("wants.relationship_expectations", []),
-            "desired_lifestyle": signals.get("wants.desired_lifestyle", []),
-        },
-        "constraints": {
-            "dealbreakers": signals.get("constraints.dealbreakers", []),
-        }
-    }
 
-    existing = await ProfileRepository.get_profile(user_id)
-    if existing:
-        await ProfileRepository.update_profile(user_id, ProfileUpdate(profile=profile_json))
-    else:
-        await ProfileRepository.create_profile(ProfileCreate(user_id=user_id, profile=profile_json))
+    try:
+        from uuid import UUID
+        user_id = UUID(user_id_str)
+        signals = state.get("extracted_signals", {})
+
+        # Strip internal bookkeeping key before persisting
+        signals_clean = {k: v for k, v in signals.items() if not k.startswith("_")}
+
+        # Structure profile into self/wants/constraints format
+        profile_json = {
+            "self": {
+                "values": signals_clean.get("self.values", []),
+                "lifestyle": signals_clean.get("self.lifestyle", []),
+                "personality_signals": signals_clean.get("self.personality_signals", []),
+                "interests": signals_clean.get("self.interests", []),
+                "life_goals": signals_clean.get("self.life_goals", []),
+                "conflict_style": signals_clean.get("self.conflict_style", []),
+                "provides": signals_clean.get("self.provides", []),
+                "emotional_needs": signals_clean.get("self.emotional_needs", []),
+            },
+            "wants": {
+                "partner_traits": signals_clean.get("wants.partner_traits", []),
+                "partner_values": signals_clean.get("wants.partner_values", []),
+                "relationship_expectations": signals_clean.get("wants.relationship_expectations", []),
+                "desired_lifestyle": signals_clean.get("wants.desired_lifestyle", []),
+            },
+            "constraints": {
+                "dealbreakers": signals_clean.get("constraints.dealbreakers", []),
+            }
+        }
+
+        existing = await ProfileRepository.get_profile(user_id)
+        if existing:
+            await ProfileRepository.update_profile(user_id, ProfileUpdate(profile=profile_json))
+        else:
+            await ProfileRepository.create_profile(ProfileCreate(user_id=user_id, profile=profile_json))
+
+        logger.info(f"finalize_profile: profile persisted for user {user_id}")
+
+    except Exception as exc:
+        logger.error(f"finalize_profile: failed to persist profile for user_id={user_id_str} — {exc}", exc_info=True)
 
 def create_onboarding_graph():
     """Builds and compiles the LangGraph StateGraph."""
