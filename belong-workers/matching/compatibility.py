@@ -138,13 +138,28 @@ def format_prompt_node(state: PairwiseState) -> Dict[str, Any]:
     )
     return {"prompt_text": prompt}
 
+def get_message_content(response: Any) -> str:
+    """Safely extract string content from LangChain AI response object or list."""
+    content = getattr(response, "content", response)
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and "text" in part:
+                parts.append(part["text"])
+            else:
+                parts.append(str(part))
+        return "".join(parts)
+    return str(content)
+
+
 def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
     """Node 2: Invokes LLM with structured output + retry on transient errors."""
     try:
         llm = get_llm()
-        # function_calling works reliably on openai/gpt-oss-* models available on Groq.
-        structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput, method="function_calling")
-
         prompt_text = state.get("prompt_text", "")
         messages = [
             SystemMessage(
@@ -157,10 +172,31 @@ def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
             HumanMessage(content=prompt_text),
         ]
 
-        response = cast(
-            PairwiseCompatibilityOutput,
-            _retry_llm_invoke(structured_llm.invoke, messages),
-        )
+        response = None
+        try:
+            structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput, method="function_calling")
+            response = cast(
+                PairwiseCompatibilityOutput,
+                _retry_llm_invoke(structured_llm.invoke, messages),
+            )
+        except Exception as fc_err:
+            logger.warning(f"function_calling structured output failed ({fc_err}). Falling back to direct JSON invoke.")
+            raw_response = _retry_llm_invoke(llm.invoke, messages)
+            content = get_message_content(raw_response).strip()
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            elif "```" in content:
+                content = content.split("```")[1].split("```")[0].strip()
+            import re
+            try:
+                data = json.loads(content)
+            except Exception:
+                match = re.search(r"\{[\s\S]*\}", content)
+                if match:
+                    data = json.loads(match.group(0))
+                else:
+                    raise
+            response = PairwiseCompatibilityOutput.model_validate(data)
 
         return {"parsed_output": response, "error": None}
     except Exception as e:
