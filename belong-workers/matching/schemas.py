@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 class CandidateMatch(BaseModel):
     """Represents a retrieved candidate from Stage 1 retrieval."""
@@ -71,7 +71,22 @@ class PairwiseCompatibilityOutput(BaseModel):
         ..., 
         description="Overall verdict: 'strong_alignment', 'partial_alignment', 'unclear', or 'conflict'"
     )
-    dimension_results: DimensionResults
+    overall_reasoning: Optional[str] = Field(
+        default="",
+        description="2-3 sentence executive summary conclusion explaining why these two users match or don't match, highlighting key synergies."
+    )
+    dimension_results: DimensionResults = Field(
+        ...,
+        description="Core compatibility dimensions results."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_dimension_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "dimension_results" not in data and "dimensions" in data:
+                data["dimension_results"] = data.pop("dimensions")
+        return data
     complementary_alignments: List[str] = Field(
         default_factory=list,
         description="Areas where A's needs/wants are met by B's self (and/or vice versa). This is reciprocal fulfillment — the core product signal."

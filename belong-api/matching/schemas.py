@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # --- Categorical Compatibility LLM Output Schemas ---
 
@@ -33,7 +33,21 @@ class PairwiseCompatibilityOutput(BaseModel):
         ..., 
         description="Overall verdict: 'strong_alignment', 'partial_alignment', 'unclear', or 'conflict'"
     )
+    overall_reasoning: Optional[str] = Field(
+        default="",
+        description="2-3 sentence executive summary conclusion explaining why these two users match or don't match."
+    )
     dimension_results: DimensionResults
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_dimension_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "dimension_results" not in data and "dimensions" in data:
+                data["dimension_results"] = data.pop("dimensions")
+        return data
+    complementary_alignments: List[str] = Field(default_factory=list, description="Reciprocal fulfillment alignments")
+    shared_alignments: List[str] = Field(default_factory=list, description="Mutual similarity alignments")
     strong_alignments: List[str] = Field(default_factory=list, description="Key areas of mutual resonance")
     potential_conflicts: List[str] = Field(default_factory=list, description="Areas of friction or misalignment")
     dealbreaker_violations: List[str] = Field(default_factory=list, description="Hard constraints or dealbreakers triggered")
@@ -63,8 +77,10 @@ class JobStatusResponse(BaseModel):
 
 class MatchCandidateResponse(BaseModel):
     """Detailed qualitative compatibility breakdown for a single matched candidate."""
+    match_id: Optional[UUID] = None
     user_b_id: UUID
     overall_verdict: str
+    overall_reasoning: Optional[str] = ""
     dimension_results: Dict[str, Any]
     strong_alignments: List[str]
     complementary_alignments: List[str] = Field(default_factory=list)

@@ -47,6 +47,12 @@ class EmbeddingWorker:
         # 2. Run canonical semantic serializer
         self_text, wants_text = self.serializer.serialize(profile_data)
 
+        # Fallback: if one section is empty, use the other so vectors are never unexpectedly NULL
+        if not wants_text and self_text:
+            wants_text = self_text
+        elif not self_text and wants_text:
+            self_text = wants_text
+
         # 3. Generate vectors
         self_vec = await self.embedding_client.embed_text(self_text) if self_text else None
         wants_vec = await self.embedding_client.embed_text(wants_text) if wants_text else None

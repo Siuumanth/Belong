@@ -27,7 +27,7 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
+                max_tokens=2048,
                 groq_api_key=api_key
             )
         except (ImportError, ModuleNotFoundError):
@@ -193,13 +193,22 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         
         # Parse JSON from response
+        import re
         content = get_message_content(response).strip()
         if "```json" in content:
             content = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content:
             content = content.split("```")[1].split("```")[0].strip()
 
-        data = json.loads(content)
+        try:
+            data = json.loads(content)
+        except Exception:
+            # Fallback: extract the outermost {...} JSON block
+            match = re.search(r"\{[\s\S]*\}", content)
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise
         items = data.get("extracted_items", [])
 
         # Store signals under target_field paths (e.g. self.emotional_needs)

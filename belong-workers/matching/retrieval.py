@@ -68,8 +68,14 @@ class CandidateRetriever:
                     raise ValueError(f"User profile with id {user_id} not found.")
 
                 if user_row.get("wants_embedding") is None:
-                    logger.warning(f"User {user_id} does not have wants_embedding. Cannot perform vector matching.")
-                    return []
+                    if user_row.get("self_embedding") is not None:
+                        logger.warning(f"User {user_id} does not have wants_embedding; falling back to self_embedding for candidate recall.")
+                        wants_vec_str = str(user_row["self_embedding"])
+                    else:
+                        logger.warning(f"User {user_id} does not have wants_embedding or self_embedding. Cannot perform vector matching.")
+                        return []
+                else:
+                    wants_vec_str = str(user_row["wants_embedding"])
 
                 # Parse User A fields
                 user_lat = user_row.get("latitude")
@@ -82,7 +88,6 @@ class CandidateRetriever:
                 user_max_distance = user_row.get("max_distance_km") or config["max_distance_km"]
                 user_req_goal = user_row.get("required_relationship_goal")
                 user_goal = user_row.get("relationship_goal")
-                wants_vec_str = str(user_row["wants_embedding"])
                 self_vec_str = str(user_row["self_embedding"]) if user_row.get("self_embedding") is not None else None
 
                 # 2. Build dynamic SQL query for Candidate Recall

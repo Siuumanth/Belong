@@ -16,7 +16,7 @@ class WorkerSettings:
 
     # LLM (Groq default)
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
@@ -72,6 +72,9 @@ Use ONLY one of these four verdicts for overall and dimension results:
 - "partial_alignment"
 - "unclear"
 - "conflict"
+
+OVERALL REASONING SUMMARY:
+In `overall_reasoning`, write a concise 2-3 sentence executive conclusion summarizing why these two users match or don't match, highlighting key reciprocal synergies and main friction points.
 
 EVIDENCE CITATIONS:
 For each dimension, populate `evidence_a_ids` and `evidence_b_ids` using the exact signal "id" fields from the profiles (e.g. ["q2_emotional_needs_s_emotional_needs_00"]). Do NOT invent facts or signal IDs.

@@ -55,7 +55,7 @@ async def trigger_matching_job(
             detail=f"Profile for user {user_id} not found."
         )
 
-    # 2. Create job in PostgreSQL
+    # 2. Create job in PostgreSQL and track session in match_runs
     payload = {"user_id": str(user_id)}
     job_data = await job_repository.create_job(
         user_id=user_id,
@@ -64,6 +64,19 @@ async def trigger_matching_job(
     )
 
     job_id = UUID(str(job_data["id"]))
+
+    async with get_db_connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                INSERT INTO match_runs (id, user_id, status)
+                VALUES (%s, %s, 'pending')
+                ON CONFLICT (id) DO NOTHING;
+                """,
+                (str(job_id), str(user_id))
+            )
+            await conn.commit()
+
     mq_payload = {
         "job_id": str(job_id),
         "user_id": str(user_id),
@@ -109,12 +122,12 @@ async def get_user_matches(user_id: UUID):
     async with get_db_connection() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             query = """
-                SELECT user_b_id, dimension_results, strong_alignments,
+                SELECT match_id, user_b_id, overall_reasoning, dimension_results, strong_alignments,
                        complementary_alignments, shared_alignments,
                        potential_conflicts, dealbreaker_violations, uncertainties,
                        created_at, updated_at
                 FROM compatibility_results
-                WHERE user_a_id = %s
+                WHERE user_a_id = %s AND is_latest = true
                 ORDER BY updated_at DESC;
             """
             await cur.execute(query, (str(user_id),))
@@ -123,10 +136,12 @@ async def get_user_matches(user_id: UUID):
     matches: List[MatchCandidateResponse] = []
     for r in rows:
         matches.append(MatchCandidateResponse(
+            match_id=UUID(str(r["match_id"])) if r.get("match_id") else None,
             user_b_id=UUID(str(r["user_b_id"])),
             overall_verdict=r.get("dimension_results", {}).get("overall_verdict", "unclear")
             if isinstance(r.get("dimension_results"), dict) and "overall_verdict" in r.get("dimension_results", {})
             else "unclear",
+            overall_reasoning=r.get("overall_reasoning") or "",
             dimension_results=r.get("dimension_results") or {},
             strong_alignments=r.get("strong_alignments") or [],
             complementary_alignments=r.get("complementary_alignments") or [],

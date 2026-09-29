@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from typing import Any, Dict, Optional, TypedDict, cast
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
@@ -11,6 +12,35 @@ from matching.schemas import PairwiseCompatibilityOutput, DimensionDetail
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Retry helpers
+# ---------------------------------------------------------------------------
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY = 2.0  # seconds
+
+
+def _retry_llm_invoke(fn, *args, **kwargs):
+    """Simple exponential-backoff retry wrapper for LLM calls."""
+    last_exc = None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as exc:
+            last_exc = exc
+            err_str = str(exc).lower()
+            # Retry on rate-limit (429) or empty-output errors
+            if any(k in err_str for k in ("429", "rate limit", "empty", "output text")):
+                delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                logger.warning(
+                    f"LLM call failed (attempt {attempt + 1}/{_MAX_RETRIES}): {exc}. "
+                    f"Retrying in {delay:.1f}s…"
+                )
+                time.sleep(delay)
+            else:
+                raise  # Non-retriable error — fail fast
+    assert last_exc is not None
+    raise last_exc
+
 class PairwiseState(TypedDict):
     user_a_profile: Dict[str, Any]
     user_b_profile: Dict[str, Any]
@@ -19,7 +49,12 @@ class PairwiseState(TypedDict):
     error: Optional[str]
 
 def get_llm():
-    """Factory function to instantiate configured LLM (Groq default)."""
+    """Factory function to instantiate configured LLM.
+
+    Default model on Groq: llama-3.1-8b-instant — it is free-tier safe,
+    supports json_mode, and produces structured output reliably.
+    Override via LLM_MODEL env var.
+    """
     provider = settings.LLM_PROVIDER.lower()
     if provider == "groq":
         api_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
@@ -28,29 +63,29 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
-                groq_api_key=api_key
+                max_tokens=2048,
+                groq_api_key=api_key,
             )
         except (ImportError, ModuleNotFoundError):
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
+                max_tokens=2048,
                 api_key=api_key or "missing_key",
-                base_url="https://api.groq.com/openai/v1"
+                base_url="https://api.groq.com/openai/v1",
             )
     elif provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=settings.LLM_MODEL,
-            temperature=settings.LLM_TEMPERATURE
+            temperature=settings.LLM_TEMPERATURE,
         )
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(
             model=settings.LLM_MODEL,
-            temperature=settings.LLM_TEMPERATURE
+            temperature=settings.LLM_TEMPERATURE,
         )
     else:
         raise ValueError(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
@@ -104,18 +139,28 @@ def format_prompt_node(state: PairwiseState) -> Dict[str, Any]:
     return {"prompt_text": prompt}
 
 def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
-    """Node 2: Invokes Groq LLM with structured output constraint."""
+    """Node 2: Invokes LLM with structured output + retry on transient errors."""
     try:
         llm = get_llm()
-        # Use json_mode instead of tool calling — tool calling truncates JSON
-        # for models like openai/gpt-oss-120b on Groq's free tier.
-        structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput, method="json_mode")
-        
+        # function_calling works reliably on openai/gpt-oss-* models available on Groq.
+        structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput, method="function_calling")
+
         prompt_text = state.get("prompt_text", "")
-        response = cast(PairwiseCompatibilityOutput, structured_llm.invoke([
-            SystemMessage(content="You are an expert AI compatibility reasoning agent for Belong. Return your analysis strictly as a valid JSON object matching the required schema."),
-            HumanMessage(content=prompt_text)
-        ]))
+        messages = [
+            SystemMessage(
+                content=(
+                    "You are an expert AI compatibility reasoning agent for Belong. "
+                    "Return your analysis strictly as a valid JSON object matching the required schema. "
+                    "Do not include any text outside the JSON object."
+                )
+            ),
+            HumanMessage(content=prompt_text),
+        ]
+
+        response = cast(
+            PairwiseCompatibilityOutput,
+            _retry_llm_invoke(structured_llm.invoke, messages),
+        )
 
         return {"parsed_output": response, "error": None}
     except Exception as e:

@@ -31,7 +31,21 @@ class MatchingWorker:
         user_id = UUID(user_id_str)
         logger.info(f"MatchingWorker starting matching execution for user {user_id} (job_id: {job_id})")
 
-        # 1. Fetch User A profile
+        # 1. Ensure match_runs session entry exists
+        match_id_str = job_id or str(UUID(int=0))
+        async with get_db_connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    INSERT INTO match_runs (id, user_id, status)
+                    VALUES (%s, %s, 'processing')
+                    ON CONFLICT (id) DO UPDATE SET status = 'processing';
+                    """,
+                    (match_id_str, str(user_id))
+                )
+                await conn.commit()
+
+        # 2. Fetch User A profile
         async with get_db_connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
@@ -41,6 +55,13 @@ class MatchingWorker:
                 user_a_row = await cur.fetchone()
 
         if not user_a_row:
+            async with get_db_connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "UPDATE match_runs SET status = 'failed', error_message = %s, completed_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                        (f"User profile {user_id} not found", match_id_str)
+                    )
+                    await conn.commit()
             raise ValueError(f"User profile for user {user_id} not found in database.")
 
         user_a_profile = user_a_row.get("profile") or {}
@@ -48,15 +69,22 @@ class MatchingWorker:
         user_a_profile["gender"] = user_a_row.get("gender")
         user_a_profile["relationship_goal"] = user_a_row.get("relationship_goal")
 
-        # 2. Stage 1: Hard filters + pgvector candidate retrieval
+        # 3. Stage 1: Hard filters + pgvector candidate retrieval
         candidate_matches = await self.retriever.retrieve_candidates(user_id)
         logger.info(f"Stage 1 retrieved {len(candidate_matches)} candidates for user {user_id}")
 
         if not candidate_matches:
             logger.info(f"No eligible candidate matches found for user {user_id}.")
+            async with get_db_connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "UPDATE match_runs SET status = 'completed', candidate_count = 0, completed_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                        (match_id_str,)
+                    )
+                    await conn.commit()
             return {"user_id": str(user_id), "total_matches": 0, "matches_persisted": 0}
 
-        # 3. Stage 2: Pairwise LLM Compatibility Reasoning for each candidate
+        # 4. Stage 2: Pairwise LLM Compatibility Reasoning for each candidate
         evaluated_candidates = []
         for candidate in candidate_matches:
             user_b_profile = candidate.profile or {}
@@ -78,53 +106,51 @@ class MatchingWorker:
             except Exception as e:
                 logger.error(f"Failed pairwise evaluation between {user_id} and {candidate.user_id}: {e}")
 
-        # 4. Rank candidates deterministically
+        # 5. Rank candidates deterministically
         ranked_candidates = rank_candidates(evaluated_candidates)
         logger.info(f"Ranked {len(ranked_candidates)} candidates for user {user_id}")
 
-        # 5. Persist results into compatibility_results table in Postgres
+        # 6. Persist results into compatibility_results table and update match_runs
         async with get_db_connection() as conn:
             async with conn.cursor() as cur:
                 for rank_idx, item in enumerate(ranked_candidates):
                     user_b_id = item["candidate_user_id"]
                     output = item["compatibility_output"]
 
+                    # Mark previous evaluations between (user_id, user_b_id) as is_latest = false
+                    await cur.execute(
+                        "UPDATE compatibility_results SET is_latest = false WHERE user_a_id = %s AND user_b_id = %s AND is_latest = true;",
+                        (str(user_id), str(user_b_id))
+                    )
+
                     # Convert dimension_results to jsonable dict
                     dimension_json = json.dumps(output.dimension_results.model_dump())
                     complementary_alignments_json = json.dumps(output.complementary_alignments)
                     shared_alignments_json = json.dumps(output.shared_alignments)
-                    # Keep strong_alignments as combined list for backward compatibility
                     strong_alignments_json = json.dumps(
                         output.complementary_alignments + output.shared_alignments
                     )
                     potential_conflicts_json = json.dumps(output.potential_conflicts)
                     dealbreaker_violations_json = json.dumps(output.dealbreaker_violations)
                     uncertainties_json = json.dumps(output.uncertainties)
+                    overall_reasoning = getattr(output, "overall_reasoning", "") or ""
 
-                    upsert_sql = """
+                    insert_sql = """
                         INSERT INTO compatibility_results (
-                            user_a_id, user_b_id, dimension_results,
+                            match_id, user_a_id, user_b_id, overall_reasoning, dimension_results,
                             strong_alignments, complementary_alignments, shared_alignments,
                             potential_conflicts, dealbreaker_violations, uncertainties,
-                            reasoning_version, updated_at
+                            reasoning_version, is_latest, updated_at
                         )
-                        VALUES (%s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', CURRENT_TIMESTAMP)
-                        ON CONFLICT (user_a_id, user_b_id, reasoning_version)
-                        DO UPDATE SET
-                            dimension_results = EXCLUDED.dimension_results,
-                            strong_alignments = EXCLUDED.strong_alignments,
-                            complementary_alignments = EXCLUDED.complementary_alignments,
-                            shared_alignments = EXCLUDED.shared_alignments,
-                            potential_conflicts = EXCLUDED.potential_conflicts,
-                            dealbreaker_violations = EXCLUDED.dealbreaker_violations,
-                            uncertainties = EXCLUDED.uncertainties,
-                            updated_at = CURRENT_TIMESTAMP;
+                        VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', true, CURRENT_TIMESTAMP);
                     """
                     await cur.execute(
-                        upsert_sql,
+                        insert_sql,
                         (
+                            match_id_str,
                             str(user_id),
                             str(user_b_id),
+                            overall_reasoning,
                             dimension_json,
                             strong_alignments_json,
                             complementary_alignments_json,
@@ -134,10 +160,17 @@ class MatchingWorker:
                             uncertainties_json
                         )
                     )
+
+                # Update match_runs session status to completed
+                await cur.execute(
+                    "UPDATE match_runs SET status = 'completed', candidate_count = %s, completed_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                    (len(ranked_candidates), match_id_str)
+                )
                 await conn.commit()
 
-        logger.info(f"Persisted {len(ranked_candidates)} compatibility results for user {user_id}")
+        logger.info(f"Persisted {len(ranked_candidates)} compatibility results for user {user_id} under match_run {match_id_str}")
         return {
+            "match_id": match_id_str,
             "user_id": str(user_id),
             "total_matches": len(ranked_candidates),
             "matches_persisted": len(ranked_candidates)

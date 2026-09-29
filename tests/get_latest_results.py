@@ -220,15 +220,35 @@ def fetch_and_print_latest_data():
             print("--------------------------------------------------------------------------------")
             print_user_conversation(user_id)
 
+    # Fetch Latest Match Run Record
+    print("\n================================================================================")
+    print("LATEST MATCH RUN SESSION (MATCH_RUNS TABLE)")
+    print("================================================================================")
+    match_run_sql = "SELECT id, user_id, status, candidate_count, error_message, created_at, completed_at FROM match_runs ORDER BY created_at DESC LIMIT 1"
+    run_records = run_psql_query(match_run_sql)
+    if not run_records:
+        print("No match_runs records found in database.")
+    else:
+        m = run_records[0]
+        print(f"Match Run ID   : {m.get('id')}")
+        print(f"User ID        : {m.get('user_id')}")
+        print(f"Status         : {m.get('status')}")
+        print(f"Candidate Count: {m.get('candidate_count')}")
+        print(f"Error Message  : {m.get('error_message') or 'None'}")
+        print(f"Created At     : {m.get('created_at')}")
+        print(f"Completed At   : {m.get('completed_at')}")
+
     # Fetch Single Latest Compatibility Result
     print("\n================================================================================")
-    print("LATEST COMPATIBILITY MATCH RESULT")
+    print("LATEST COMPATIBILITY MATCH RESULT (COMPATIBILITY_RESULTS TABLE)")
     print("================================================================================")
     results_sql = """
         SELECT 
             id,
+            match_id,
             user_a_id,
             user_b_id,
+            overall_reasoning,
             dimension_results,
             strong_alignments,
             complementary_alignments,
@@ -249,10 +269,13 @@ def fetch_and_print_latest_data():
     else:
         r = results[0]
         print(f"Match Record ID : {r.get('id')}")
+        print(f"Match Session ID: {r.get('match_id')}")
         print(f"User A ID       : {r.get('user_a_id')}")
         print(f"User B ID       : {r.get('user_b_id')}")
         print(f"Model / Version : {r.get('model_name')} ({r.get('reasoning_version')})")
         print(f"Created At      : {r.get('created_at')}")
+        print(f"\nOverall Compatibility Reasoning:")
+        print(r.get('overall_reasoning') or 'None')
         print("\nDimension Results:")
         print(json.dumps(r.get("dimension_results"), indent=2))
         print("\nComplementary Alignments (Reciprocal Fulfillment):")
