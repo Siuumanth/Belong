@@ -276,13 +276,13 @@ async def run_simulation():
             for w in range(15):
                 await asyncio.sleep(2)
                 try:
-                    res1 = await client.get(f"/api/profiles/{sim_user_1.user_id}")
-                    res2 = await client.get(f"/api/profiles/{sim_user_2.user_id}")
+                    res1 = await client.get(f"/api/profiles/{sim_user_1.user_id}/embeddings")
+                    res2 = await client.get(f"/api/profiles/{sim_user_2.user_id}/embeddings")
                     p1 = res1.json() if res1.status_code == 200 else {}
                     p2 = res2.json() if res2.status_code == 200 else {}
-                    # Check if embedding status is completed or source text is populated
-                    if p1.get("embedding_source_text") or p2.get("embedding_source_text"):
-                        logger.info(f"✅ Embeddings confirmed in PostgreSQL after {(w + 1) * 2}s!")
+                    # Check if embeddings are confirmed generated
+                    if p1.get("has_self_embedding") and p2.get("has_self_embedding"):
+                        logger.info(f"✅ Both user embeddings confirmed in PostgreSQL after {(w + 1) * 2}s!")
                         break
                 except Exception:
                     pass

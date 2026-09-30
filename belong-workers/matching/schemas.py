@@ -84,8 +84,37 @@ class PairwiseCompatibilityOutput(BaseModel):
     @classmethod
     def normalize_dimension_keys(cls, data: Any) -> Any:
         if isinstance(data, dict):
+            # 1. Normalize 'dimensions' key to 'dimension_results'
             if "dimension_results" not in data and "dimensions" in data:
                 data["dimension_results"] = data.pop("dimensions")
+            
+            # 2. If the LLM returned individual dimensions directly at the root level
+            core_dims = ["emotional_needs", "core_values", "lifestyle", "conflict_style"]
+            if "dimension_results" not in data:
+                root_dims = {k: data.pop(k) for k in core_dims if k in data}
+                if root_dims:
+                    data["dimension_results"] = root_dims
+
+            # 3. Ensure dimension_results dictionary exists with all 4 required dimensions
+            dim_res = data.get("dimension_results")
+            if not isinstance(dim_res, dict):
+                dim_res = {}
+
+            default_verdict = data.get("overall_verdict", "partial_alignment")
+            for dim in core_dims:
+                if dim not in dim_res or not isinstance(dim_res[dim], dict):
+                    dim_res[dim] = {
+                        "verdict": default_verdict,
+                        "evidence_a_ids": [],
+                        "evidence_b_ids": [],
+                        "reasoning": ""
+                    }
+            data["dimension_results"] = dim_res
+
+            # 4. Ensure overall_verdict is present
+            if "overall_verdict" not in data:
+                data["overall_verdict"] = "partial_alignment"
+
         return data
     complementary_alignments: List[str] = Field(
         default_factory=list,

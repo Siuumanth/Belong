@@ -57,14 +57,30 @@ export async function api<T>(
   return body as T;
 }
 
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
 export type AuthResponse = {
   token: string;
   username: string;
   email: string;
 };
 
+export type SignUpRequest = {
+  username: string;
+  email: string;
+  password: string;
+};
+
+export type LoginRequest = {
+  email: string;
+  password: string;
+};
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
 export type Profile = {
   user_id: string;
+  name?: string;
   age: number;
   gender: string;
   orientation: string;
@@ -83,6 +99,7 @@ export type Profile = {
 
 export type ProfileWrite = {
   user_id?: string;
+  name?: string;
   age: number;
   gender: string;
   orientation: string;
@@ -94,6 +111,16 @@ export type ProfileWrite = {
   max_distance_km?: number;
   preferred_genders?: string[];
 };
+
+export type EmbeddingStatus = {
+  user_id: string;
+  has_self_embedding: boolean;
+  has_wants_embedding: boolean;
+  embedding_source_text?: Record<string, unknown>;
+  updated_at?: string;
+};
+
+// ─── Onboarding ───────────────────────────────────────────────────────────────
 
 export type OnboardingSession = {
   conversation_id: string;
@@ -122,19 +149,58 @@ export type OnboardingReply = {
   message?: string;
 };
 
+// ─── Matching ─────────────────────────────────────────────────────────────────
+
+export type OverallVerdict =
+  | "strong_alignment"
+  | "partial_alignment"
+  | "unclear"
+  | "conflict";
+
 export type DimensionResult = {
   verdict?: string;
+  evidence_a_ids?: string[];
+  evidence_b_ids?: string[];
+  // legacy fields kept for compat
   evidence_a?: string;
   evidence_b?: string;
 };
 
 export type MatchResultItem = {
-  candidate_id: string;
+  // openapi.yaml: MatchCandidateResponse
+  match_id?: string | null;
+  user_b_id?: string;
+  // legacy field name used by the existing service
+  candidate_id?: string;
+  overall_verdict?: OverallVerdict;
+  overall_reasoning?: string;
   dimension_results?: Record<string, DimensionResult>;
+  complementary_alignments?: string[];
+  shared_alignments?: string[];
   strong_alignments?: string[];
   potential_conflicts?: string[];
   dealbreaker_violations?: string[];
   uncertainties?: string[];
+};
+
+export type JobAcceptedResponse = {
+  job_id: string;
+  user_id: string;
+  type: string;
+  status: string;
+  created_at: string;
+};
+
+export type JobStatusResponse = {
+  job_id: string;
+  user_id: string;
+  type: string;
+  status: "pending" | "running" | "completed" | "failed" | "cancelled" | string;
+  attempts?: number;
+  error?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  result?: unknown;
 };
 
 export type MatchJob = {
@@ -143,11 +209,27 @@ export type MatchJob = {
   matches?: MatchResultItem[];
 };
 
+export type MatchesListResponse = {
+  user_id: string;
+  total_matches?: number;
+  matches: MatchResultItem[];
+};
+
+// ─── API clients ──────────────────────────────────────────────────────────────
+
 export const authApi = {
-  signup: (body: { username: string; email: string; password: string }) =>
-    api<{ message: string }>("/auth/signup", { method: "POST", body: JSON.stringify(body) }, { auth: false }),
-  login: (body: { email: string; password: string }) =>
-    api<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(body) }, { auth: false }),
+  signup: (body: SignUpRequest) =>
+    api<{ message: string }>(
+      "/auth/signup",
+      { method: "POST", body: JSON.stringify(body) },
+      { auth: false },
+    ),
+  login: (body: LoginRequest) =>
+    api<AuthResponse>(
+      "/auth/login",
+      { method: "POST", body: JSON.stringify(body) },
+      { auth: false },
+    ),
 };
 
 export const profileApi = {
@@ -162,9 +244,16 @@ export const profileApi = {
   create: (body: ProfileWrite & { user_id: string }) =>
     api<Profile>("/profiles", { method: "POST", body: JSON.stringify(body) }),
   update: (userId: string, body: Partial<ProfileWrite>) =>
-    api<Profile>(`/profiles/${userId}`, { method: "PATCH", body: JSON.stringify(body) }),
+    api<Profile>(`/profiles/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   triggerEmbedding: (userId: string) =>
-    api<{ job_id: string; status: string }>(`/profiles/${userId}/embeddings`, { method: "POST" }),
+    api<JobAcceptedResponse>(`/profiles/${userId}/embeddings`, {
+      method: "POST",
+    }),
+  getEmbeddingStatus: (userId: string) =>
+    api<EmbeddingStatus>(`/profiles/${userId}/embeddings`),
 };
 
 export const onboardingApi = {
@@ -178,16 +267,16 @@ export const onboardingApi = {
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, message }),
     }),
-  state: (conversationId: string) => api<OnboardingState>(`/onboarding/${conversationId}`),
+  state: (conversationId: string) =>
+    api<OnboardingState>(`/onboarding/${conversationId}`),
 };
 
 export const matchApi = {
   createJob: (userId: string, limit = 5) =>
-    api<{ job_id: string; status: string }>("/matches", {
+    api<JobAcceptedResponse>("/matches", {
       method: "POST",
       body: JSON.stringify({ user_id: userId, limit }),
     }),
   job: (jobId: string) => api<MatchJob>(`/matches/jobs/${jobId}`),
-  latest: (userId: string) =>
-    api<{ user_id: string; matches: MatchResultItem[] }>(`/matches/${userId}`),
+  latest: (userId: string) => api<MatchesListResponse>(`/matches/${userId}`),
 };

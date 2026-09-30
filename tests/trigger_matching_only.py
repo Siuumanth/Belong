@@ -102,8 +102,8 @@ async def main():
 
     # 5. Direct Database Verification
     c_rows = run_psql_query("""
-        SELECT id, user_a_id, user_b_id, overall_verdict, overall_reasoning,
-               complementary_alignments, created_at
+        SELECT match_id, user_a_id, user_b_id, overall_reasoning,
+               dimension_results, complementary_alignments, created_at
         FROM compatibility_results
         ORDER BY created_at DESC
         LIMIT 5
@@ -112,8 +112,10 @@ async def main():
     print(f"DIRECT DATABASE CHECK: {len(c_rows)} rows in compatibility_results")
     print("=" * 70)
     for cr in c_rows:
+        dim_res = cr.get('dimension_results') or {}
+        verdict = dim_res.get('overall_verdict', 'N/A') if isinstance(dim_res, dict) else 'N/A'
         print(f"Pair: {cr.get('user_a_id')} <-> {cr.get('user_b_id')}")
-        print(f"Verdict: {cr.get('overall_verdict')}")
+        print(f"Verdict: {verdict}")
         print(f"Reasoning: {cr.get('overall_reasoning')}")
         print(f"Created: {cr.get('created_at')}")
         print("-" * 50)

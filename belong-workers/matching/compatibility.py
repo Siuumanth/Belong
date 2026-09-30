@@ -67,7 +67,7 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
+                max_tokens=2048,
                 groq_api_key=api_key,
             )
         except (ImportError, ModuleNotFoundError):
@@ -75,7 +75,7 @@ def get_llm():
             return ChatOpenAI(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
+                max_tokens=2048,
                 api_key=api_key or "missing_key",
                 base_url="https://api.groq.com/openai/v1",
             )

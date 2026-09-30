@@ -137,12 +137,12 @@ class MatchingWorker:
 
                     insert_sql = """
                         INSERT INTO compatibility_results (
-                            match_id, user_a_id, user_b_id, overall_reasoning, dimension_results,
+                            match_id, user_a_id, user_b_id, overall_verdict, overall_reasoning, dimension_results,
                             strong_alignments, complementary_alignments, shared_alignments,
                             potential_conflicts, dealbreaker_violations, uncertainties,
                             reasoning_version, is_latest, updated_at
                         )
-                        VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', true, CURRENT_TIMESTAMP);
+                        VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', true, CURRENT_TIMESTAMP);
                     """
                     await cur.execute(
                         insert_sql,
@@ -150,6 +150,7 @@ class MatchingWorker:
                             match_id_str,
                             str(user_id),
                             str(user_b_id),
+                            getattr(output, "overall_verdict", "unclear") or "unclear",
                             overall_reasoning,
                             dimension_json,
                             strong_alignments_json,

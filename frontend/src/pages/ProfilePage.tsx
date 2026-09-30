@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { ErrorText, Field, inputClass } from "../components/ui";
+import { Link, useNavigate } from "react-router-dom";
 import { profileApi, type Profile, type ProfileWrite } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { ErrorText, Field, inputClass } from "../components/ui";
 
 const emptyForm: ProfileWrite = {
+  name: "",
   age: 25,
   gender: "woman",
   orientation: "heterosexual",
@@ -15,7 +16,7 @@ const emptyForm: ProfileWrite = {
   preferred_genders: ["man"],
 };
 
-// ─── Chip toggle (preferred genders) ─────────────────────────────────────────
+// ─── Gender chips ─────────────────────────────────────────────────────────────
 const GENDER_OPTIONS = ["man", "woman", "nonbinary"];
 
 function GenderChips({
@@ -26,9 +27,7 @@ function GenderChips({
   onChange: (v: string[]) => void;
 }) {
   function toggle(g: string) {
-    onChange(
-      value.includes(g) ? value.filter((x) => x !== g) : [...value, g],
-    );
+    onChange(value.includes(g) ? value.filter((x) => x !== g) : [...value, g]);
   }
   return (
     <div className="flex flex-wrap gap-2">
@@ -39,10 +38,10 @@ function GenderChips({
             key={g}
             type="button"
             onClick={() => toggle(g)}
-            className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
+            className={`rounded-full border px-4 py-1.5 text-sm capitalize transition-all ${
               active
-                ? "border-blue bg-blue/15 text-blue"
-                : "border-line text-slate-500 hover:border-zinc-500 hover:text-slate-300"
+                ? "border-blue bg-blue/15 text-blue shadow-sm shadow-blue/10"
+                : "border-line text-[#8fa3bf] hover:border-blue/30 hover:text-[#e8edf8]"
             }`}
           >
             {g}
@@ -84,24 +83,24 @@ function GeoButton({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <button
         type="button"
         disabled={busy || loading}
         onClick={locate}
-        className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs text-slate-400 hover:border-blue/40 hover:text-blue disabled:opacity-50"
+        className="flex items-center gap-2 rounded-xl border border-line px-4 py-2 text-xs text-[#8fa3bf] hover:border-blue/40 hover:text-blue disabled:opacity-50 transition-colors"
       >
         <svg
           className={loading ? "animate-spin" : ""}
-          width="12"
-          height="12"
+          width="13"
+          height="13"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
         >
           <circle cx="12" cy="12" r="10" />
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+          <path d="M12 8v4l3 3" />
         </svg>
         {loading ? "Locating…" : "Use my location"}
       </button>
@@ -115,18 +114,70 @@ function GeoButton({
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 function Section({
   title,
+  description,
   children,
 }: {
   title: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <p className="mb-3 text-xs uppercase tracking-widest text-slate-600">
-        {title}
-      </p>
-      <div className="rounded-2xl border border-line bg-panel p-5">
-        {children}
+    <div className="rounded-2xl border border-line bg-panel overflow-hidden">
+      <div className="border-b border-line px-6 py-4">
+        <p className="text-sm font-semibold text-[#e8edf8]">{title}</p>
+        {description && (
+          <p className="mt-0.5 text-xs text-[#4a6080]">{description}</p>
+        )}
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  );
+}
+
+// ─── Profile completeness banner ──────────────────────────────────────────────
+function CompletionBanner({
+  hasProfile,
+  hasSignals,
+}: {
+  hasProfile: boolean;
+  hasSignals: boolean;
+}) {
+  const steps = [
+    { done: hasProfile, label: "Profile created" },
+    { done: hasSignals, label: "Onboarding completed" },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
+  const pct = (doneCount / steps.length) * 100;
+
+  return (
+    <div className="rounded-2xl border border-line bg-panel p-5">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-[#e8edf8]">Profile completeness</p>
+        <span className="text-xs text-[#4a6080]">{doneCount}/{steps.length}</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-line">
+        <div
+          className="h-full rounded-full bg-blue transition-all duration-700"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="mt-4 space-y-2">
+        {steps.map((s) => (
+          <div key={s.label} className="flex items-center gap-2.5">
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] transition-colors ${
+                s.done
+                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-400"
+                  : "border-line text-[#4a6080]"
+              }`}
+            >
+              {s.done ? "✓" : "·"}
+            </div>
+            <span className={`text-xs ${s.done ? "text-[#8fa3bf]" : "text-[#4a6080]"}`}>
+              {s.label}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -154,6 +205,7 @@ export function ProfilePage() {
         setExisting(profile);
         if (profile) {
           setForm({
+            name: profile.name ?? "",
             age: profile.age,
             gender: profile.gender,
             orientation: profile.orientation,
@@ -201,40 +253,57 @@ export function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex h-40 items-center justify-center text-slate-600 text-sm">
-        Loading profile…
+      <div className="flex h-60 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-blue" />
+          <span className="text-xs text-[#4a6080]">Loading profile…</span>
+        </div>
       </div>
     );
   }
 
-  const hasSignals =
-    existing?.profile && Object.keys(existing.profile).length > 0;
+  const hasSignals = existing?.profile && Object.keys(existing.profile).length > 0;
 
   return (
-    <section className="mx-auto max-w-2xl space-y-8">
-      {/* Header */}
-      <div className="flex items-end justify-between gap-4">
+    <div className="mx-auto max-w-2xl space-y-6 py-2">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl">Your profile</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Hard filters used for retrieval. Your personality comes from the conversation.
+          <h1 className="font-display text-3xl font-light text-[#e8edf8]">
+            {existing?.name ? `Hi, ${existing.name}` : "Your profile"}
+          </h1>
+          <p className="mt-1.5 text-sm text-[#8fa3bf]">
+            These filters shape who gets through before the AI takes over.
           </p>
         </div>
         {existing && !hasSignals && (
-          <button
-            type="button"
-            onClick={() => navigate("/onboarding")}
-            className="shrink-0 rounded-full border border-blue/40 px-4 py-1.5 text-sm text-blue hover:bg-blue/10"
+          <Link
+            to="/onboarding"
+            className="shrink-0 rounded-xl border border-blue/30 bg-blue/8 px-4 py-2 text-sm font-medium text-blue hover:bg-blue/15 transition-colors"
           >
             Start onboarding →
-          </button>
+          </Link>
         )}
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-6">
+      {/* Completion banner */}
+      {existing && (
+        <CompletionBanner hasProfile={!!existing} hasSignals={!!hasSignals} />
+      )}
+
+      <form onSubmit={onSubmit} className="space-y-5">
         {/* About you */}
-        <Section title="About you">
+        <Section title="About you" description="Basic identity used for matching filters">
           <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Display name">
+              <input
+                className={inputClass}
+                type="text"
+                placeholder="Alice"
+                value={form.name ?? ""}
+                onChange={(e) => set("name", e.target.value)}
+              />
+            </Field>
             <Field label="Age">
               <input
                 className={inputClass}
@@ -280,8 +349,8 @@ export function ProfilePage() {
         </Section>
 
         {/* Location */}
-        <Section title="Location">
-          <div className="space-y-3">
+        <Section title="Location" description="Used for distance-based hard filtering">
+          <div className="space-y-4">
             <GeoButton
               busy={busy}
               onLocate={(lat, lng) => {
@@ -297,10 +366,7 @@ export function ProfilePage() {
                   step="any"
                   value={form.latitude ?? ""}
                   onChange={(e) =>
-                    set(
-                      "latitude",
-                      e.target.value === "" ? undefined : Number(e.target.value),
-                    )
+                    set("latitude", e.target.value === "" ? undefined : Number(e.target.value))
                   }
                   placeholder="37.7749"
                 />
@@ -312,40 +378,35 @@ export function ProfilePage() {
                   step="any"
                   value={form.longitude ?? ""}
                   onChange={(e) =>
-                    set(
-                      "longitude",
-                      e.target.value === "" ? undefined : Number(e.target.value),
-                    )
+                    set("longitude", e.target.value === "" ? undefined : Number(e.target.value))
                   }
                   placeholder="-122.4194"
                 />
               </Field>
             </div>
-            <Field label="Max distance (km)">
-              <div className="flex items-center gap-3">
-                <input
-                  className={inputClass}
-                  type="range"
-                  min={5}
-                  max={200}
-                  step={5}
-                  value={form.max_distance_km ?? 25}
-                  onChange={(e) => set("max_distance_km", Number(e.target.value))}
-                  style={{ accentColor: "var(--color-blue)" }}
-                />
-                <span className="w-16 shrink-0 text-right text-sm text-slate-300">
-                  {form.max_distance_km ?? 25} km
-                </span>
+            <Field label={`Max distance — ${form.max_distance_km ?? 25} km`}>
+              <input
+                className="w-full accent-blue cursor-pointer"
+                type="range"
+                min={5}
+                max={200}
+                step={5}
+                value={form.max_distance_km ?? 25}
+                onChange={(e) => set("max_distance_km", Number(e.target.value))}
+              />
+              <div className="mt-1 flex justify-between text-[10px] text-[#4a6080]">
+                <span>5 km</span>
+                <span>200 km</span>
               </div>
             </Field>
           </div>
         </Section>
 
         {/* Who you're looking for */}
-        <Section title="Who you're looking for">
-          <div className="space-y-4">
+        <Section title="Who you're looking for" description="Hard filter applied before any AI stage">
+          <div className="space-y-5">
             <Field label="Preferred genders">
-              <div className="mt-1">
+              <div className="mt-2">
                 <GenderChips
                   value={form.preferred_genders ?? []}
                   onChange={(v) => set("preferred_genders", v)}
@@ -360,10 +421,7 @@ export function ProfilePage() {
                   min={18}
                   value={form.preferred_age_min ?? ""}
                   onChange={(e) =>
-                    set(
-                      "preferred_age_min",
-                      e.target.value === "" ? undefined : Number(e.target.value),
-                    )
+                    set("preferred_age_min", e.target.value === "" ? undefined : Number(e.target.value))
                   }
                 />
               </Field>
@@ -374,10 +432,7 @@ export function ProfilePage() {
                   min={18}
                   value={form.preferred_age_max ?? ""}
                   onChange={(e) =>
-                    set(
-                      "preferred_age_max",
-                      e.target.value === "" ? undefined : Number(e.target.value),
-                    )
+                    set("preferred_age_max", e.target.value === "" ? undefined : Number(e.target.value))
                   }
                 />
               </Field>
@@ -386,11 +441,11 @@ export function ProfilePage() {
         </Section>
 
         {/* Actions */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 pt-1">
           <button
             type="submit"
             disabled={busy}
-            className="rounded-full bg-blue px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-dim disabled:opacity-50"
+            className="rounded-xl bg-blue px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue/20 hover:bg-blue-dim disabled:opacity-50 transition-all"
           >
             {busy ? "Saving…" : existing ? "Update profile" : "Create profile"}
           </button>
@@ -399,14 +454,14 @@ export function ProfilePage() {
               type="button"
               onClick={() => {
                 void navigator.clipboard.writeText(userId);
-                setNotice("User ID copied.");
+                setNotice("User ID copied to clipboard.");
               }}
-              className="rounded-full border border-line px-4 py-2 text-sm text-slate-400 hover:border-blue/40 hover:text-blue"
+              className="rounded-xl border border-line px-4 py-2.5 text-sm text-[#8fa3bf] hover:border-blue/30 hover:text-blue transition-colors"
             >
               Copy user ID
             </button>
           )}
-          <div className="flex-1 space-y-1">
+          <div className="flex-1">
             <ErrorText message={error} />
             {notice && <p className="text-sm text-emerald-400">{notice}</p>}
           </div>
@@ -415,15 +470,30 @@ export function ProfilePage() {
 
       {/* Extracted signals */}
       {hasSignals && (
-        <Section title="Extracted signals">
-          <p className="mb-3 text-xs text-slate-500">
-            Built from your onboarding conversation.
-          </p>
-          <pre className="overflow-auto rounded-lg bg-ink p-4 text-xs leading-relaxed text-slate-400">
+        <Section title="Extracted signals" description="Built from your onboarding conversation — read-only">
+          <pre className="overflow-auto rounded-xl bg-ink p-4 text-xs leading-relaxed text-[#8fa3bf]">
             {JSON.stringify(existing!.profile, null, 2)}
           </pre>
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/onboarding")}
+              className="rounded-xl border border-line px-4 py-2 text-xs text-[#8fa3bf] hover:border-blue/30 hover:text-blue transition-colors"
+            >
+              Redo onboarding
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                profileApi.triggerEmbedding(userId).then(() => setNotice("Embedding job enqueued.")).catch(() => setError("Failed to enqueue embedding job."));
+              }}
+              className="rounded-xl border border-line px-4 py-2 text-xs text-[#8fa3bf] hover:border-blue/30 hover:text-blue transition-colors"
+            >
+              Regenerate embeddings
+            </button>
+          </div>
         </Section>
       )}
-    </section>
+    </div>
   );
 }
