@@ -350,19 +350,19 @@ class UserSimulator:
         }
 
     async def _post_with_fallback(self, client: httpx.AsyncClient, path: str, **kwargs) -> httpx.Response:
-        """Helper to try route both with /api prefix and directly."""
-        target_path = path if path.startswith("/api") else f"/api{path}"
-        res = await client.post(target_path, **kwargs)
+        """Helper to try route directly first, then with /api prefix if 404."""
+        res = await client.post(path, **kwargs)
         if res.status_code == 404:
-            res = await client.post(path, **kwargs)
+            target_path = path if path.startswith("/api") else f"/api{path}"
+            res = await client.post(target_path, **kwargs)
         return res
 
     async def _get_with_fallback(self, client: httpx.AsyncClient, path: str, **kwargs) -> httpx.Response:
-        """Helper to try GET route both with /api prefix and directly."""
-        target_path = path if path.startswith("/api") else f"/api{path}"
-        res = await client.get(target_path, **kwargs)
+        """Helper to try GET route directly first, then with /api prefix if 404."""
+        res = await client.get(path, **kwargs)
         if res.status_code == 404:
-            res = await client.get(path, **kwargs)
+            target_path = path if path.startswith("/api") else f"/api{path}"
+            res = await client.get(target_path, **kwargs)
         return res
 
 

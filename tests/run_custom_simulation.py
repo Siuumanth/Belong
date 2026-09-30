@@ -194,7 +194,7 @@ async def poll_job_completion(client: httpx.AsyncClient, job_id: str, max_secs: 
         await asyncio.sleep(interval)
         elapsed += interval
         try:
-            res = await client.get(f"/api/matches/jobs/{job_id}")
+            res = await client.get(f"/matches/jobs/{job_id}")
             if res.status_code == 200:
                 data = res.json()
                 status = data.get("status", "unknown")
@@ -223,7 +223,7 @@ async def run_simulation():
     sim_user_2 = UserSimulator(USER_2_CONFIG)
     users = [sim_user_1, sim_user_2]
 
-    async with httpx.AsyncClient(base_url=API_URL, timeout=120.0) as client:
+    async with httpx.AsyncClient(base_url=API_URL, timeout=300.0) as client:
 
         # Health check
         if not await check_api_health(client):
@@ -276,8 +276,8 @@ async def run_simulation():
             for w in range(15):
                 await asyncio.sleep(2)
                 try:
-                    res1 = await client.get(f"/api/profiles/{sim_user_1.user_id}/embeddings")
-                    res2 = await client.get(f"/api/profiles/{sim_user_2.user_id}/embeddings")
+                    res1 = await client.get(f"/profiles/{sim_user_1.user_id}/embeddings")
+                    res2 = await client.get(f"/profiles/{sim_user_2.user_id}/embeddings")
                     p1 = res1.json() if res1.status_code == 200 else {}
                     p2 = res2.json() if res2.status_code == 200 else {}
                     # Check if embeddings are confirmed generated
@@ -311,7 +311,7 @@ async def run_simulation():
                 print("\n-----------------------------------------------------------------")
                 print(f"STEP 5: Fetching Match Results for User '{target_user.persona.id}'")
                 print("-----------------------------------------------------------------")
-                res = await client.get(f"/api/matches/{target_user.user_id}")
+                res = await client.get(f"/matches/{target_user.user_id}")
 
                 if res.status_code == 200:
                     matches_data = res.json()

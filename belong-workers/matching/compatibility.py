@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict, Optional, TypedDict, cast
+from typing import Any, Dict, Optional, TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
@@ -161,83 +161,53 @@ def get_message_content(response: Any) -> str:
 
 
 def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
-    """Node 2: Invokes LLM with structured output + retry on transient errors."""
+    """Node 2: Invokes LLM and parses JSON response. Model-agnostic — no tool use required."""
+    import re
     try:
         llm = get_llm()
-        prompt_text = state.get("prompt_text", "")
         messages = [
             SystemMessage(
                 content=(
                     "You are an expert AI compatibility reasoning agent for Belong. "
-                    "Return your analysis strictly as a valid JSON object matching the required schema. "
-                    "Do not include any text outside the JSON object."
+                    "Return your analysis ONLY as a valid JSON object matching the required schema. "
+                    "Do not include any explanation, markdown, or text outside the JSON object. "
+                    "Start your response with '{' and end with '}'."
                 )
             ),
-            HumanMessage(content=prompt_text),
+            HumanMessage(content=state.get("prompt_text", "")),
         ]
 
-        response = None
+        raw_response = _retry_llm_invoke(llm.invoke, messages)
+        content = get_message_content(raw_response).strip()
+
+        if not content:
+            raise RuntimeError("LLM returned empty response")
+
+        # Strip markdown fences if present
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+
+        # Parse and validate
         try:
-            structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput, method="function_calling")
-            response = cast(
-                PairwiseCompatibilityOutput,
-                _retry_llm_invoke(structured_llm.invoke, messages),
-            )
-        except Exception as fc_err:
-            logger.warning(f"function_calling structured output failed ({fc_err}). Attempting recovery...")
-            import re
-            data = None
-            err_str = str(fc_err)
+            data = json.loads(content)
+        except Exception:
+            match = re.search(r"\{[\s\S]*\}", content)
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise
 
-            # Strategy 1: Groq often puts the generated JSON inside 'failed_generation' in the 400 error
-            if "failed_generation" in err_str:
-                try:
-                    # Look for arguments dictionary in the failed_generation payload
-                    fg_match = re.search(r'"arguments"\s*:\s*(\{[\s\S]+)', err_str)
-                    if fg_match:
-                        raw_args = fg_match.group(1).rstrip("'} ")
-                        # Try parsing as is, or strip trailing incomplete bits
-                        for attempt_str in [raw_args, raw_args.rsplit(",", 1)[0] + "}"]:
-                            try:
-                                candidate = json.loads(attempt_str)
-                                if isinstance(candidate, dict) and "overall_verdict" in candidate:
-                                    data = candidate
-                                    logger.info("Successfully recovered output from failed_generation.")
-                                    break
-                            except Exception:
-                                pass
-                except Exception as ex:
-                    logger.debug(f"Failed extraction from failed_generation: {ex}")
+        if "overall_verdict" not in data:
+            data["overall_verdict"] = "partial_alignment"
 
-            # Strategy 2: Direct plain LLM call if not recovered from failed_generation
-            if not data:
-                raw_response = _retry_llm_invoke(llm.invoke, messages)
-                content = get_message_content(raw_response).strip()
-                if not content:
-                    raise RuntimeError("LLM returned empty response on fallback invoke")
-                if "```json" in content:
-                    content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content:
-                    content = content.split("```")[1].split("```")[0].strip()
-                try:
-                    data = json.loads(content)
-                except Exception:
-                    match = re.search(r"\{[\s\S]*\}", content)
-                    if match:
-                        data = json.loads(match.group(0))
-                    else:
-                        raise
+        return {"parsed_output": PairwiseCompatibilityOutput.model_validate(data), "error": None}
 
-            if isinstance(data, dict) and "overall_verdict" not in data:
-                # Calculate verdict based on dimensions or default to partial_alignment
-                data["overall_verdict"] = "partial_alignment"
-
-            response = PairwiseCompatibilityOutput.model_validate(data)
-
-        return {"parsed_output": response, "error": None}
     except Exception as e:
         logger.error(f"Error during pairwise LLM reasoning: {e}", exc_info=True)
         return {"parsed_output": None, "error": str(e)}
+
 
 def _build_signal_index(profile: Dict[str, Any]) -> Dict[str, str]:
     """Build a flat {signal_id: quote} index from a structured profile dict.

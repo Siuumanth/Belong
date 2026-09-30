@@ -56,8 +56,8 @@ async def main():
     # 2. Trigger matching via API with X-User-ID header
     headers = {"X-User-ID": target_user_id}
     async with httpx.AsyncClient(base_url=API_BASE, timeout=60.0) as client:
-        print(f"Triggering POST /api/matches with header X-User-ID: {target_user_id}...")
-        res = await client.post("/api/matches", headers=headers)
+        print(f"Triggering POST /matches with header X-User-ID: {target_user_id}...")
+        res = await client.post("/matches", headers=headers)
         if res.status_code not in (200, 202):
             print(f"[ERROR] Failed to request matches: {res.status_code} - {res.text}")
             return
@@ -70,7 +70,7 @@ async def main():
         print("Polling job status...")
         for i in range(35):
             await asyncio.sleep(2)
-            poll_res = await client.get(f"/api/matches/jobs/{job_id}")
+            poll_res = await client.get(f"/matches/jobs/{job_id}")
             if poll_res.status_code == 200:
                 poll_data = poll_res.json()
                 status = poll_data.get("status")
@@ -85,7 +85,7 @@ async def main():
 
         # 4. Fetch compatibility matches from API
         print("\nFetching match results from API...")
-        match_res = await client.get(f"/api/matches/{target_user_id}", headers=headers)
+        match_res = await client.get(f"/matches/{target_user_id}", headers=headers)
         if match_res.status_code == 200:
             data = match_res.json()
             matches = data.get("matches", [])

@@ -23,8 +23,13 @@ Your job is to extract structured compatibility evidence from a user's answer du
 QUESTION ASKED:
 "{question_text}"
 
-TARGET DIMENSIONS TO EXTRACT FOR THIS TOPIC ({topic_id}):
+LIKELY RELEVANT DIMENSIONS FOR THIS TOPIC ({topic_id}):
 {target_dimensions}
+
+IMPORTANT: These are suggested dimensions, not a restriction. Extract signals for ANY profile field
+supported by the user's answer — including fields not listed above. If the answer contains clear
+evidence for self.values, self.lifestyle, self.interests, or any other field, extract it regardless
+of whether that field appears in the list above. Do NOT limit extraction to only the listed dimensions.
 
 USER RESPONSE:
 "{latest_user_input}"
@@ -62,8 +67,15 @@ Examples of VALUES/PREFERENCES (NOT dealbreakers):
 ✓ "I prefer someone active" → wants.partner_traits (preference, not hard boundary)
 ✓ "trust is important to me" → wants.partner_values (positive value)
 
-IMPORTANT: If the user says BOTH what they value AND what they cannot accept, extract BOTH:
-"I value honesty. I can't do dishonesty" → wants.partner_values + constraints.dealbreakers
+DUAL-FILING RULE (CRITICAL):
+If a statement is phrased as a dealbreaker ("I can't do X", "hard no", "non-negotiable", "it's done"),
+extract it ONLY to `constraints.dealbreakers`. Do NOT also extract it as a positive `wants.partner_values` signal.
+The only exception: if the user ALSO makes a separate positive statement ("I value honesty AND I can't do dishonesty"),
+extract the positive statement to `wants.partner_values` AND the negative statement to `constraints.dealbreakers`.
+If only a dealbreaker phrasing is present, route to `constraints.dealbreakers` only.
+Example:
+  "I can't do dishonesty" → constraints.dealbreakers ONLY
+  "I value honesty. Dishonesty is a dealbreaker" → wants.partner_values + constraints.dealbreakers
 
 ATOMIC EXTRACTION — WANTS FIELDS:
 When the user says something like "I want someone who communicates, is emotionally present, and wants to build something real":

@@ -163,9 +163,10 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
         return {"extracted_signals": extracted_signals}
 
     if active_probe_field:
-        # User just answered an adaptive follow-up probe
+        # User just answered an adaptive follow-up probe.
+        # Primary target is the probed field, but extraction is open to all relevant signals.
         topic_id = f"probe_{active_probe_field.replace('.', '_')}"
-        target_dimensions = active_probe_field
+        target_dimensions = f"{active_probe_field} (primary), plus any other profile fields supported by the answer"
         question_text = active_probe_prompt or "What are some things you naturally do for a partner?"
     elif current_idx < len(questions):
         question_cfg = questions[current_idx]
@@ -271,28 +272,9 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error in extract_signals_node: {e}")
 
-    # Validation logging for critical fields
-    logger.info(f"Extraction for {topic_id}: extracted {len(items)} items across {len(extracted_signals)} dimensions")
-    
-    # Check for dealbreaker keywords if this was Q6
-    if topic_id == "q6_dealbreakers":
-        dealbreaker_count = len(extracted_signals.get("constraints.dealbreakers", []))
-        logger.info(f"Q6 dealbreaker extraction: {dealbreaker_count} dealbreakers extracted")
-        
-        if dealbreaker_count == 0:
-            # Check for dealbreaker keywords in user input
-            dealbreaker_keywords = ["hard no", "dealbreaker", "can't do", "won't accept", "it's done", "non-negotiable"]
-            found_keywords = [kw for kw in dealbreaker_keywords if kw in user_input.lower()]
-            if found_keywords:
-                logger.warning(f"Q6 answer contains dealbreaker keywords {found_keywords} but extracted 0 dealbreakers!")
-    
-    # Check for multi-dimension extraction on Q4
-    if topic_id == "q4_lifestyle_values":
-        dimensions_extracted = [k for k in ["self.lifestyle", "self.interests", "self.values", "self.life_goals"] 
-                                if extracted_signals.get(k)]
-        logger.info(f"Q4 extracted dimensions: {dimensions_extracted}")
-        if len(dimensions_extracted) < 2:
-            logger.warning(f"Q4 only extracted {len(dimensions_extracted)} dimensions, expected at least 2")
+    # Extraction diagnostic — generic across all turns, not coupled to a specific question
+    populated_dimensions = [k for k, v in extracted_signals.items() if v and not k.startswith("_")]
+    logger.info(f"Extraction for {topic_id}: {len(items)} items → {len(populated_dimensions)} dimensions now populated: {populated_dimensions}")
 
     return {
         "extracted_signals": extracted_signals,
