@@ -281,13 +281,18 @@ paths:
       tags: [Matching]
       security:
         - BearerAuth: []
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: false
+          description: Authenticated user ID injected by Auth Gateway.
+          schema: { type: string, format: uuid }
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
-              required: [user_id]
               properties:
                 user_id: { type: string, format: uuid }
                 limit: { type: integer, default: 5, example: 5 }
@@ -298,11 +303,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JobAcceptedResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /matches/jobs/{job_id}:
     get:
       summary: Get Matching Job Status & Results
-      description: Polls the state of an asynchronous matching job. Once completed, returns ranked candidate results with full compatibility reasoning cards.
+      description: Polls the state of an asynchronous matching job. Once completed, returns status and result metadata.
       tags: [Matching]
       security:
         - BearerAuth: []
@@ -317,7 +324,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MatchJobResponse'
+                $ref: '#/components/schemas/JobStatusResponse'
 
   /matches/{user_id}:
     get:
@@ -337,13 +344,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  user_id: { type: string, format: uuid }
-                  matches:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/MatchResultItem'
+                $ref: '#/components/schemas/MatchesListResponse'
 
 # ==========================================
 # COMPONENTS & SCHEMAS
@@ -510,36 +511,68 @@ components:
       type: object
       properties:
         job_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        type: { type: string, example: "matching" }
         status: { type: string, example: "pending" }
+        created_at: { type: string, format: date-time }
 
-    MatchJobResponse:
+    JobStatusResponse:
       type: object
       properties:
         job_id: { type: string, format: uuid }
-        status: { type: string, enum: [pending, running, completed, failed], example: "completed" }
-        matches:
-          type: array
-          items:
-            $ref: '#/components/schemas/MatchResultItem'
+        user_id: { type: string, format: uuid }
+        type: { type: string, example: "matching" }
+        status: { type: string, enum: [pending, running, completed, failed, cancelled], example: "completed" }
+        attempts: { type: integer, example: 1 }
+        error: { type: string, nullable: true }
+        started_at: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+        result: { type: object, nullable: true }
 
-    MatchResultItem:
+    MatchCandidateResponse:
       type: object
       properties:
-        candidate_id: { type: string, format: uuid }
+        match_id: { type: string, format: uuid, nullable: true }
+        user_b_id: { type: string, format: uuid }
+        overall_verdict:
+          type: string
+          enum: [strong_alignment, partial_alignment, unclear, conflict]
+          example: "partial_alignment"
+        overall_reasoning:
+          type: string
+          example: "The pair shows strong reciprocal emotional support—A's patient listening meets B's need for presence."
         dimension_results:
           type: object
-          description: Categorical verdicts per dimension
+          description: Categorical verdicts and signal IDs per dimension
           example:
+            lifestyle:
+              verdict: "strong_alignment"
+              evidence_a_ids: ["q4_lifestyle_values_s_lifestyle_00"]
+              evidence_b_ids: ["q4_lifestyle_values_s_lifestyle_03"]
             emotional_needs:
               verdict: "strong_alignment"
-              evidence_a: "Needs space to process stressful events"
-              evidence_b: "Respects boundaries and listens first"
+              evidence_a_ids: ["q2_emotional_needs_s_needs_00"]
+              evidence_b_ids: ["probe_provides_s_provides_00"]
+            core_values:
+              verdict: "partial_alignment"
             conflict_style:
               verdict: "partial_alignment"
-              evidence_a: "Takes time to cool down"
-              evidence_b: "Prefers immediate calm discussion"
+        complementary_alignments:
+          type: array
+          description: Reciprocal fulfillment pairings (A's wants satisfied by B's provides, and vice versa)
+          items: { type: string }
+          example:
+            - "A wants reassurance & respect -> B provides frequent check-ins (q3_conflict_provides_s_provides_01)"
+            - "B wants emotional presence -> A provides patient listening & reassurance (probe_provides_s_provides_00)"
+        shared_alignments:
+          type: array
+          description: Mutual similarities in hobbies, background, or goals
+          items: { type: string }
+          example:
+            - "Both value long-term commitment and personal growth"
         strong_alignments:
           type: array
+          description: Combined key areas of alignment
           items: { type: string }
         potential_conflicts:
           type: array
@@ -550,3 +583,13 @@ components:
         uncertainties:
           type: array
           items: { type: string }
+
+    MatchesListResponse:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        total_matches: { type: integer, example: 1 }
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchCandidateResponse'
