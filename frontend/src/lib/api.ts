@@ -39,10 +39,10 @@ export async function api<T>(
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const token = document.cookie
+  const raw = document.cookie
     .split("; ")
-    .find((row) => row.startsWith("belong_token="))
-    ?.split("=")[1];
+    .find((row) => row.startsWith("belong_token="));
+  const token = raw ? raw.substring("belong_token=".length) : null;
   const decoded = token ? decodeURIComponent(token) : null;
   if (opts.auth !== false && decoded) {
     headers.set("Authorization", `Bearer ${decoded}`);
@@ -243,48 +243,51 @@ export const authApi = {
 export const profileApi = {
   get: async (userId: string): Promise<Profile | null> => {
     try {
-      return await api<Profile>(`/api/profiles/${userId}`);
+      return await api<Profile>(`/profiles/${userId}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return null;
       throw err;
     }
   },
   create: (body: ProfileWrite & { user_id: string }) =>
-    api<Profile>("/api/profiles", { method: "POST", body: JSON.stringify(body) }),
+    api<Profile>("/profiles", { method: "POST", body: JSON.stringify(body) }),
   update: (userId: string, body: Partial<ProfileWrite>) =>
-    api<Profile>(`/api/profiles/${userId}`, {
+    api<Profile>(`/profiles/${userId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
   triggerEmbedding: (userId: string) =>
-    api<JobAcceptedResponse>(`/api/profiles/${userId}/embeddings`, {
+    api<JobAcceptedResponse>(`/profiles/${userId}/embeddings`, {
       method: "POST",
     }),
   getEmbeddingStatus: (userId: string) =>
-    api<EmbeddingStatus>(`/api/profiles/${userId}/embeddings`),
+    api<EmbeddingStatus>(`/profiles/${userId}/embeddings`),
 };
 
 export const onboardingApi = {
   start: (userId: string) =>
-    api<OnboardingSession>("/api/onboarding/session", {
+    api<OnboardingSession>("/onboarding/session", {
       method: "POST",
       body: JSON.stringify({ user_id: userId }),
     }),
   send: (conversationId: string, message: string) =>
-    api<OnboardingReply>("/api/onboarding/message", {
+    api<OnboardingReply>("/onboarding/message", {
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, message }),
     }),
   state: (conversationId: string) =>
-    api<OnboardingState>(`/api/onboarding/${conversationId}`),
+    api<OnboardingState>(`/onboarding/${conversationId}`),
+  // Fetch the latest conversation for a user — used when localStorage ID is missing
+  latestForUser: (userId: string) =>
+    api<OnboardingState>(`/onboarding/user/${userId}`),
 };
 
 export const matchApi = {
   createJob: (userId: string, limit = 5) =>
-    api<JobAcceptedResponse>("/api/matches", {
+    api<JobAcceptedResponse>("/matches", {
       method: "POST",
       body: JSON.stringify({ user_id: userId, limit }),
     }),
-  job: (jobId: string) => api<MatchJob>(`/api/matches/jobs/${jobId}`),
-  latest: (userId: string) => api<MatchesListResponse>(`/api/matches/${userId}`),
+  job: (jobId: string) => api<MatchJob>(`/matches/jobs/${jobId}`),
+  latest: (userId: string) => api<MatchesListResponse>(`/matches/${userId}`),
 };

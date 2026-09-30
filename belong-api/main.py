@@ -57,7 +57,7 @@ from api.routes.matches import router as matches_router
 async def health_check():
     return {"status": "ok", "service": "python-belong-api"}
 
-app.include_router(profiles_router, prefix="/api")
-app.include_router(onboarding_router, prefix="/api")
-app.include_router(embeddings_router, prefix="/api")
-app.include_router(matches_router, prefix="/api")
+app.include_router(profiles_router)
+app.include_router(onboarding_router)
+app.include_router(embeddings_router)
+app.include_router(matches_router)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { profileApi, type Profile } from "../lib/api";
+import { matchApi, profileApi, type MatchesListResponse, type Profile } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
 // ─── Quick-action card ────────────────────────────────────────────────────────
@@ -100,13 +100,21 @@ export function DashboardPage() {
   const userId = session!.userId;
 
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
+  const [hasMatches, setHasMatches] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    profileApi
-      .get(userId)
-      .then((p) => { if (!cancelled) setProfile(p); })
-      .catch(() => { if (!cancelled) setProfile(null); });
+
+    // Fetch profile and latest matches in parallel
+    Promise.all([
+      profileApi.get(userId).catch(() => null),
+      matchApi.latest(userId).catch(() => null),
+    ]).then(([p, m]: [Profile | null, MatchesListResponse | null]) => {
+      if (cancelled) return;
+      setProfile(p);
+      setHasMatches((m?.total_matches ?? 0) > 0);
+    });
+
     return () => { cancelled = true; };
   }, [userId]);
 
@@ -139,7 +147,7 @@ export function DashboardPage() {
           <PipelineConnector done={hasProfile} />
           <PipelineStep label="Onboarding" done={hasSignals} active={hasProfile && !hasSignals} />
           <PipelineConnector done={hasSignals} />
-          <PipelineStep label="Find matches" active={hasSignals} done={false} />
+          <PipelineStep label="Find matches" active={hasSignals && !hasMatches} done={hasMatches} />
         </div>
         {!hasProfile && (
           <p className="mt-4 text-xs text-[#4a6080]">
@@ -151,9 +159,14 @@ export function DashboardPage() {
             Profile done. Complete the onboarding conversation to unlock matching.
           </p>
         )}
-        {hasSignals && (
+        {hasSignals && !hasMatches && (
+          <p className="mt-4 text-xs text-[#4a6080]">
+            All set — run your first match.
+          </p>
+        )}
+        {hasMatches && (
           <p className="mt-4 text-xs text-[#d4a843]">
-            All set — you can run a match any time.
+            You have matches — check them out.
           </p>
         )}
       </div>

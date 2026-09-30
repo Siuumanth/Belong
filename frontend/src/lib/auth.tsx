@@ -28,7 +28,7 @@ function getCookie(): string | null {
     .split("; ")
     .find((row) => row.startsWith(`${COOKIE_NAME}=`));
   if (!match) return null;
-  return decodeURIComponent(match.split("=")[1]);
+  return decodeURIComponent(match.substring(`${COOKIE_NAME}=`.length));
 }
 
 function deleteCookie() {

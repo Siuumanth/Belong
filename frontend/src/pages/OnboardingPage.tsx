@@ -117,8 +117,39 @@ function ProgressBar({ count }: { count: number }) {
   );
 }
 
-// ─── Completion screen ────────────────────────────────────────────────────────
-function CompletionScreen({ onContinue }: { onContinue: () => void }) {
+// ─── Completion banner (shown above chat when onboarding is done) ─────────────
+function CompletionBanner({ onRedo, onMatches }: { onRedo: () => void; onMatches: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#d4a843]/25 bg-[#d4a843]/8 px-5 py-3.5">
+      <div className="flex items-center gap-3">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#d4a843]/15 text-sm text-[#d4a843]">✓</span>
+        <div>
+          <p className="text-sm font-medium text-[#d4a843]">Onboarding complete</p>
+          <p className="text-xs text-[#8fa3bf]">Your compatibility signals have been captured.</p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={onMatches}
+          className="rounded-xl bg-blue px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-dim transition-colors"
+        >
+          See matches →
+        </button>
+        <button
+          type="button"
+          onClick={onRedo}
+          className="rounded-xl border border-line px-3 py-1.5 text-xs text-[#4a6080] hover:text-[#8fa3bf] transition-colors"
+        >
+          Redo
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Completion screen (no chat history available) ────────────────────────────
+function CompletionScreen({ onContinue, onRedo }: { onContinue: () => void; onRedo: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-20 text-center animate-float-up">
       <div className="relative flex h-20 w-20 items-center justify-center">
@@ -128,10 +159,9 @@ function CompletionScreen({ onContinue }: { onContinue: () => void }) {
         </div>
       </div>
       <div>
-        <h2 className="font-display text-3xl font-light text-[#e8edf8]">You're all set</h2>
+        <h2 className="font-display text-3xl font-light text-[#e8edf8]">Onboarding complete</h2>
         <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#8fa3bf]">
-          Your signals have been captured. We're building your compatibility
-          profile — this usually takes under a minute.
+          Your signals have been captured and your compatibility profile is ready.
         </p>
       </div>
       <div className="flex flex-col gap-3 items-center">
@@ -142,7 +172,13 @@ function CompletionScreen({ onContinue }: { onContinue: () => void }) {
         >
           See my matches →
         </button>
-        <p className="text-xs text-[#4a6080]">Embeddings generate in the background</p>
+        <button
+          type="button"
+          onClick={onRedo}
+          className="text-xs text-[#4a6080] hover:text-[#8fa3bf] transition-colors"
+        >
+          Redo onboarding
+        </button>
       </div>
     </div>
   );
@@ -215,12 +251,8 @@ export function OnboardingPage() {
   const userId = session!.userId;
   const navigate = useNavigate();
 
-  // Read stored ID once — stable, not re-read on every render
-  const storedIdRef = useRef<string | null>(localStorage.getItem(storageKey(userId)));
-  const storedId = storedIdRef.current;
-
-  const [view, setView] = useState<ViewState>(storedId ? "loading" : "landing");
-  const [conversationId, setConversationId] = useState<string | null>(storedId);
+  const [view, setView] = useState<ViewState>("loading");
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [visibleCount, setVisibleCount] = useState(0);
   const [typing, setTyping] = useState(false);
@@ -231,37 +263,81 @@ export function OnboardingPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── Restore conversation from API on mount if we have a stored ID ──────────
+  // ── On mount: check backend state before showing anything ─────────────────
   useEffect(() => {
-    if (!storedId) return;
     let cancelled = false;
-    onboardingApi
-      .state(storedId)
-      .then((state) => {
+
+    async function bootstrap() {
+      const storedId = localStorage.getItem(storageKey(userId));
+
+      // Helper: load a conversation state and update component state
+      async function loadConversation(convId: string): Promise<boolean> {
+        try {
+          const state = await onboardingApi.state(convId);
+          if (cancelled) return false;
+          const msgs: ChatMessage[] = (state.messages ?? []).map((m) => ({
+            role: String(m.role ?? "assistant"),
+            content: String(m.content ?? ""),
+            question_id: m.question_id ?? null,
+            created_at: m.created_at ? String(m.created_at) : undefined,
+          }));
+          // Save the ID to localStorage so future reloads are fast
+          localStorage.setItem(storageKey(userId), convId);
+          setMessages(msgs);
+          setVisibleCount(msgs.length);
+          setConversationId(convId);
+          setView(state.status === "completed" ? "completed" : "chat");
+          return true;
+        } catch (err) {
+          if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 404) {
+            localStorage.removeItem(storageKey(userId));
+          }
+          return false;
+        }
+      }
+
+      // Step 1 — try stored ID first (fast path)
+      if (storedId) {
+        const ok = await loadConversation(storedId);
+        if (ok || cancelled) return;
+      }
+
+      // Step 2 — no stored ID or it failed, look up by user ID from backend
+      try {
+        const state = await onboardingApi.latestForUser(userId);
         if (cancelled) return;
-        // Normalize messages — backend rows may have extra DB fields
+        const convId = state.conversation_id;
         const msgs: ChatMessage[] = (state.messages ?? []).map((m) => ({
           role: String(m.role ?? "assistant"),
           content: String(m.content ?? ""),
           question_id: m.question_id ?? null,
           created_at: m.created_at ? String(m.created_at) : undefined,
         }));
+        console.log("[onboarding bootstrap] latestForUser →", {
+          convId,
+          status: state.status,
+          messageCount: msgs.length,
+          rawMessages: state.messages,
+        });
+        localStorage.setItem(storageKey(userId), convId);
         setMessages(msgs);
         setVisibleCount(msgs.length);
+        setConversationId(convId);
         setView(state.status === "completed" ? "completed" : "chat");
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        console.error("Failed to restore conversation:", err);
-        // Stale or broken ID — clear and go to landing
-        localStorage.removeItem(storageKey(userId));
-        storedIdRef.current = null;
-        setConversationId(null);
-        setView("landing");
-      });
+        return;
+      } catch (e) {
+        console.log("[onboarding bootstrap] latestForUser failed →", e);
+        // No conversation in DB at all — fall through
+      }
+
+      // Step 3 — no conversation anywhere, go to landing
+      if (!cancelled) setView("landing");
+    }
+
+    void bootstrap();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // mount-only
+  }, []);
 
   // ── Animate messages in one-by-one ────────────────────────────────────────
   useEffect(() => {
@@ -381,9 +457,48 @@ export function OnboardingPage() {
   }
 
   if (view === "completed") {
+    // Always show chat layout with completion banner when we have a conversation
+    // Fall back to standalone screen only if truly no messages AND no conversation ID
+    const showChat = messages.length > 0 || conversationId !== null;
+
+    if (showChat) {
+      return (
+        <div className="mx-auto flex max-w-5xl gap-8" style={{ height: "calc(100vh - 88px)" }}>
+          <ProgressStepper assistantCount={assistantCount} />
+
+          <div className="flex flex-1 flex-col min-w-0">
+            {/* Completion banner */}
+            <div className="pb-3">
+              <CompletionBanner
+                onRedo={resetSession}
+                onMatches={() => navigate("/matches")}
+              />
+            </div>
+
+            {messages.length === 0 ? (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-sm text-[#4a6080]">No message history available.</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+                {messages.slice(0, visibleCount).map((msg, i) => (
+                  <Bubble key={`${msg.role}-${i}`} msg={msg} visible={i < visibleCount} />
+                ))}
+                <div ref={bottomRef} />
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // No conversation at all — standalone screen
     return (
       <div className="mx-auto max-w-xl">
-        <CompletionScreen onContinue={() => navigate("/matches")} />
+        <CompletionScreen
+          onContinue={() => navigate("/matches")}
+          onRedo={resetSession}
+        />
       </div>
     );
   }

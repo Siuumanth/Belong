@@ -180,6 +180,34 @@ async def send_message(payload: SendMessageRequest, background_tasks: Background
         question_id=next_question_id
     )
 
+@router.get("/user/{user_id}", response_model=ConversationDetailsResponse)
+async def get_latest_conversation_for_user(user_id: UUID):
+    """Returns the most recent onboarding conversation for a user."""
+    conversation = await OnboardingRepository.get_latest_conversation_by_user(user_id)
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No conversation found for user {user_id}."
+        )
+
+    messages = await OnboardingRepository.get_messages(UUID(str(conversation["id"])))
+
+    reconstructed_state = {
+        "current_area_index": conversation.get("current_area_index", 0),
+        "follow_up_count": conversation.get("follow_up_count", 0),
+        "covered_areas": conversation.get("covered_areas", []),
+        "extracted_signals": conversation.get("extracted_signals", {})
+    }
+
+    return ConversationDetailsResponse(
+        conversation_id=UUID(str(conversation["id"])),
+        user_id=UUID(str(conversation["user_id"])),
+        status=conversation["status"],
+        state=reconstructed_state,
+        messages=messages
+    )
+
+
 @router.get("/{conversation_id}", response_model=ConversationDetailsResponse)
 async def get_conversation_details(conversation_id: UUID):
     conversation = await OnboardingRepository.get_conversation(conversation_id)

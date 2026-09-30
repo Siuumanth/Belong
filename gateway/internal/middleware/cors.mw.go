@@ -12,12 +12,17 @@ var allowedOrigins []string
 func NewCORS() Middleware {
 	// runs once at startup
 	allowedOrigins = []string{
-		os.Getenv("FRONTEND_URL"),
-		os.Getenv("DEV_URL"),
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"http://localhost:3000",
+		"http://127.0.0.1:5173",
+		"http://127.0.0.1:3000",
+		"https://localhost:5173",
 		"http://localhost:5500",
 		"https://localhost:5500",
-		"https://localhost:5173",
 		"http://127.0.0.1:5500",
+		os.Getenv("FRONTEND_URL"),
+		os.Getenv("DEV_URL"),
 		os.Getenv("OTHER_URL"),
 	}
 	return utils.MiddlewareFunc(func(next http.Handler) http.Handler {
@@ -60,7 +65,7 @@ func NewCORS() Middleware {
 
 func isOriginAllowed(origin string) bool {
 	for _, allowedOrigin := range allowedOrigins {
-		if origin == allowedOrigin {
+		if allowedOrigin != "" && origin == allowedOrigin {
 			return true
 		}
 	}

@@ -115,6 +115,28 @@ class OnboardingRepository:
                 return dict(row)
 
     @staticmethod
+    async def get_latest_conversation_by_user(user_id: UUID) -> Optional[Dict[str, Any]]:
+        async with get_db_connection() as conn:
+            async with conn.cursor(row_factory=dict_row) as cur:
+                query = """
+                    SELECT id, user_id, status, current_area_index, follow_up_count, covered_areas, extracted_signals, created_at, updated_at
+                    FROM conversations
+                    WHERE user_id = %s
+                    ORDER BY updated_at DESC
+                    LIMIT 1;
+                """
+                await cur.execute(query, (str(user_id),))
+                row = await cur.fetchone()
+                if not row:
+                    return None
+                res = dict(row)
+                if isinstance(res.get("covered_areas"), str):
+                    res["covered_areas"] = json.loads(res["covered_areas"])
+                if isinstance(res.get("extracted_signals"), str):
+                    res["extracted_signals"] = json.loads(res["extracted_signals"])
+                return res
+
+    @staticmethod
     async def get_messages(conversation_id: UUID) -> List[Dict[str, Any]]:
         async with get_db_connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
