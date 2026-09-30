@@ -5,7 +5,7 @@ from pathlib import Path
 # ============================================================
 
 # Project directory to scan
-SOURCE_DIR = Path(r"D:/code/Golang/Belong")
+SOURCE_DIR = Path(r"D:/code/Golang/Belong/belong-api/db/migrations")
 
 # Output directory
 OUTPUT_DIR = Path(r"D:/code/Golang/Belong/archieve")
@@ -36,7 +36,7 @@ EXCLUDE_DIRS = {
     "build",
 }
 
-OUTPUT_FILE = OUTPUT_DIR / "all_code.txt"
+OUTPUT_FILE = OUTPUT_DIR / "all_SQL.txt"
 
 
 # ============================================================

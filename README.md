@@ -20,7 +20,7 @@ An AI-native Relationship Matchmaking & Deep Compatibility Engine that replaces 
 
 Most dating platforms optimize for surface-level similarity or high swipe volume, which is a poor proxy for long-term compatibility. **Belong** evaluates whether two individuals' **emotional needs, behavioral patterns, and relationship expectations are complementary** — even if their surface-level interests differ.
 
-![](https://github.com/Siuumanth/Belong/raw/main/docs/images/system-architecture.png)
+![](https://github.com/Siuumanth/Belong/blob/main/images/architecure.png?raw=true)
 
 ### Key Architectural Pillars:
 1. **Conversational AI Onboarding:** Replaces static forms with an adaptive 6-question dialogue powered by a LangGraph state machine.
@@ -77,7 +77,9 @@ Most dating platforms optimize for surface-level similarity or high swipe volume
 
 ## 3. Code Architecture & Conversational Onboarding
 
-### Architectural Separation: Evidence vs. Interpretation
+### Onboarding & Signal Extraction Flow
+
+![](https://github.com/Siuumanth/Belong/blob/main/images/onboarding-flow.png?raw=true)
 
 ```text
                     ┌────────────────────────┐
@@ -108,6 +110,8 @@ The system strictly decouples evidence collection from interpretation:
 ## 4. Two-Stage Matchmaking & Compatibility Engine
 
 Instead of relying solely on vector distance or arbitrary numeric scores, Belong combines rapid candidate retrieval with deep LLM pairwise reasoning.
+
+![](https://github.com/Siuumanth/Belong/blob/main/images/matching-flow.png?raw=true)
 
 ```text
 Stage 1: SQL Hard Filtering + pgvector
@@ -157,6 +161,8 @@ Matching and embedding generation are fully asynchronous, ensuring API endpoints
 ## 6. Database Design & Vector Schema
 
 All data integrity and relational constraints are enforced in PostgreSQL 16.
+
+![](https://github.com/Siuumanth/Belong/blob/main/images/schema.png?raw=true)
 
 ```text
 ┌────────────────────────────────────────────────────────┐

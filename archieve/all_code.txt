@@ -1171,7 +1171,7 @@ async def trigger_matching_job(
             detail=f"Profile for user {user_id} not found."
         )
 
-    # 2. Create job in PostgreSQL
+    # 2. Create job in PostgreSQL and track session in match_runs
     payload = {"user_id": str(user_id)}
     job_data = await job_repository.create_job(
         user_id=user_id,
@@ -1180,6 +1180,19 @@ async def trigger_matching_job(
     )
 
     job_id = UUID(str(job_data["id"]))
+
+    async with get_db_connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """
+                INSERT INTO match_runs (id, user_id, status)
+                VALUES (%s, %s, 'pending')
+                ON CONFLICT (id) DO NOTHING;
+                """,
+                (str(job_id), str(user_id))
+            )
+            await conn.commit()
+
     mq_payload = {
         "job_id": str(job_id),
         "user_id": str(user_id),
@@ -1225,12 +1238,12 @@ async def get_user_matches(user_id: UUID):
     async with get_db_connection() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             query = """
-                SELECT user_b_id, dimension_results, strong_alignments,
+                SELECT match_id, user_b_id, overall_verdict, overall_reasoning, dimension_results, strong_alignments,
                        complementary_alignments, shared_alignments,
                        potential_conflicts, dealbreaker_violations, uncertainties,
                        created_at, updated_at
                 FROM compatibility_results
-                WHERE user_a_id = %s
+                WHERE user_a_id = %s AND is_latest = true
                 ORDER BY updated_at DESC;
             """
             await cur.execute(query, (str(user_id),))
@@ -1239,10 +1252,10 @@ async def get_user_matches(user_id: UUID):
     matches: List[MatchCandidateResponse] = []
     for r in rows:
         matches.append(MatchCandidateResponse(
+            match_id=UUID(str(r["match_id"])) if r.get("match_id") else None,
             user_b_id=UUID(str(r["user_b_id"])),
-            overall_verdict=r.get("dimension_results", {}).get("overall_verdict", "unclear")
-            if isinstance(r.get("dimension_results"), dict) and "overall_verdict" in r.get("dimension_results", {})
-            else "unclear",
+            overall_verdict=r.get("overall_verdict") or "unclear",
+            overall_reasoning=r.get("overall_reasoning") or "",
             dimension_results=r.get("dimension_results") or {},
             strong_alignments=r.get("strong_alignments") or [],
             complementary_alignments=r.get("complementary_alignments") or [],
@@ -1445,6 +1458,34 @@ async def send_message(payload: SendMessageRequest, background_tasks: Background
         follow_up_count=new_state.get("follow_up_count", 0),
         question_id=next_question_id
     )
+
+@router.get("/user/{user_id}", response_model=ConversationDetailsResponse)
+async def get_latest_conversation_for_user(user_id: UUID):
+    """Returns the most recent onboarding conversation for a user."""
+    conversation = await OnboardingRepository.get_latest_conversation_by_user(user_id)
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No conversation found for user {user_id}."
+        )
+
+    messages = await OnboardingRepository.get_messages(UUID(str(conversation["id"])))
+
+    reconstructed_state = {
+        "current_area_index": conversation.get("current_area_index", 0),
+        "follow_up_count": conversation.get("follow_up_count", 0),
+        "covered_areas": conversation.get("covered_areas", []),
+        "extracted_signals": conversation.get("extracted_signals", {})
+    }
+
+    return ConversationDetailsResponse(
+        conversation_id=UUID(str(conversation["id"])),
+        user_id=UUID(str(conversation["user_id"])),
+        status=conversation["status"],
+        state=reconstructed_state,
+        messages=messages
+    )
+
 
 @router.get("/{conversation_id}", response_model=ConversationDetailsResponse)
 async def get_conversation_details(conversation_id: UUID):
@@ -2034,6 +2075,16 @@ CREATE INDEX IF NOT EXISTS idx_compatibility_user_a_latest ON compatibility_resu
 
 
 ====================================================================================================
+FILE: belong-api\db\migrations\008_add_overall_verdict_to_compatibility_results.sql
+====================================================================================================
+
+-- Migration 008: Add overall_verdict column to compatibility_results
+ALTER TABLE compatibility_results
+    ADD COLUMN IF NOT EXISTS overall_verdict TEXT NOT NULL DEFAULT 'unclear';
+
+
+
+====================================================================================================
 FILE: belong-api\embeddings\__init__.py
 ====================================================================================================
 
@@ -2526,10 +2577,10 @@ from api.routes.matches import router as matches_router
 async def health_check():
     return {"status": "ok", "service": "python-belong-api"}
 
-app.include_router(profiles_router, prefix="/api")
-app.include_router(onboarding_router, prefix="/api")
-app.include_router(embeddings_router, prefix="/api")
-app.include_router(matches_router, prefix="/api")
+app.include_router(profiles_router)
+app.include_router(onboarding_router)
+app.include_router(embeddings_router)
+app.include_router(matches_router)
 
 
 
@@ -2588,252 +2639,13 @@ class RetrievalOptions(BaseModel):
 
 
 ====================================================================================================
-FILE: belong-api\matching\retrieval.py
-====================================================================================================
-
-import json
-import logging
-from typing import List, Optional, Dict, Any, Tuple
-from uuid import UUID
-
-try:
-    from psycopg.rows import dict_row
-except (ImportError, ModuleNotFoundError):
-    dict_row = None
-
-from config import settings
-from db.connection import get_db_connection
-from matching.models import CandidateMatch, RetrievalOptions
-
-logger = logging.getLogger(__name__)
-
-class CandidateRetriever:
-    """Handles Stage 1 Matching: Hard constraint SQL filters + pgvector candidate retrieval."""
-
-    def __init__(self, options: Optional[RetrievalOptions] = None):
-        self.options = options or RetrievalOptions()
-
-    def _get_effective_options(self, custom_options: Optional[RetrievalOptions] = None) -> Dict[str, Any]:
-        """Merges instance options, call-specific options, and default config settings."""
-        opts = custom_options or self.options
-        return {
-            "candidate_pool_limit": opts.candidate_pool_limit or settings.MATCHING_CANDIDATE_POOL_LIMIT,
-            "pre_rank_limit": opts.pre_rank_limit or settings.MATCHING_PRE_RANK_LIMIT,
-            "max_distance_km": opts.max_distance_km or settings.MATCHING_MAX_DISTANCE_KM_DEFAULT,
-            "min_similarity_threshold": (
-                opts.min_similarity_threshold 
-                if opts.min_similarity_threshold is not None 
-                else settings.MATCHING_MIN_SIMILARITY_THRESHOLD
-            ),
-            "bidirectional_weight": (
-                opts.bidirectional_weight 
-                if opts.bidirectional_weight is not None 
-                else settings.MATCHING_BIDIRECTIONAL_WEIGHT
-            ),
-            "require_mutual_age": opts.require_mutual_age,
-            "require_mutual_gender": opts.require_mutual_gender,
-            "require_mutual_relationship_goal": opts.require_mutual_relationship_goal,
-        }
-
-    async def retrieve_candidates(
-        self, 
-        user_id: UUID, 
-        options: Optional[RetrievalOptions] = None
-    ) -> List[CandidateMatch]:
-        """Retrieves and pre-ranks candidate profiles for user_id based on hard filters & vector similarity."""
-        config = self._get_effective_options(options)
-
-        async with get_db_connection() as conn:
-            async with conn.cursor(row_factory=dict_row) as cur:
-                # 1. Fetch user's profile and vectors
-                user_query = """
-                    SELECT user_id, age, gender, orientation, latitude, longitude,
-                           relationship_goal, preferred_age_min, preferred_age_max,
-                           max_distance_km, preferred_genders, required_relationship_goal,
-                           self_embedding, wants_embedding
-                    FROM profiles
-                    WHERE user_id = %s;
-                """
-                await cur.execute(user_query, (str(user_id),))
-                user_row = await cur.fetchone()
-
-                if not user_row:
-                    raise ValueError(f"User profile with id {user_id} not found.")
-
-                if user_row.get("wants_embedding") is None:
-                    logger.warning(f"User {user_id} does not have wants_embedding. Cannot perform vector matching.")
-                    return []
-
-                # Parse User A fields
-                user_lat = user_row.get("latitude")
-                user_lon = user_row.get("longitude")
-                user_age = user_row.get("age")
-                user_gender = user_row.get("gender")
-                user_pref_genders = user_row.get("preferred_genders") or []
-                user_pref_age_min = user_row.get("preferred_age_min")
-                user_pref_age_max = user_row.get("preferred_age_max")
-                user_max_distance = user_row.get("max_distance_km") or config["max_distance_km"]
-                user_req_goal = user_row.get("required_relationship_goal")
-                user_goal = user_row.get("relationship_goal")
-                wants_vec_str = str(user_row["wants_embedding"])
-                self_vec_str = str(user_row["self_embedding"]) if user_row.get("self_embedding") is not None else None
-
-                # 2. Build dynamic SQL query for Candidate Recall
-                conditions = [
-                    "p.user_id != %(user_id)s",
-                    "p.self_embedding IS NOT NULL"
-                ]
-                params: Dict[str, Any] = {
-                    "user_id": str(user_id),
-                    "wants_vec": wants_vec_str,
-                    "pool_limit": config["candidate_pool_limit"]
-                }
-
-                # Hard Filter: Gender & Preferred Genders
-                if config["require_mutual_gender"]:
-                    # User A prefers specific genders
-                    if user_pref_genders and len(user_pref_genders) > 0:
-                        conditions.append("p.gender = ANY(%(user_pref_genders)s)")
-                        params["user_pref_genders"] = user_pref_genders
-
-                    # Candidate B prefers User A's gender (if Candidate specifies preferences)
-                    if user_gender:
-                        conditions.append(
-                            "(p.preferred_genders = '[]'::jsonb OR p.preferred_genders ? %(user_gender)s)"
-                        )
-                        params["user_gender"] = user_gender
-
-                # Hard Filter: Mutual Age Constraints
-                if config["require_mutual_age"]:
-                    if user_pref_age_min is not None:
-                        conditions.append("(p.age IS NULL OR p.age >= %(user_pref_age_min)s)")
-                        params["user_pref_age_min"] = user_pref_age_min
-                    if user_pref_age_max is not None:
-                        conditions.append("(p.age IS NULL OR p.age <= %(user_pref_age_max)s)")
-                        params["user_pref_age_max"] = user_pref_age_max
-                    
-                    if user_age is not None:
-                        conditions.append("(p.preferred_age_min IS NULL OR p.preferred_age_min <= %(user_age)s)")
-                        conditions.append("(p.preferred_age_max IS NULL OR p.preferred_age_max >= %(user_age)s)")
-                        params["user_age"] = user_age
-
-                # Hard Filter: Relationship Goals
-                if config["require_mutual_relationship_goal"]:
-                    if user_req_goal:
-                        conditions.append("(p.relationship_goal IS NULL OR p.relationship_goal = %(user_req_goal)s)")
-                        params["user_req_goal"] = user_req_goal
-                    if user_goal:
-                        conditions.append(
-                            "(p.required_relationship_goal IS NULL OR p.required_relationship_goal = %(user_goal)s)"
-                        )
-                        params["user_goal"] = user_goal
-
-                # Hard Filter: Geographic Distance (Haversine)
-                haversine_sql = "NULL::float"
-                if user_lat is not None and user_lon is not None:
-                    params["user_lat"] = user_lat
-                    params["user_lon"] = user_lon
-                    params["user_max_dist"] = user_max_distance
-                    
-                    # Haversine distance in km
-                    haversine_sql = """
-                        (6371 * acos(
-                            LEAST(1.0, GREATEST(-1.0, 
-                                cos(radians(%(user_lat)s)) * cos(radians(p.latitude)) * 
-                                cos(radians(p.longitude) - radians(%(user_lon)s)) + 
-                                sin(radians(%(user_lat)s)) * sin(radians(p.latitude))
-                            ))
-                        ))
-                    """
-                    # Distance filter applies if candidate has lat/lon
-                    conditions.append(f"""
-                        (p.latitude IS NULL OR p.longitude IS NULL OR (
-                            {haversine_sql} <= LEAST(%(user_max_dist)s, COALESCE(p.max_distance_km, %(user_max_dist)s))
-                        ))
-                    """)
-
-                # Reverse vector distance selection
-                if self_vec_str:
-                    params["self_vec"] = self_vec_str
-                    reverse_dist_sql = "CASE WHEN p.wants_embedding IS NOT NULL THEN (p.wants_embedding <=> %(self_vec)s::vector) ELSE NULL END"
-                else:
-                    reverse_dist_sql = "NULL::float"
-
-                where_clause = " AND ".join(conditions)
-
-                retrieval_query = f"""
-                    SELECT p.user_id, p.age, p.gender, p.orientation, p.relationship_goal,
-                           p.latitude, p.longitude, p.profile,
-                           {haversine_sql} AS distance_km,
-                           (p.self_embedding <=> %(wants_vec)s::vector) AS cosine_distance,
-                           {reverse_dist_sql} AS reverse_cosine_distance
-                    FROM profiles p
-                    WHERE {where_clause}
-                    ORDER BY (p.self_embedding <=> %(wants_vec)s::vector) ASC
-                    LIMIT %(pool_limit)s;
-                """
-
-                await cur.execute(retrieval_query, params)
-                candidate_rows = await cur.fetchall()
-
-        # 3. Post-Process and Pre-Rank Candidates
-        candidates: List[CandidateMatch] = []
-        weight = config["bidirectional_weight"]
-
-        for row in candidate_rows:
-            cos_dist = float(row["cosine_distance"])
-            cos_sim = max(0.0, 1.0 - cos_dist)
-
-            rev_cos_dist = float(row["reverse_cosine_distance"]) if row.get("reverse_cosine_distance") is not None else None
-            rev_cos_sim = max(0.0, 1.0 - rev_cos_dist) if rev_cos_dist is not None else None
-
-            # Calculate combined bidirectional score for pre-ranking
-            if rev_cos_sim is not None:
-                combined_score = (1.0 - weight) * cos_sim + weight * rev_cos_sim
-            else:
-                combined_score = cos_sim
-
-            if combined_score < config["min_similarity_threshold"]:
-                continue
-
-            candidates.append(CandidateMatch(
-                user_id=UUID(str(row["user_id"])),
-                age=row.get("age"),
-                gender=row.get("gender"),
-                orientation=row.get("orientation"),
-                relationship_goal=row.get("relationship_goal"),
-                latitude=row.get("latitude"),
-                longitude=row.get("longitude"),
-                distance_km=round(row["distance_km"], 1) if row.get("distance_km") is not None else None,
-                profile=row.get("profile") or {},
-                cosine_distance=round(cos_dist, 4),
-                cosine_similarity=round(cos_sim, 4),
-                reverse_cosine_distance=round(rev_cos_dist, 4) if rev_cos_dist is not None else None,
-                reverse_cosine_similarity=round(rev_cos_sim, 4) if rev_cos_sim is not None else None,
-                combined_score=round(combined_score, 4)
-            ))
-
-        # Sort descending by combined score
-        candidates.sort(key=lambda c: c.combined_score, reverse=True)
-
-        # Slice to pre_rank_limit for Stage 2 Pairwise Reasoning
-        pre_ranked_candidates = candidates[:config["pre_rank_limit"]]
-        logger.info(
-            f"Stage 1 Recall for user {user_id}: Retrieved {len(candidate_rows)} pool candidates, "
-            f"pre-ranked top {len(pre_ranked_candidates)} (limit={config['pre_rank_limit']})."
-        )
-        return pre_ranked_candidates
-
-
-
-====================================================================================================
 FILE: belong-api\matching\schemas.py
 ====================================================================================================
 
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # --- Categorical Compatibility LLM Output Schemas ---
 
@@ -2865,7 +2677,21 @@ class PairwiseCompatibilityOutput(BaseModel):
         ..., 
         description="Overall verdict: 'strong_alignment', 'partial_alignment', 'unclear', or 'conflict'"
     )
+    overall_reasoning: Optional[str] = Field(
+        default="",
+        description="2-3 sentence executive summary conclusion explaining why these two users match or don't match."
+    )
     dimension_results: DimensionResults
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_dimension_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "dimension_results" not in data and "dimensions" in data:
+                data["dimension_results"] = data.pop("dimensions")
+        return data
+    complementary_alignments: List[str] = Field(default_factory=list, description="Reciprocal fulfillment alignments")
+    shared_alignments: List[str] = Field(default_factory=list, description="Mutual similarity alignments")
     strong_alignments: List[str] = Field(default_factory=list, description="Key areas of mutual resonance")
     potential_conflicts: List[str] = Field(default_factory=list, description="Areas of friction or misalignment")
     dealbreaker_violations: List[str] = Field(default_factory=list, description="Hard constraints or dealbreakers triggered")
@@ -2895,8 +2721,10 @@ class JobStatusResponse(BaseModel):
 
 class MatchCandidateResponse(BaseModel):
     """Detailed qualitative compatibility breakdown for a single matched candidate."""
+    match_id: Optional[UUID] = None
     user_b_id: UUID
     overall_verdict: str
+    overall_reasoning: Optional[str] = ""
     dimension_results: Dict[str, Any]
     strong_alignments: List[str]
     complementary_alignments: List[str] = Field(default_factory=list)
@@ -2957,7 +2785,7 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
+                max_tokens=2048,
                 groq_api_key=api_key
             )
         except (ImportError, ModuleNotFoundError):
@@ -3093,9 +2921,10 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
         return {"extracted_signals": extracted_signals}
 
     if active_probe_field:
-        # User just answered an adaptive follow-up probe
+        # User just answered an adaptive follow-up probe.
+        # Primary target is the probed field, but extraction is open to all relevant signals.
         topic_id = f"probe_{active_probe_field.replace('.', '_')}"
-        target_dimensions = active_probe_field
+        target_dimensions = f"{active_probe_field} (primary), plus any other profile fields supported by the answer"
         question_text = active_probe_prompt or "What are some things you naturally do for a partner?"
     elif current_idx < len(questions):
         question_cfg = questions[current_idx]
@@ -3123,13 +2952,22 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
         response = await llm.ainvoke([HumanMessage(content=prompt)])
         
         # Parse JSON from response
+        import re
         content = get_message_content(response).strip()
         if "```json" in content:
             content = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content:
             content = content.split("```")[1].split("```")[0].strip()
 
-        data = json.loads(content)
+        try:
+            data = json.loads(content)
+        except Exception:
+            # Fallback: extract the outermost {...} JSON block
+            match = re.search(r"\{[\s\S]*\}", content)
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise
         items = data.get("extracted_items", [])
 
         # Store signals under target_field paths (e.g. self.emotional_needs)
@@ -3192,28 +3030,9 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error in extract_signals_node: {e}")
 
-    # Validation logging for critical fields
-    logger.info(f"Extraction for {topic_id}: extracted {len(items)} items across {len(extracted_signals)} dimensions")
-    
-    # Check for dealbreaker keywords if this was Q6
-    if topic_id == "q6_dealbreakers":
-        dealbreaker_count = len(extracted_signals.get("constraints.dealbreakers", []))
-        logger.info(f"Q6 dealbreaker extraction: {dealbreaker_count} dealbreakers extracted")
-        
-        if dealbreaker_count == 0:
-            # Check for dealbreaker keywords in user input
-            dealbreaker_keywords = ["hard no", "dealbreaker", "can't do", "won't accept", "it's done", "non-negotiable"]
-            found_keywords = [kw for kw in dealbreaker_keywords if kw in user_input.lower()]
-            if found_keywords:
-                logger.warning(f"Q6 answer contains dealbreaker keywords {found_keywords} but extracted 0 dealbreakers!")
-    
-    # Check for multi-dimension extraction on Q4
-    if topic_id == "q4_lifestyle_values":
-        dimensions_extracted = [k for k in ["self.lifestyle", "self.interests", "self.values", "self.life_goals"] 
-                                if extracted_signals.get(k)]
-        logger.info(f"Q4 extracted dimensions: {dimensions_extracted}")
-        if len(dimensions_extracted) < 2:
-            logger.warning(f"Q4 only extracted {len(dimensions_extracted)} dimensions, expected at least 2")
+    # Extraction diagnostic — generic across all turns, not coupled to a specific question
+    populated_dimensions = [k for k, v in extracted_signals.items() if v and not k.startswith("_")]
+    logger.info(f"Extraction for {topic_id}: {len(items)} items → {len(populated_dimensions)} dimensions now populated: {populated_dimensions}")
 
     return {
         "extracted_signals": extracted_signals,
@@ -3515,8 +3334,13 @@ Your job is to extract structured compatibility evidence from a user's answer du
 QUESTION ASKED:
 "{question_text}"
 
-TARGET DIMENSIONS TO EXTRACT FOR THIS TOPIC ({topic_id}):
+LIKELY RELEVANT DIMENSIONS FOR THIS TOPIC ({topic_id}):
 {target_dimensions}
+
+IMPORTANT: These are suggested dimensions, not a restriction. Extract signals for ANY profile field
+supported by the user's answer — including fields not listed above. If the answer contains clear
+evidence for self.values, self.lifestyle, self.interests, or any other field, extract it regardless
+of whether that field appears in the list above. Do NOT limit extraction to only the listed dimensions.
 
 USER RESPONSE:
 "{latest_user_input}"
@@ -3554,8 +3378,15 @@ Examples of VALUES/PREFERENCES (NOT dealbreakers):
 ✓ "I prefer someone active" → wants.partner_traits (preference, not hard boundary)
 ✓ "trust is important to me" → wants.partner_values (positive value)
 
-IMPORTANT: If the user says BOTH what they value AND what they cannot accept, extract BOTH:
-"I value honesty. I can't do dishonesty" → wants.partner_values + constraints.dealbreakers
+DUAL-FILING RULE (CRITICAL):
+If a statement is phrased as a dealbreaker ("I can't do X", "hard no", "non-negotiable", "it's done"),
+extract it ONLY to `constraints.dealbreakers`. Do NOT also extract it as a positive `wants.partner_values` signal.
+The only exception: if the user ALSO makes a separate positive statement ("I value honesty AND I can't do dishonesty"),
+extract the positive statement to `wants.partner_values` AND the negative statement to `constraints.dealbreakers`.
+If only a dealbreaker phrasing is present, route to `constraints.dealbreakers` only.
+Example:
+  "I can't do dishonesty" → constraints.dealbreakers ONLY
+  "I value honesty. Dishonesty is a dealbreaker" → wants.partner_values + constraints.dealbreakers
 
 ATOMIC EXTRACTION — WANTS FIELDS:
 When the user says something like "I want someone who communicates, is emotionally present, and wants to build something real":
@@ -3839,6 +3670,28 @@ class OnboardingRepository:
                 row = await cur.fetchone()
                 await conn.commit()
                 return dict(row)
+
+    @staticmethod
+    async def get_latest_conversation_by_user(user_id: UUID) -> Optional[Dict[str, Any]]:
+        async with get_db_connection() as conn:
+            async with conn.cursor(row_factory=dict_row) as cur:
+                query = """
+                    SELECT id, user_id, status, current_area_index, follow_up_count, covered_areas, extracted_signals, created_at, updated_at
+                    FROM conversations
+                    WHERE user_id = %s
+                    ORDER BY updated_at DESC
+                    LIMIT 1;
+                """
+                await cur.execute(query, (str(user_id),))
+                row = await cur.fetchone()
+                if not row:
+                    return None
+                res = dict(row)
+                if isinstance(res.get("covered_areas"), str):
+                    res["covered_areas"] = json.loads(res["covered_areas"])
+                if isinstance(res.get("extracted_signals"), str):
+                    res["extracted_signals"] = json.loads(res["extracted_signals"])
+                return res
 
     @staticmethod
     async def get_messages(conversation_id: UUID) -> List[Dict[str, Any]]:
@@ -4534,7 +4387,7 @@ class WorkerSettings:
 
     # LLM (Groq default)
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
     LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 
@@ -4590,6 +4443,9 @@ Use ONLY one of these four verdicts for overall and dimension results:
 - "partial_alignment"
 - "unclear"
 - "conflict"
+
+OVERALL REASONING SUMMARY:
+In `overall_reasoning`, write a concise 2-3 sentence executive conclusion summarizing why these two users match or don't match, highlighting key reciprocal synergies and main friction points.
 
 EVIDENCE CITATIONS:
 For each dimension, populate `evidence_a_ids` and `evidence_b_ids` using the exact signal "id" fields from the profiles (e.g. ["q2_emotional_needs_s_emotional_needs_00"]). Do NOT invent facts or signal IDs.
@@ -4789,11 +4645,11 @@ class EmbeddingClient:
         if hf_token:
             headers["Authorization"] = f"Bearer {hf_token}"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=3.0) as client:
             try:
                 response = await client.post(
                     api_url,
-                    json={"inputs": texts, "options": {"wait_for_model": True}},
+                    json={"inputs": texts, "options": {"wait_for_model": False}},
                     headers=headers,
                 )
                 response.raise_for_status()
@@ -5138,7 +4994,8 @@ FILE: belong-workers\matching\compatibility.py
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, TypedDict, cast
+import time
+from typing import Any, Dict, Optional, TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
@@ -5148,6 +5005,39 @@ from matching.schemas import PairwiseCompatibilityOutput, DimensionDetail
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Retry helpers
+# ---------------------------------------------------------------------------
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY = 2.0  # seconds
+
+
+def _retry_llm_invoke(fn, *args, **kwargs):
+    """Simple exponential-backoff retry wrapper for LLM calls with empty-response detection."""
+    last_exc = None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            res = fn(*args, **kwargs)
+            # Check if an LLM message returned empty content
+            if hasattr(res, "content") and not getattr(res, "content"):
+                raise ValueError("LLM returned empty content string")
+            return res
+        except Exception as exc:
+            last_exc = exc
+            err_str = str(exc).lower()
+            # Retry on rate-limit (429), connection issues, or empty-output errors
+            if any(k in err_str for k in ("429", "rate limit", "empty", "output text", "too many requests")):
+                delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                logger.warning(
+                    f"LLM call failed (attempt {attempt + 1}/{_MAX_RETRIES}): {exc}. "
+                    f"Retrying in {delay:.1f}s…"
+                )
+                time.sleep(delay)
+            else:
+                raise  # Non-retriable error — fail fast
+    assert last_exc is not None
+    raise last_exc
+
 class PairwiseState(TypedDict):
     user_a_profile: Dict[str, Any]
     user_b_profile: Dict[str, Any]
@@ -5156,7 +5046,12 @@ class PairwiseState(TypedDict):
     error: Optional[str]
 
 def get_llm():
-    """Factory function to instantiate configured LLM (Groq default)."""
+    """Factory function to instantiate configured LLM.
+
+    Default model on Groq: llama-3.1-8b-instant — it is free-tier safe,
+    supports json_mode, and produces structured output reliably.
+    Override via LLM_MODEL env var.
+    """
     provider = settings.LLM_PROVIDER.lower()
     if provider == "groq":
         api_key = settings.GROQ_API_KEY or os.getenv("GROQ_API_KEY")
@@ -5165,29 +5060,29 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
-                groq_api_key=api_key
+                max_tokens=2048,
+                groq_api_key=api_key,
             )
         except (ImportError, ModuleNotFoundError):
             from langchain_openai import ChatOpenAI
             return ChatOpenAI(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=4096,
+                max_tokens=2048,
                 api_key=api_key or "missing_key",
-                base_url="https://api.groq.com/openai/v1"
+                base_url="https://api.groq.com/openai/v1",
             )
     elif provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model=settings.LLM_MODEL,
-            temperature=settings.LLM_TEMPERATURE
+            temperature=settings.LLM_TEMPERATURE,
         )
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(
             model=settings.LLM_MODEL,
-            temperature=settings.LLM_TEMPERATURE
+            temperature=settings.LLM_TEMPERATURE,
         )
     else:
         raise ValueError(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
@@ -5240,24 +5135,72 @@ def format_prompt_node(state: PairwiseState) -> Dict[str, Any]:
     )
     return {"prompt_text": prompt}
 
+def get_message_content(response: Any) -> str:
+    """Safely extract string content from LangChain AI response object or list."""
+    content = getattr(response, "content", response)
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and "text" in part:
+                parts.append(part["text"])
+            else:
+                parts.append(str(part))
+        return "".join(parts)
+    return str(content)
+
+
 def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
-    """Node 2: Invokes Groq LLM with structured output constraint."""
+    """Node 2: Invokes LLM and parses JSON response. Model-agnostic — no tool use required."""
+    import re
     try:
         llm = get_llm()
-        # Use json_mode instead of tool calling — tool calling truncates JSON
-        # for models like openai/gpt-oss-120b on Groq's free tier.
-        structured_llm = llm.with_structured_output(PairwiseCompatibilityOutput, method="json_mode")
-        
-        prompt_text = state.get("prompt_text", "")
-        response = cast(PairwiseCompatibilityOutput, structured_llm.invoke([
-            SystemMessage(content="You are an expert AI compatibility reasoning agent for Belong. Return your analysis strictly as a valid JSON object matching the required schema."),
-            HumanMessage(content=prompt_text)
-        ]))
+        messages = [
+            SystemMessage(
+                content=(
+                    "You are an expert AI compatibility reasoning agent for Belong. "
+                    "Return your analysis ONLY as a valid JSON object matching the required schema. "
+                    "Do not include any explanation, markdown, or text outside the JSON object. "
+                    "Start your response with '{' and end with '}'."
+                )
+            ),
+            HumanMessage(content=state.get("prompt_text", "")),
+        ]
 
-        return {"parsed_output": response, "error": None}
+        raw_response = _retry_llm_invoke(llm.invoke, messages)
+        content = get_message_content(raw_response).strip()
+
+        if not content:
+            raise RuntimeError("LLM returned empty response")
+
+        # Strip markdown fences if present
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+
+        # Parse and validate
+        try:
+            data = json.loads(content)
+        except Exception:
+            match = re.search(r"\{[\s\S]*\}", content)
+            if match:
+                data = json.loads(match.group(0))
+            else:
+                raise
+
+        if "overall_verdict" not in data:
+            data["overall_verdict"] = "partial_alignment"
+
+        return {"parsed_output": PairwiseCompatibilityOutput.model_validate(data), "error": None}
+
     except Exception as e:
         logger.error(f"Error during pairwise LLM reasoning: {e}", exc_info=True)
         return {"parsed_output": None, "error": str(e)}
+
 
 def _build_signal_index(profile: Dict[str, Any]) -> Dict[str, str]:
     """Build a flat {signal_id: quote} index from a structured profile dict.
@@ -5492,8 +5435,14 @@ class CandidateRetriever:
                     raise ValueError(f"User profile with id {user_id} not found.")
 
                 if user_row.get("wants_embedding") is None:
-                    logger.warning(f"User {user_id} does not have wants_embedding. Cannot perform vector matching.")
-                    return []
+                    if user_row.get("self_embedding") is not None:
+                        logger.warning(f"User {user_id} does not have wants_embedding; falling back to self_embedding for candidate recall.")
+                        wants_vec_str = str(user_row["self_embedding"])
+                    else:
+                        logger.warning(f"User {user_id} does not have wants_embedding or self_embedding. Cannot perform vector matching.")
+                        return []
+                else:
+                    wants_vec_str = str(user_row["wants_embedding"])
 
                 # Parse User A fields
                 user_lat = user_row.get("latitude")
@@ -5506,7 +5455,6 @@ class CandidateRetriever:
                 user_max_distance = user_row.get("max_distance_km") or config["max_distance_km"]
                 user_req_goal = user_row.get("required_relationship_goal")
                 user_goal = user_row.get("relationship_goal")
-                wants_vec_str = str(user_row["wants_embedding"])
                 self_vec_str = str(user_row["self_embedding"]) if user_row.get("self_embedding") is not None else None
 
                 # 2. Build dynamic SQL query for Candidate Recall
@@ -5657,7 +5605,7 @@ FILE: belong-workers\matching\schemas.py
 
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 class CandidateMatch(BaseModel):
     """Represents a retrieved candidate from Stage 1 retrieval."""
@@ -5732,7 +5680,47 @@ class PairwiseCompatibilityOutput(BaseModel):
         default="",
         description="2-3 sentence executive summary conclusion explaining why these two users match or don't match, highlighting key synergies."
     )
-    dimension_results: DimensionResults
+    dimension_results: DimensionResults = Field(
+        ...,
+        description="Core compatibility dimensions results."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_dimension_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # 1. Normalize 'dimensions' key to 'dimension_results'
+            if "dimension_results" not in data and "dimensions" in data:
+                data["dimension_results"] = data.pop("dimensions")
+            
+            # 2. If the LLM returned individual dimensions directly at the root level
+            core_dims = ["emotional_needs", "core_values", "lifestyle", "conflict_style"]
+            if "dimension_results" not in data:
+                root_dims = {k: data.pop(k) for k in core_dims if k in data}
+                if root_dims:
+                    data["dimension_results"] = root_dims
+
+            # 3. Ensure dimension_results dictionary exists with all 4 required dimensions
+            dim_res = data.get("dimension_results")
+            if not isinstance(dim_res, dict):
+                dim_res = {}
+
+            default_verdict = data.get("overall_verdict", "partial_alignment")
+            for dim in core_dims:
+                if dim not in dim_res or not isinstance(dim_res[dim], dict):
+                    dim_res[dim] = {
+                        "verdict": default_verdict,
+                        "evidence_a_ids": [],
+                        "evidence_b_ids": [],
+                        "reasoning": ""
+                    }
+            data["dimension_results"] = dim_res
+
+            # 4. Ensure overall_verdict is present
+            if "overall_verdict" not in data:
+                data["overall_verdict"] = "partial_alignment"
+
+        return data
     complementary_alignments: List[str] = Field(
         default_factory=list,
         description="Areas where A's needs/wants are met by B's self (and/or vice versa). This is reciprocal fulfillment — the core product signal."
@@ -6015,6 +6003,12 @@ class EmbeddingWorker:
         # 2. Run canonical semantic serializer
         self_text, wants_text = self.serializer.serialize(profile_data)
 
+        # Fallback: if one section is empty, use the other so vectors are never unexpectedly NULL
+        if not wants_text and self_text:
+            wants_text = self_text
+        elif not self_text and wants_text:
+            self_text = wants_text
+
         # 3. Generate vectors
         self_vec = await self.embedding_client.embed_text(self_text) if self_text else None
         wants_vec = await self.embedding_client.embed_text(wants_text) if wants_text else None
@@ -6118,7 +6112,21 @@ class MatchingWorker:
         user_id = UUID(user_id_str)
         logger.info(f"MatchingWorker starting matching execution for user {user_id} (job_id: {job_id})")
 
-        # 1. Fetch User A profile
+        # 1. Ensure match_runs session entry exists
+        match_id_str = job_id or str(UUID(int=0))
+        async with get_db_connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    """
+                    INSERT INTO match_runs (id, user_id, status)
+                    VALUES (%s, %s, 'processing')
+                    ON CONFLICT (id) DO UPDATE SET status = 'processing';
+                    """,
+                    (match_id_str, str(user_id))
+                )
+                await conn.commit()
+
+        # 2. Fetch User A profile
         async with get_db_connection() as conn:
             async with conn.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
@@ -6128,6 +6136,13 @@ class MatchingWorker:
                 user_a_row = await cur.fetchone()
 
         if not user_a_row:
+            async with get_db_connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "UPDATE match_runs SET status = 'failed', error_message = %s, completed_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                        (f"User profile {user_id} not found", match_id_str)
+                    )
+                    await conn.commit()
             raise ValueError(f"User profile for user {user_id} not found in database.")
 
         user_a_profile = user_a_row.get("profile") or {}
@@ -6135,15 +6150,22 @@ class MatchingWorker:
         user_a_profile["gender"] = user_a_row.get("gender")
         user_a_profile["relationship_goal"] = user_a_row.get("relationship_goal")
 
-        # 2. Stage 1: Hard filters + pgvector candidate retrieval
+        # 3. Stage 1: Hard filters + pgvector candidate retrieval
         candidate_matches = await self.retriever.retrieve_candidates(user_id)
         logger.info(f"Stage 1 retrieved {len(candidate_matches)} candidates for user {user_id}")
 
         if not candidate_matches:
             logger.info(f"No eligible candidate matches found for user {user_id}.")
+            async with get_db_connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(
+                        "UPDATE match_runs SET status = 'completed', candidate_count = 0, completed_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                        (match_id_str,)
+                    )
+                    await conn.commit()
             return {"user_id": str(user_id), "total_matches": 0, "matches_persisted": 0}
 
-        # 3. Stage 2: Pairwise LLM Compatibility Reasoning for each candidate
+        # 4. Stage 2: Pairwise LLM Compatibility Reasoning for each candidate
         evaluated_candidates = []
         for candidate in candidate_matches:
             user_b_profile = candidate.profile or {}
@@ -6165,53 +6187,52 @@ class MatchingWorker:
             except Exception as e:
                 logger.error(f"Failed pairwise evaluation between {user_id} and {candidate.user_id}: {e}")
 
-        # 4. Rank candidates deterministically
+        # 5. Rank candidates deterministically
         ranked_candidates = rank_candidates(evaluated_candidates)
         logger.info(f"Ranked {len(ranked_candidates)} candidates for user {user_id}")
 
-        # 5. Persist results into compatibility_results table in Postgres
+        # 6. Persist results into compatibility_results table and update match_runs
         async with get_db_connection() as conn:
             async with conn.cursor() as cur:
                 for rank_idx, item in enumerate(ranked_candidates):
                     user_b_id = item["candidate_user_id"]
                     output = item["compatibility_output"]
 
+                    # Mark previous evaluations between (user_id, user_b_id) as is_latest = false
+                    await cur.execute(
+                        "UPDATE compatibility_results SET is_latest = false WHERE user_a_id = %s AND user_b_id = %s AND is_latest = true;",
+                        (str(user_id), str(user_b_id))
+                    )
+
                     # Convert dimension_results to jsonable dict
                     dimension_json = json.dumps(output.dimension_results.model_dump())
                     complementary_alignments_json = json.dumps(output.complementary_alignments)
                     shared_alignments_json = json.dumps(output.shared_alignments)
-                    # Keep strong_alignments as combined list for backward compatibility
                     strong_alignments_json = json.dumps(
                         output.complementary_alignments + output.shared_alignments
                     )
                     potential_conflicts_json = json.dumps(output.potential_conflicts)
                     dealbreaker_violations_json = json.dumps(output.dealbreaker_violations)
                     uncertainties_json = json.dumps(output.uncertainties)
+                    overall_reasoning = getattr(output, "overall_reasoning", "") or ""
 
-                    upsert_sql = """
+                    insert_sql = """
                         INSERT INTO compatibility_results (
-                            user_a_id, user_b_id, dimension_results,
+                            match_id, user_a_id, user_b_id, overall_verdict, overall_reasoning, dimension_results,
                             strong_alignments, complementary_alignments, shared_alignments,
                             potential_conflicts, dealbreaker_violations, uncertainties,
-                            reasoning_version, updated_at
+                            reasoning_version, is_latest, updated_at
                         )
-                        VALUES (%s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', CURRENT_TIMESTAMP)
-                        ON CONFLICT (user_a_id, user_b_id, reasoning_version)
-                        DO UPDATE SET
-                            dimension_results = EXCLUDED.dimension_results,
-                            strong_alignments = EXCLUDED.strong_alignments,
-                            complementary_alignments = EXCLUDED.complementary_alignments,
-                            shared_alignments = EXCLUDED.shared_alignments,
-                            potential_conflicts = EXCLUDED.potential_conflicts,
-                            dealbreaker_violations = EXCLUDED.dealbreaker_violations,
-                            uncertainties = EXCLUDED.uncertainties,
-                            updated_at = CURRENT_TIMESTAMP;
+                        VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', true, CURRENT_TIMESTAMP);
                     """
                     await cur.execute(
-                        upsert_sql,
+                        insert_sql,
                         (
+                            match_id_str,
                             str(user_id),
                             str(user_b_id),
+                            getattr(output, "overall_verdict", "unclear") or "unclear",
+                            overall_reasoning,
                             dimension_json,
                             strong_alignments_json,
                             complementary_alignments_json,
@@ -6221,10 +6242,17 @@ class MatchingWorker:
                             uncertainties_json
                         )
                     )
+
+                # Update match_runs session status to completed
+                await cur.execute(
+                    "UPDATE match_runs SET status = 'completed', candidate_count = %s, completed_at = CURRENT_TIMESTAMP WHERE id = %s;",
+                    (len(ranked_candidates), match_id_str)
+                )
                 await conn.commit()
 
-        logger.info(f"Persisted {len(ranked_candidates)} compatibility results for user {user_id}")
+        logger.info(f"Persisted {len(ranked_candidates)} compatibility results for user {user_id} under match_run {match_id_str}")
         return {
+            "match_id": match_id_str,
             "user_id": str(user_id),
             "total_matches": len(ranked_candidates),
             "matches_persisted": len(ranked_candidates)
@@ -6673,12 +6701,17 @@ var allowedOrigins []string
 func NewCORS() Middleware {
 	// runs once at startup
 	allowedOrigins = []string{
-		os.Getenv("FRONTEND_URL"),
-		os.Getenv("DEV_URL"),
+		"http://localhost:5173",
+		"http://localhost:5174",
+		"http://localhost:3000",
+		"http://127.0.0.1:5173",
+		"http://127.0.0.1:3000",
+		"https://localhost:5173",
 		"http://localhost:5500",
 		"https://localhost:5500",
-		"https://localhost:5173",
 		"http://127.0.0.1:5500",
+		os.Getenv("FRONTEND_URL"),
+		os.Getenv("DEV_URL"),
 		os.Getenv("OTHER_URL"),
 	}
 	return utils.MiddlewareFunc(func(next http.Handler) http.Handler {
@@ -6721,7 +6754,7 @@ func NewCORS() Middleware {
 
 func isOriginAllowed(origin string) bool {
 	for _, allowedOrigin := range allowedOrigins {
-		if origin == allowedOrigin {
+		if allowedOrigin != "" && origin == allowedOrigin {
 			return true
 		}
 	}
@@ -7621,6 +7654,2786 @@ SELECT '[1, 0, 0]'::vector(3) <=> '[0, 1, 0]'::vector(3) AS orthogonal_cosine_di
 
 
 ====================================================================================================
-FILE: sql\004_match_runs_and_reasoning.sql
+FILE: tests\conftest.py
 ====================================================================================================
+
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Dict, Any, List
+import pytest
+
+# Add belong-api and belong-workers to sys.path for cross-module testing
+ROOT_DIR = Path(__file__).parent.parent
+BELONG_API_DIR = ROOT_DIR / "belong-api"
+BELONG_WORKERS_DIR = ROOT_DIR / "belong-workers"
+
+sys.path.insert(0, str(BELONG_WORKERS_DIR))
+sys.path.insert(0, str(BELONG_API_DIR))
+sys.path.insert(0, str(ROOT_DIR))
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+@pytest.fixture(scope="session")
+def golden_personas() -> List[Dict[str, Any]]:
+    """Fixture providing loaded personas from personas.json."""
+    personas_path = FIXTURES_DIR / "personas.json"
+    with open(personas_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("personas", [])
+
+@pytest.fixture(scope="session")
+def expected_outcomes() -> Dict[str, Any]:
+    """Fixture providing expected pair outcome invariants from expected_outcomes.json."""
+    outcomes_path = FIXTURES_DIR / "expected_outcomes.json"
+    with open(outcomes_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("outcomes", {})
+
+@pytest.fixture(scope="session")
+def personas_map(golden_personas: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Map of persona_id -> persona dict."""
+    return {p["id"]: p for p in golden_personas}
+
+
+
+
+====================================================================================================
+FILE: tests\get_latest_results.py
+====================================================================================================
+
+"""
+Belong Platform - Comprehensive Profile, Onboarding & Compatibility Inspector
+============================================================================
+Fetches the 2 latest user profiles, maps their individual onboarding dialogues
+(Q&A), displays the latest compatibility match result, AND saves the complete
+log into `results.md`.
+
+USAGE:
+    python tests/get_latest_results.py
+"""
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+import time
+
+print(time.localtime())
+
+# Paths
+TESTS_DIR = Path(__file__).parent
+RESULTS_FILE = TESTS_DIR / "results.md"
+
+
+class TeeOutput:
+    """Duplicates stdout writes to both console and a markdown file."""
+
+    def __init__(self, filepath: Path):
+        self.file = open(filepath, "w", encoding="utf-8")
+        self.stdout = sys.stdout
+
+    def write(self, data: str):
+        try:
+            self.stdout.write(data)
+        except UnicodeEncodeError:
+            enc = getattr(self.stdout, 'encoding', 'utf-8') or 'utf-8'
+            self.stdout.write(data.encode(enc, errors='replace').decode(enc, errors='replace'))
+        self.file.write(data)
+
+    def flush(self):
+        self.stdout.flush()
+        self.file.flush()
+
+    def close(self):
+        self.file.close()
+
+
+def run_psql_query(query_sql: str):
+    """Executes a SQL query against belong-postgres and returns parsed JSON array."""
+    json_query = f"SELECT json_agg(t) FROM ({query_sql}) t;"
+    cmd = [
+        "docker", "exec", "-i", "belong-postgres",
+        "psql", "-U", "belong_user", "-d", "belong", "-t", "-A", "-c",
+        json_query
+    ]
+    try:
+        # Use UTF-8 encoding explicitly and handle errors gracefully
+        res = subprocess.run(cmd, capture_output=True, text=False, check=True)
+        out = res.stdout.decode('utf-8', errors='replace')  # Replace invalid chars instead of crashing
+        if out is None:
+            return []
+        out = out.strip()
+        if not out or out == "null":
+            return []
+        return json.loads(out)
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing psql command: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON from psql output: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error in run_psql_query: {e}")
+        return None
+
+
+def print_user_conversation(user_id: str):
+    """Fetches and prints all onboarding Q&A messages for a given user_id."""
+    conv_sql = f"""
+        SELECT 
+            c.id AS conversation_id,
+            c.user_id,
+            c.status,
+            c.created_at,
+            (
+                SELECT json_agg(m ORDER BY m.created_at ASC)
+                FROM conversation_messages m
+                WHERE m.conversation_id = c.id
+            ) AS messages
+        FROM conversations c
+        WHERE c.user_id = '{user_id}'
+        ORDER BY c.created_at DESC
+        LIMIT 1
+    """
+    conv_list = run_psql_query(conv_sql)
+    
+    # Check if query failed or returned empty
+    if conv_list is None:
+        print("   Onboarding Dialogue: (Error fetching conversation from database)\n")
+        return
+    
+    if not conv_list or len(conv_list) == 0:
+        print("   Onboarding Dialogue: (No conversation recorded for this profile)\n")
+        return
+    
+    conv = conv_list[0]
+    if not conv or not conv.get("messages"):
+        print("   Onboarding Dialogue: (No messages found for this conversation)\n")
+        return
+
+    messages = conv.get("messages", [])
+    print(f"   Conversation ID : {conv.get('conversation_id')}")
+    print(f"   Status          : {conv.get('status')}")
+    print(f"   Started At      : {conv.get('created_at')}\n")
+
+    q_num = 1
+    for i in range(len(messages)):
+        msg = messages[i]
+        role = msg.get("role")
+        content = msg.get("content")
+        q_id = msg.get("question_id")
+
+        if role == "assistant":
+            q_tag = f" ({q_id})" if q_id else ""
+            print(f"   Q{q_num}{q_tag}: {content}")
+        elif role == "user":
+            print(f"   A{q_num}: {content}\n")
+            q_num += 1
+
+
+def fetch_and_print_latest_data():
+    print("=" * 85)
+    print("         BELONG PLATFORM - COMPLETE PROFILES, DIALOGUES & MATCH INSPECTOR")
+    print("=" * 85)
+
+    # Fetch 2 Latest Profiles
+    profiles_sql = """
+        SELECT 
+            user_id,
+            name,
+            age,
+            gender,
+            orientation,
+            relationship_goal,
+            latitude,
+            longitude,
+            preferred_age_min,
+            preferred_age_max,
+            max_distance_km,
+            preferred_genders,
+            required_relationship_goal,
+            created_at,
+            profile,
+            self_embedding::text AS self_embedding,
+            wants_embedding::text AS wants_embedding,
+            embedding_source_text
+        FROM profiles
+        ORDER BY created_at DESC
+        LIMIT 2
+    """
+    profiles = run_psql_query(profiles_sql)
+    if profiles is None:
+        print("Error: Could not connect to PostgreSQL container 'belong-postgres'.")
+        sys.exit(1)
+
+    if not profiles:
+        print("\nNo profiles found in the database.")
+    else:
+        for idx, p in enumerate(profiles, start=1):
+            user_id = p.get('user_id')
+            user_name = p.get('name') or '<No Name>'
+            print(f"\n================================================================================")
+            print(f"USER PROFILE #{idx}: {user_name} (User ID: {user_id})")
+            print(f"================================================================================")
+            print(f"Age / Gender       : {p.get('age')} / {p.get('gender')}")
+            print(f"Orientation / Goal : {p.get('orientation')} / {p.get('relationship_goal')}")
+            print(f"Location (Lat/Lon) : {p.get('latitude')}, {p.get('longitude')}")
+            print(f"Preferences        : Age {p.get('preferred_age_min')}-{p.get('preferred_age_max')}, Dist {p.get('max_distance_km')}km, Genders {p.get('preferred_genders')}")
+            print(f"Created At         : {p.get('created_at')}")
+            print("\nExtracted Profile JSON:")
+            print(json.dumps(p.get("profile"), indent=2))
+
+            # print("\n--------------------------------------------------------------------------------")
+            # print("VECTOR EMBEDDINGS")
+            # print("--------------------------------------------------------------------------------")
+            
+            # self_emb_raw = p.get("self_embedding")
+            # if self_emb_raw:
+            #     try:
+            #         self_vec = json.loads(self_emb_raw) if isinstance(self_emb_raw, str) else self_emb_raw
+            #         print(f"Self Embedding ({len(self_vec)}-dim vector):")
+            #         print(self_vec)
+            #     except Exception:
+            #         print(f"Self Embedding: {self_emb_raw}")
+            # else:
+            #     print("Self Embedding: None (Not generated)")
+
+            # wants_emb_raw = p.get("wants_embedding")
+            # if wants_emb_raw:
+            #     try:
+            #         wants_vec = json.loads(wants_emb_raw) if isinstance(wants_emb_raw, str) else wants_emb_raw
+            #         print(f"\nWant Embedding ({len(wants_vec)}-dim vector):")
+            #         print(wants_vec)
+            #     except Exception:
+            #         print(f"\nWant Embedding: {wants_emb_raw}")
+            # else:
+            #     print("\nWant Embedding: None (Not generated)")
+
+            emb_source = p.get("embedding_source_text")
+            if emb_source and isinstance(emb_source, dict):
+                if emb_source.get("self_text"):
+                    print("\nSelf Embedding Source Text:")
+                    print(emb_source.get("self_text"))
+                if emb_source.get("wants_text"):
+                    print("\nWant Embedding Source Text:")
+                    print(emb_source.get("wants_text"))
+
+            print("\n--------------------------------------------------------------------------------")
+            print(f"ONBOARDING DIALOGUE FOR PROFILE #{idx} ({user_name})")
+            print("--------------------------------------------------------------------------------")
+            print_user_conversation(user_id)
+
+    # Fetch Latest Match Run Record
+    print("\n================================================================================")
+    print("LATEST MATCH RUN SESSION (MATCH_RUNS TABLE)")
+    print("================================================================================")
+    match_run_sql = "SELECT id, user_id, status, candidate_count, error_message, created_at, completed_at FROM match_runs ORDER BY created_at DESC LIMIT 1"
+    run_records = run_psql_query(match_run_sql)
+    if not run_records:
+        print("No match_runs records found in database.")
+    else:
+        m = run_records[0]
+        print(f"Match Run ID   : {m.get('id')}")
+        print(f"User ID        : {m.get('user_id')}")
+        print(f"Status         : {m.get('status')}")
+        print(f"Candidate Count: {m.get('candidate_count')}")
+        print(f"Error Message  : {m.get('error_message') or 'None'}")
+        print(f"Created At     : {m.get('created_at')}")
+        print(f"Completed At   : {m.get('completed_at')}")
+
+    # Fetch Single Latest Compatibility Result
+    print("\n================================================================================")
+    print("LATEST COMPATIBILITY MATCH RESULT (COMPATIBILITY_RESULTS TABLE)")
+    print("================================================================================")
+    results_sql = """
+        SELECT 
+            id,
+            match_id,
+            user_a_id,
+            user_b_id,
+            overall_reasoning,
+            dimension_results,
+            strong_alignments,
+            complementary_alignments,
+            shared_alignments,
+            potential_conflicts,
+            dealbreaker_violations,
+            uncertainties,
+            model_name,
+            reasoning_version,
+            created_at
+        FROM compatibility_results
+        ORDER BY created_at DESC
+        LIMIT 1
+    """
+    results = run_psql_query(results_sql)
+    if not results:
+        print("No compatibility results found in database.")
+    else:
+        r = results[0]
+        print(f"Match Record ID : {r.get('id')}")
+        print(f"Match Session ID: {r.get('match_id')}")
+        print(f"User A ID       : {r.get('user_a_id')}")
+        print(f"User B ID       : {r.get('user_b_id')}")
+        print(f"Model / Version : {r.get('model_name')} ({r.get('reasoning_version')})")
+        print(f"Created At      : {r.get('created_at')}")
+        print(f"\nOverall Compatibility Reasoning:")
+        print(r.get('overall_reasoning') or 'None')
+        print("\nDimension Results:")
+        print(json.dumps(r.get("dimension_results"), indent=2))
+        print("\nComplementary Alignments (Reciprocal Fulfillment):")
+        print(json.dumps(r.get("complementary_alignments") or [], indent=2))
+        print("\nShared Alignments (Similarity):")
+        print(json.dumps(r.get("shared_alignments") or [], indent=2))
+        print("\nStrong Alignments (Combined):")
+        print(json.dumps(r.get("strong_alignments") or [], indent=2))
+        print("\nPotential Conflicts:")
+        print(json.dumps(r.get("potential_conflicts"), indent=2))
+        print("\nDealbreaker Violations:")
+        print(json.dumps(r.get("dealbreaker_violations"), indent=2))
+        print("\nUncertainties:")
+        print(json.dumps(r.get("uncertainties"), indent=2))
+
+    print("\n" + "=" * 85)
+    print("INSPECTION COMPLETED")
+    print("=" * 85)
+
+
+if __name__ == "__main__":
+    tee = TeeOutput(RESULTS_FILE)
+    sys.stdout = tee
+    try:
+        fetch_and_print_latest_data()
+        print(f"\n[INFO] Log saved to: {RESULTS_FILE}")
+    finally:
+        sys.stdout = tee.stdout
+        tee.close()
+
+
+
+====================================================================================================
+FILE: tests\nuke_data.py
+====================================================================================================
+
+"""
+Belong Platform - PostgreSQL Data Wipe Script (Python Edition)
+===============================================================
+Wipes all user profiles, conversations, messages, jobs, and match results
+from the PostgreSQL database while preserving database schema & structure.
+
+USAGE:
+    python tests/nuke_data.py
+"""
+
+import subprocess
+
+def nuke_data():
+    print("==================================================================")
+    print(">>> NUKING ALL BELONG POSTGRESQL DATA...")
+    print("==================================================================")
+    
+    cmd = [
+        "docker", "exec", "-i", "belong-postgres",
+        "psql", "-U", "belong_user", "-d", "belong", "-c",
+        "TRUNCATE TABLE profiles, conversations, conversation_messages, jobs, compatibility_results RESTART IDENTITY CASCADE;"
+    ]
+    
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        print(res.stdout.strip())
+        print("SUCCESS: All PostgreSQL data tables have been nuked clean!")
+        print("==================================================================")
+    except Exception as e:
+        print(f"Error nuking database: {e}")
+
+if __name__ == "__main__":
+    nuke_data()
+
+
+
+====================================================================================================
+FILE: tests\run_custom_simulation.py
+====================================================================================================
+
+"""
+Custom User Simulation & Matching Test Script
+==============================================
+A fully configurable script to test custom user personas, AI onboarding dialogues,
+embedding generation, and match outcomes against the Belong backend API.
+
+USAGE:
+    python tests/run_custom_simulation.py
+
+HOW TO CUSTOMIZE:
+    1. Edit the User Personas (USER_1_CONFIG, USER_2_CONFIG) below.
+    2. Adjust the SIMULATION CONFIG flags (e.g. RUN_ONBOARDING, TRIGGER_MATCHING).
+    3. Run the script!
+"""
+
+import asyncio
+import json
+import logging
+import os
+import sys
+from pathlib import Path
+from typing import Dict, Any, Optional
+
+import httpx
+
+# Ensure tests directory and root directory are in sys.path
+TESTS_DIR = Path(__file__).parent
+ROOT_DIR = TESTS_DIR.parent
+sys.path.insert(0, str(TESTS_DIR))
+sys.path.insert(0, str(ROOT_DIR))
+
+from simulators.user_simulator import UserSimulator, PersonaConfig
+
+# Setup clean logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("custom_simulation")
+
+
+# =====================================================================
+# ⚙️ SIMULATION CONFIGURATION
+# =====================================================================
+# API endpoint: Use 8000 for direct API, or 9000 for API Gateway
+API_URL = os.getenv("BELONG_API_URL", "http://localhost:8000")
+
+# Flags to control execution steps
+CREATE_PROFILES = True      # Step 1: POST /profiles
+RUN_ONBOARDING = True       # Step 2: Multi-turn AI Onboarding chat
+TRIGGER_EMBEDDINGS = True   # Step 3: Extract traits & embeddings
+TRIGGER_MATCHING = True     # Step 4: Run vector search & LLM matching
+POLL_TIMEOUT_SECS = 90      # Max seconds to wait for matching job to finish
+
+
+
+
+# =====================================================================
+# 👤 DEFINE YOUR TEST USER PERSONAS HERE
+# =====================================================================
+
+# USER 1: Custom Persona
+USER_1_CONFIG = (
+    PersonaConfig.builder("custom_user_alice")
+    .with_name("Alice")
+    .with_category("test_custom")
+    .with_age(28, preferred_min=24, preferred_max=35)
+    .with_gender("female", preferred_genders=["male"])
+    .with_location(latitude=37.7749, longitude=-122.4194, max_distance_km=50)  # San Francisco
+    .with_relationship_goal("long-term", required_goal="long-term")
+    .with_responses(
+        q1_intent_partner=(
+            "honestly I'm just tired of situationships lol. I want someone who actually "
+            "wants to build something real — like talks about the future, checks in on me, "
+            "that kind of thing. communication is huge for me, and I need someone who's "
+            "emotionally present, not just physically around."
+        ),
+        q2_emotional_needs=(
+            "when I'm stressed I go pretty quiet and I need someone who notices and just... "
+            "sits with me? not trying to fix it immediately. I really appreciate when my "
+            "partner says something like 'I'm here' without me having to ask. words of "
+            "affirmation are genuinely important to me, I feel more secure when I hear them."
+        ),
+        q3_conflict_provides=(
+            "I don't like fighting but I won't avoid a hard conversation either. I usually "
+            "take an hour or two to cool down first, then I'll bring it up. I try to say "
+            "'I felt...' instead of blaming. when my partner is going through something, "
+            "I show up — I cook for them, check in more often, just make sure they know "
+            "I'm paying attention."
+        ),
+        q4_lifestyle_values=(
+            "I do morning yoga most days, like 5-6 times a week. I work in product design "
+            "so I spend a lot of time at a screen which is why I try to stay active. "
+            "weekends are usually a hike or farmers market, maybe a bookstore. I'm "
+            "plant-based and pretty into cooking. I care a lot about being consistent — "
+            "like doing small things well over time."
+        ),
+        q5_personality=(
+            "my friends say I'm a lot — in a good way I think? I'm pretty intense when "
+            "I care about something, very organized, and I overthink sometimes but I'm "
+            "self-aware about it. I'm warm and I genuinely love people. I probably make "
+            "a good partner because I actually pay attention to the small stuff."
+        ),
+        q6_dealbreakers=(
+            "smoking is a hard no, I have asthma. also anyone who uses substances "
+            "regularly — I'm fine with a drink socially but that's about it. and "
+            "dishonesty in any form, even white lies about small things. if I can't trust "
+            "what you say, it's done."
+        ),
+    )
+    .build()
+)
+
+# USER 2: Custom Candidate Persona
+USER_2_CONFIG = (
+    PersonaConfig.builder("custom_user_bob")
+    .with_name("Bob")
+    .with_category("test_custom")
+    .with_age(30, preferred_min=23, preferred_max=32)
+    .with_gender("male", preferred_genders=["female"])
+    .with_location(latitude=37.7800, longitude=-122.4100, max_distance_km=50)  # Near SF
+    .with_relationship_goal("long-term", required_goal="long-term")
+    .with_responses(
+        q1_intent_partner=(
+            "I want something that actually lasts. I've had fun, I've dated around, "
+            "but at this point I want someone I can genuinely grow with — someone who's "
+            "curious, takes care of themselves, and doesn't play games. trust is the "
+            "baseline for me, everything else builds from there."
+        ),
+        q2_emotional_needs=(
+            "when I'm stressed I get kind of quiet and withdrawn — I usually need an hour "
+            "to process before I can talk about it. what helps is if my partner doesn't "
+            "push too hard but also doesn't disappear. just knowing they're around is "
+            "enough. I'm the opposite when she's stressed — I'm pretty good at just "
+            "listening without jumping to solutions."
+        ),
+        q3_conflict_provides=(
+            "I try to deal with things pretty quickly rather than letting them sit. "
+            "I stay calm, I don't raise my voice — I just hate that. I'd rather have "
+            "a slightly awkward conversation than let something fester for a week. "
+            "I think I'm good at making my partner feel stable, like I'm not going anywhere "
+            "even when things are hard."
+        ),
+        q4_lifestyle_values=(
+            "trail running is my thing — I do a half marathon most weekends. I'm a software "
+            "engineer so weekdays are pretty heads-down but I try to get outside every day. "
+            "I got into coffee brewing during covid and now I take it a bit too seriously. "
+            "I value people who actually have ambition and keep growing, professionally "
+            "or personally, I don't really care which."
+        ),
+        q5_personality=(
+            "pretty chill, pretty reliable. I show up when I say I will. I'm curious about "
+            "a lot of things — I'll read a book about almost anything. my friends say I'm "
+            "a good listener which I think is true, I genuinely care what people have to say. "
+            "I can be a bit reserved at first but I warm up fast."
+        ),
+        q6_dealbreakers=(
+            "I can't do arrogance, like someone who can never admit they're wrong. "
+            "and dishonesty — not just big lies, the small habitual ones are worse honestly. "
+            "also someone who's totally stagnant, just not interested in improving anything "
+            "about themselves."
+        ),
+    )
+    .build()
+)
+
+
+# =====================================================================
+# 🚀 SIMULATION RUNNER ENGINE
+# =====================================================================
+
+async def check_api_health(client: httpx.AsyncClient) -> bool:
+    """Verifies backend API service is running and healthy."""
+    try:
+        res = await client.get("/healthz")
+        if res.status_code == 200:
+            logger.info(f"Connected to Belong API at {API_URL} (Status: OK)")
+            return True
+        logger.error(f"API health check failed with status {res.status_code}")
+        return False
+    except Exception as e:
+        logger.error(f"Cannot connect to Belong API at {API_URL}: {e}")
+        logger.error("Make sure your API server is running (e.g. docker compose up or uvicorn main:app).")
+        return False
+
+
+async def poll_job_completion(client: httpx.AsyncClient, job_id: str, max_secs: int = 30) -> bool:
+    """Polls async matching job status until completed or timed out."""
+    logger.info(f"Polling matching job '{job_id}' (max {max_secs}s)...")
+    elapsed = 0
+    interval = 2
+    while elapsed < max_secs:
+        await asyncio.sleep(interval)
+        elapsed += interval
+        try:
+            res = await client.get(f"/matches/jobs/{job_id}")
+            if res.status_code == 200:
+                data = res.json()
+                status = data.get("status", "unknown")
+                logger.info(f"  └─ Job status after {elapsed}s: {status}")
+                if status == "completed":
+                    return True
+                elif status == "failed":
+                    logger.error(f"  └─ Job failed: {data.get('error', 'No error detail')}")
+                    return False
+            else:
+                logger.warning(f"  └─ Unexpected status code {res.status_code} polling job")
+        except Exception as e:
+            logger.warning(f"  └─ Error polling job: {e}")
+
+    logger.warning("Job polling timed out before completion.")
+    return False
+
+
+async def run_simulation():
+    """Main execution workflow."""
+    print("=" * 70)
+    print("      BELONG CUSTOM USER SIMULATION RUNNER")
+    print("=" * 70)
+
+    sim_user_1 = UserSimulator(USER_1_CONFIG)
+    sim_user_2 = UserSimulator(USER_2_CONFIG)
+    users = [sim_user_1, sim_user_2]
+
+    async with httpx.AsyncClient(base_url=API_URL, timeout=300.0) as client:
+
+        # Health check
+        if not await check_api_health(client):
+            return
+
+        # -----------------------------------------------------------------
+        # STEP 1: CREATE PROFILES
+        # -----------------------------------------------------------------
+        if CREATE_PROFILES:
+            print("\n-----------------------------------------------------------------")
+            print("STEP 1: Registering User Demographic Profiles")
+            print("-----------------------------------------------------------------")
+            for user in users:
+                ok = await user.create_profile_async(client)
+                if ok:
+                    logger.info(f"✅ Created profile for '{user.persona.id}' (User ID: {user.user_id})")
+                else:
+                    logger.error(f"❌ Failed creating profile for '{user.persona.id}'")
+
+        # -----------------------------------------------------------------
+        # STEP 2: MULTI-TURN AI ONBOARDING CHAT (Primary User Only)
+        # -----------------------------------------------------------------
+        if RUN_ONBOARDING:
+            print("\n-----------------------------------------------------------------")
+            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (All Users)")
+            print("-----------------------------------------------------------------")
+            for user in users:
+                logger.info(f"Starting conversational onboarding for '{user.persona.id}'...")
+                ok = await user.run_onboarding_async(client)
+                if ok:
+                    logger.info(f"✅ Onboarding finished for '{user.persona.id}' (Status: {user.status})")
+                else:
+                    logger.error(f"❌ Onboarding failed/incomplete for '{user.persona.id}'")
+
+        # -----------------------------------------------------------------
+        # STEP 3: TRIGGER EMBEDDING GENERATION
+        # -----------------------------------------------------------------
+        if TRIGGER_EMBEDDINGS:
+            print("\n-----------------------------------------------------------------")
+            print("STEP 3: Triggering Trait & Vector Embedding Generation")
+            print("-----------------------------------------------------------------")
+            for user in users:
+                ok = await user.trigger_embeddings_async(client)
+                if ok:
+                    logger.info(f"✅ Embeddings job queued for '{user.persona.id}'")
+                else:
+                    logger.error(f"❌ Embedding trigger failed for '{user.persona.id}'")
+
+            logger.info("Waiting for background EmbeddingWorker to complete vector generation...")
+            for w in range(15):
+                await asyncio.sleep(2)
+                try:
+                    res1 = await client.get(f"/profiles/{sim_user_1.user_id}/embeddings")
+                    res2 = await client.get(f"/profiles/{sim_user_2.user_id}/embeddings")
+                    p1 = res1.json() if res1.status_code == 200 else {}
+                    p2 = res2.json() if res2.status_code == 200 else {}
+                    # Check if embeddings are confirmed generated
+                    if p1.get("has_self_embedding") and p2.get("has_self_embedding"):
+                        logger.info(f"✅ Both user embeddings confirmed in PostgreSQL after {(w + 1) * 2}s!")
+                        break
+                except Exception:
+                    pass
+            else:
+                logger.info("Proceeding to matching after wait interval...")
+
+        # -----------------------------------------------------------------
+        # STEP 4: TRIGGER MATCHING & FETCH RESULTS
+        # -----------------------------------------------------------------
+
+        if TRIGGER_MATCHING:
+            print("\n-----------------------------------------------------------------")
+            print("STEP 4: Triggering Compatibility Match Engine")
+            print("-----------------------------------------------------------------")
+            target_user = sim_user_1
+            logger.info(f"Requesting matches for primary user '{target_user.persona.id}'...")
+            job_id = await target_user.request_matches_async(client)
+
+            if job_id:
+                logger.info(f"✅ Match job successfully submitted! Job ID: {job_id}")
+
+                # Poll for completion
+                job_ok = await poll_job_completion(client, job_id, max_secs=POLL_TIMEOUT_SECS)
+
+                # Fetch matches regardless
+                print("\n-----------------------------------------------------------------")
+                print(f"STEP 5: Fetching Match Results for User '{target_user.persona.id}'")
+                print("-----------------------------------------------------------------")
+                res = await client.get(f"/matches/{target_user.user_id}")
+
+                if res.status_code == 200:
+                    matches_data = res.json()
+                    matches = matches_data.get("matches", [])
+                    logger.info(f"Total Matches Returned: {len(matches)}")
+                    print("\nMATCH RESULTS SUMMARY:")
+                    print(json.dumps(matches_data, indent=2))
+                else:
+                    logger.error(f"Failed to fetch matches (Status Code: {res.status_code})")
+                    logger.error(res.text)
+            else:
+                logger.error("❌ Failed to request match job.")
+
+    print("\n" + "=" * 70)
+    print("SIMULATION COMPLETED!")
+    print("=" * 70)
+
+
+if __name__ == "__main__":
+    asyncio.run(run_simulation())
+
+
+
+====================================================================================================
+FILE: tests\run_onboarding_simulation.py
+====================================================================================================
+
+"""
+Human Onboarding Simulation CLI Runner
+======================================
+CLI runner utilizing the UserSimulator actor engine to run multi-turn onboarding
+simulations against a running belong-api service.
+
+Usage:
+    python tests/run_onboarding_simulation.py
+"""
+
+import asyncio
+import json
+import logging
+from pathlib import Path
+from typing import Dict, Any, List
+
+import httpx
+
+from simulators.user_simulator import UserSimulator, PersonaConfig
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logger = logging.getLogger("onboarding_simulation")
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+PERSONAS_FILE = FIXTURES_DIR / "personas.json"
+
+
+def load_personas() -> List[Dict[str, Any]]:
+    """Loads synthetic personas from personas.json."""
+    if not PERSONAS_FILE.exists():
+        raise FileNotFoundError(f"Personas file not found at {PERSONAS_FILE}")
+    with open(PERSONAS_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get("personas", [])
+
+
+async def main():
+    personas_raw = load_personas()
+    logger.info(f"Loaded {len(personas_raw)} synthetic personas from {PERSONAS_FILE}")
+
+    api_url = "http://localhost:8000"
+    success_count = 0
+
+    async with httpx.AsyncClient(base_url=api_url, timeout=30.0) as client:
+        # Check API health
+        try:
+            health = await client.get("/healthz")
+            if health.status_code != 200:
+                logger.error(f"Belong API service returned status {health.status_code}")
+                return
+        except Exception as e:
+            logger.error(f"Cannot connect to Belong API at {api_url}: {e}")
+            return
+
+        for p_dict in personas_raw:
+            config = PersonaConfig.from_dict(p_dict)
+            user = UserSimulator(config)
+
+            logger.info(f"--- Starting Onboarding for Persona '{config.id}' (User ID: {user.user_id}) ---")
+
+            # 1. Create Profile
+            if not await user.create_profile_async(client):
+                logger.error(f"Profile creation failed for {config.id}")
+                continue
+
+            # 2. Run Onboarding Simulation
+            if await user.run_onboarding_async(client):
+                logger.info(f"Onboarding successfully completed for '{config.id}'")
+                success_count += 1
+            else:
+                logger.error(f"Onboarding failed or incomplete for '{config.id}'")
+
+    logger.info(f"Simulation summary: {success_count}/{len(personas_raw)} personas completed onboarding successfully.")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
+
+====================================================================================================
+FILE: tests\simulations\__init__.py
+====================================================================================================
+
+"""
+User Simulation Test Suites
+===========================
+Contains end-to-end user persona simulations testing full user journeys,
+multi-turn onboarding, and ecosystem matching outcomes.
+"""
+
+
+
+====================================================================================================
+FILE: tests\simulations\test_user_configurable_personas.py
+====================================================================================================
+
+"""
+Configurable User Personas Test Suite
+======================================
+Tests the programmatically configurable user persona framework (PersonaConfig & PersonaBuilder).
+
+Ensures users can be fully customized with:
+- Custom demographics (age, gender, orientation, location, distance limit)
+- Custom question responses (q1-q6)
+- Custom dealbreakers and relationship goals
+- Custom extracted profile traits
+"""
+
+import pytest
+from typing import Dict, Any
+
+from simulators.user_simulator import UserSimulator, PersonaConfig, PersonaBuilder
+
+
+@pytest.mark.simulation
+class TestConfigurableUserPersonas:
+    """Tests configurable persona creation and customization capabilities."""
+
+    def test_default_persona_config_defaults(self):
+        """Verifies default fallback values for PersonaConfig."""
+        persona = PersonaConfig("default_user_1")
+        assert persona.id == "default_user_1"
+        assert persona.category == "custom"
+        assert persona.demographics["age"] == 28
+        assert persona.demographics["latitude"] == 37.7749
+        assert "q1_intent_partner" in persona.question_responses
+
+    def test_persona_builder_fluid_configuration(self):
+        """Verifies fluid builder methods for customizing user personas."""
+        persona = (
+            PersonaConfig.builder("custom_user_alpha")
+            .with_category("custom_test")
+            .with_age(32, preferred_min=28, preferred_max=40)
+            .with_gender("male", preferred_genders=["female"])
+            .with_location(40.7128, -74.0060, max_distance_km=30)  # NYC coordinates
+            .with_relationship_goal("marriage", required_goal="marriage")
+            .with_responses(
+                q1_intent_partner="Seeking a loving partner for marriage and family in NYC.",
+                q2_emotional_needs="Open communication, emotional security, and shared goals.",
+                q3_conflict_provides="Calm discussion, active listening, and practical solutions.",
+                q4_lifestyle_values="Architecture, museums, fitness, and family dinners.",
+                q5_personality="Grounded, organized, warm, and loyal.",
+                q6_dealbreakers="Dishonesty and smoking are absolute dealbreakers.",
+            )
+            .build()
+        )
+
+        assert persona.id == "custom_user_alpha"
+        assert persona.category == "custom_test"
+        assert persona.demographics["age"] == 32
+        assert persona.demographics["preferred_age_min"] == 28
+        assert persona.demographics["preferred_age_max"] == 40
+        assert persona.demographics["gender"] == "male"
+        assert persona.demographics["preferred_genders"] == ["female"]
+        assert persona.demographics["latitude"] == 40.7128
+        assert persona.demographics["longitude"] == -74.0060
+        assert persona.demographics["max_distance_km"] == 30
+        assert persona.demographics["relationship_goal"] == "marriage"
+        assert persona.demographics["required_relationship_goal"] == "marriage"
+        assert "NYC" in persona.question_responses["q1_intent_partner"]
+
+    def test_user_simulator_payload_generation(self):
+        """Verifies that UserSimulator generates exact API payloads matching persona configuration."""
+        persona = (
+            PersonaConfig.builder("config_user_beta")
+            .with_age(26)
+            .with_gender("female", preferred_genders=["male"])
+            .with_location(34.0522, -118.2437, max_distance_km=40)  # LA coordinates
+            .with_dealbreaker("Non-smoker only.")
+            .build()
+        )
+
+        user = UserSimulator(persona)
+        payload = user.profile_payload()
+
+        assert payload["user_id"] == user.user_id
+        assert payload["age"] == 26
+        assert payload["gender"] == "female"
+        assert payload["latitude"] == 34.0522
+        assert payload["longitude"] == -118.2437
+        assert payload["max_distance_km"] == 40
+        assert persona.question_responses["q6_dealbreakers"] == "Non-smoker only."
+
+    def test_batch_configurable_user_population_creation(self):
+        """Verifies programmatic creation of a population of customized simulated users."""
+        population_configs = [
+            PersonaConfig.builder(f"user_{i}")
+            .with_age(20 + i * 2)
+            .with_location(37.7749 + i * 0.01, -122.4194 + i * 0.01)
+            .build()
+            for i in range(5)
+        ]
+
+        simulated_users = [UserSimulator(config) for config in population_configs]
+
+        assert len(simulated_users) == 5
+        for i, user in enumerate(simulated_users):
+            assert user.persona.demographics["age"] == 20 + i * 2
+            assert user.status == "initialized"
+
+
+
+====================================================================================================
+FILE: tests\simulations\test_user_ecosystem_simulation.py
+====================================================================================================
+
+"""
+User Ecosystem Simulation Test Suite
+=====================================
+Simulates a multi-user community/ecosystem of distinct user personas interacting
+simultaneously (onboarding, trait extraction, embedding generation, and matching).
+
+Evaluates User Expectation Invariants:
+- Complementary Pairing: Alice + Bob
+- Dealbreaker Defense: Eve (non-smoker) + Frank (heavy smoker)
+- Conflict Style Clash: Ian (anxious pursuer) + Julia (stonewaller)
+- Geographic Distance Boundary: Quinn (Seattle) + Ryan (San Francisco)
+"""
+
+import asyncio
+import os
+import pytest
+import httpx
+from typing import Dict, Any, List
+
+from simulators.user_simulator import UserSimulator, PersonaConfig
+
+
+@pytest.mark.simulation
+class TestUserEcosystemSimulation:
+    """Simulates an entire user ecosystem and evaluates personalized match outcome invariants."""
+
+    @pytest.fixture
+    def api_url(self) -> str:
+        return os.getenv("BELONG_API_URL", "http://localhost:8000")
+
+    @pytest.mark.asyncio
+    async def test_full_user_ecosystem_matching_simulation(
+        self,
+        golden_personas: List[Dict[str, Any]],
+        expected_outcomes: Dict[str, Any],
+        api_url: str,
+    ):
+        """Simulates onboarding & matching for all personas in the golden dataset."""
+        if not golden_personas:
+            pytest.skip("No golden personas available.")
+
+        # Instantiate UserSimulator actors for all personas
+        simulated_users: Dict[str, UserSimulator] = {}
+        for p_dict in golden_personas:
+            config = PersonaConfig.from_dict(p_dict)
+            simulated_users[config.id] = UserSimulator(config)
+
+        async with httpx.AsyncClient(base_url=api_url, timeout=30.0) as client:
+            try:
+                health = await client.get("/healthz")
+                if health.status_code != 200:
+                    pytest.skip("Belong API service not available.")
+            except Exception:
+                pytest.skip("Belong API service not running on port 8000.")
+
+            # Step 1: Create Profiles for all users in ecosystem
+            for persona_id, user in simulated_users.items():
+                ok = await user.create_profile_async(client)
+                assert ok is True, f"Failed creating profile for user {persona_id}"
+
+            # Step 2: Trigger Embedding extraction for all users
+            for persona_id, user in simulated_users.items():
+                ok = await user.trigger_embeddings_async(client)
+                assert ok is True, f"Failed embedding trigger for user {persona_id}"
+
+            # Step 3: Trigger Matching Job for target user Alice (cp_alice) if present
+            if "cp_alice" in simulated_users:
+                alice = simulated_users["cp_alice"]
+                job_id = await alice.request_matches_async(client)
+                assert job_id is not None, "Failed triggering match job for Alice"
+
+                # Poll for job completion
+                job_completed = False
+                for _ in range(10):
+                    await asyncio.sleep(2)
+                    res = await client.get(f"/matches/jobs/{job_id}")
+                    if res.status_code == 200 and res.json().get("status") == "completed":
+                        job_completed = True
+                        break
+
+                # Fetch matches for Alice
+                res = await client.get(f"/matches/{alice.user_id}")
+                assert res.status_code == 200
+                matches_data = res.json()
+                matches_list = matches_data.get("matches", [])
+
+                # Verify expected outcome invariant: Alice -> Bob (cp_bob)
+                if "cp_bob" in simulated_users:
+                    bob = simulated_users["cp_bob"]
+                    expected_spec = expected_outcomes.get("cp_alice -> cp_bob")
+                    
+                    bob_match = next((m for m in matches_list if m.get("candidate_user_id") == bob.user_id), None)
+                    eval_res = alice.evaluate_match_outcome(bob, bob_match, expected_spec)
+                    assert eval_res["passed"] is True, f"Outcome evaluation failed: {eval_res['reasons']}"
+
+    @pytest.mark.asyncio
+    async def test_configurable_user_pair_simulation(self, api_url: str):
+        """
+        Simulates two dynamically configured users with strict dealbreakers
+        to verify dealbreaker isolation behavior.
+        """
+        # User 1: Non-smoker with strict dealbreaker
+        user1_config = (
+            PersonaConfig.builder("sim_health_user")
+            .with_age(28)
+            .with_gender("female", preferred_genders=["male"])
+            .with_location(37.7749, -122.4194)
+            .with_responses(
+                q1_intent_partner="Looking for a healthy non-smoking long-term partner.",
+                q6_dealbreakers="Smoking of any kind is an absolute non-negotiable dealbreaker."
+            )
+            .build()
+        )
+        user1 = UserSimulator(user1_config)
+
+        # User 2: Smoker
+        user2_config = (
+            PersonaConfig.builder("sim_smoker_user")
+            .with_age(30)
+            .with_gender("male", preferred_genders=["female"])
+            .with_location(37.7800, -122.4100)
+            .with_responses(
+                q1_intent_partner="Looking for an easygoing partner.",
+                q4_lifestyle_values="I smoke cigarettes daily and love nightlife.",
+                q6_dealbreakers="Overly controlling partners."
+            )
+            .build()
+        )
+        user2 = UserSimulator(user2_config)
+
+        async with httpx.AsyncClient(base_url=api_url, timeout=15.0) as client:
+            try:
+                health = await client.get("/healthz")
+                if health.status_code != 200:
+                    pytest.skip("Belong API service not available.")
+            except Exception:
+                pytest.skip("Belong API service not running.")
+
+            # Create profiles
+            assert await user1.create_profile_async(client) is True
+            assert await user2.create_profile_async(client) is True
+
+            # Execute onboarding for both
+            assert await user1.run_onboarding_async(client) is True
+            assert await user2.run_onboarding_async(client) is True
+
+
+
+====================================================================================================
+FILE: tests\simulations\test_user_onboarding_simulation.py
+====================================================================================================
+
+"""
+User Onboarding Simulation Test Suite
+======================================
+Simulates real human users undergoing multi-turn conversational onboarding dialogues.
+
+Tests:
+1. Standard persona onboarding simulation (loaded from personas.json).
+2. Dynamic configurable user persona onboarding simulation.
+3. Edge case onboarding (vague responses, custom dealbreakers).
+"""
+
+import os
+import pytest
+import httpx
+from typing import Dict, Any, List
+
+from simulators.user_simulator import UserSimulator, PersonaConfig
+
+
+@pytest.mark.simulation
+class TestUserOnboardingSimulation:
+    """Test suite for simulating multi-turn user onboarding dialogues."""
+
+    @pytest.fixture
+    def api_url(self) -> str:
+        return os.getenv("BELONG_API_URL", "http://localhost:8000")
+
+    @pytest.mark.asyncio
+    async def test_standard_persona_onboarding_simulation(
+        self, golden_personas: List[Dict[str, Any]], api_url: str
+    ):
+        """Simulates full multi-turn onboarding for loaded golden personas."""
+        if not golden_personas:
+            pytest.skip("No golden personas found in fixtures.")
+
+        # Test first persona (e.g. Alice)
+        persona = PersonaConfig.from_dict(golden_personas[0])
+        user = UserSimulator(persona)
+
+        async with httpx.AsyncClient(base_url=api_url, timeout=15.0) as client:
+            # Check if API is reachable
+            try:
+                health = await client.get("/healthz")
+                if health.status_code != 200:
+                    pytest.skip("Belong API microservice is not reachable.")
+            except Exception:
+                pytest.skip("Belong API microservice is not running on port 8000.")
+
+            # 1. Create Profile
+            profile_ok = await user.create_profile_async(client)
+            assert profile_ok is True, f"Failed to create profile for user {user.user_id}"
+
+            # 2. Run Multi-turn Onboarding
+            onboarding_ok = await user.run_onboarding_async(client)
+            assert onboarding_ok is True, f"Onboarding did not complete for user {user.user_id}"
+            assert user.status == "completed"
+
+    @pytest.mark.asyncio
+    async def test_custom_configurable_user_onboarding(self, api_url: str):
+        """
+        Tests onboarding with a programmatically configured custom user persona
+        (overriding age, location, and question responses).
+        """
+        # Create a dynamic custom persona via builder
+        custom_persona = (
+            PersonaConfig.builder("sim_user_custom_01")
+            .with_category("test_custom")
+            .with_age(27, preferred_min=24, preferred_max=32)
+            .with_gender("female", preferred_genders=["male"])
+            .with_location(37.7749, -122.4194, max_distance_km=25)
+            .with_relationship_goal("long-term", required_goal="long-term")
+            .with_responses(
+                q1_intent_partner="I am seeking a partner for a deep, lifelong bond and family building.",
+                q2_emotional_needs="I need active listening, emotional safety, and frequent check-ins.",
+                q3_conflict_provides="I stay calm, listen patiently, and express my feelings transparently.",
+                q4_lifestyle_values="Daily running, plant-based cooking, reading novels, and tech innovation.",
+                q5_personality="Friends describe me as empathetic, organized, optimistic, and articulate.",
+                q6_dealbreakers="Smoking, substance abuse, and dishonesty are total non-starters.",
+            )
+            .build()
+        )
+
+        user = UserSimulator(custom_persona)
+
+        # Validate local profile payload building
+        payload = user.profile_payload()
+        assert payload["age"] == 27
+        assert payload["max_distance_km"] == 25
+        assert payload["gender"] == "female"
+        assert payload["relationship_goal"] == "long-term"
+
+        async with httpx.AsyncClient(base_url=api_url, timeout=15.0) as client:
+            try:
+                health = await client.get("/healthz")
+                if health.status_code != 200:
+                    pytest.skip("Belong API service not available for live simulation.")
+            except Exception:
+                pytest.skip("Belong API service not running.")
+
+            # Run full flow
+            prof_created = await user.create_profile_async(client)
+            assert prof_created is True
+            onboard_completed = await user.run_onboarding_async(client)
+            assert onboard_completed is True
+            assert user.status == "completed"
+
+
+
+====================================================================================================
+FILE: tests\simulators\__init__.py
+====================================================================================================
+
+"""
+User Simulator Package
+======================
+Provides configurable simulated user actors (UserSimulator) and persona builders (PersonaConfig)
+for end-to-end multi-turn onboarding, embedding extraction, and persona matching tests.
+"""
+
+from .user_simulator import UserSimulator, PersonaConfig
+
+__all__ = ["UserSimulator", "PersonaConfig"]
+
+
+
+====================================================================================================
+FILE: tests\simulators\user_simulator.py
+====================================================================================================
+
+"""
+User Simulator & Configurable Persona Builder
+==============================================
+Provides reusable actors to simulate real human users performing onboarding,
+trait extraction, profile creation, and matching operations.
+
+Supports:
+- Standard personas loaded from personas.json
+- Fully configurable dynamic personas created programmatically via PersonaConfig.builder()
+"""
+
+import asyncio
+import json
+from pathlib import Path
+from typing import Dict, Any, List, Optional
+from uuid import uuid4, UUID
+import httpx
+
+
+
+class PersonaConfig:
+    """Configurable definition of a synthetic user persona."""
+
+    def __init__(
+        self,
+        id: str,
+        name: Optional[str] = None,
+        category: str = "custom",
+        demographics: Optional[Dict[str, Any]] = None,
+        question_responses: Optional[Dict[str, str]] = None,
+        profile: Optional[Dict[str, Any]] = None,
+    ):
+        self.id = id
+        self.name = name
+        self.category = category
+        self.demographics = demographics or {
+            "name": name,
+            "age": 28,
+            "gender": "other",
+            "orientation": "straight",
+            "relationship_goal": "long-term",
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "preferred_age_min": 21,
+            "preferred_age_max": 35,
+            "preferred_genders": ["female", "male"],
+            "max_distance_km": 50,
+            "required_relationship_goal": "long-term",
+        }
+        if name and "name" not in self.demographics:
+            self.demographics["name"] = name
+        self.question_responses = question_responses or {
+            "q1_intent_partner": "I want something real and long-term — someone emotionally available who actually communicates.",
+            "q2_emotional_needs": "I need someone who checks in when things are hard and doesn't disappear. reassurance matters to me.",
+            "q3_conflict_provides": "I take a bit of time to cool down then I talk it out. I try not to raise my voice. I show up for my partner when they're struggling.",
+            "q4_lifestyle_values": "I stay pretty active, I like being outside, and I try to take care of my health. I value consistency.",
+            "q5_personality": "I'm warm, pretty reliable, and I notice the small things. good listener.",
+            "q6_dealbreakers": "Dishonesty and disrespect are non-negotiable for me.",
+        }
+        self.profile = profile or {}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PersonaConfig":
+        """Instantiates a PersonaConfig from a dictionary (e.g. from personas.json)."""
+        demo = data.get("demographics", {})
+        return cls(
+            id=data.get("id", str(uuid4())),
+            name=data.get("name") or (demo.get("name") if isinstance(demo, dict) else None),
+            category=data.get("category", "custom"),
+            demographics=demo,
+            question_responses=data.get("question_responses"),
+            profile=data.get("profile"),
+        )
+
+
+    @classmethod
+    def builder(cls, persona_id: str) -> "PersonaBuilder":
+        """Returns a fluid builder instance for creating a custom persona."""
+        return PersonaBuilder(persona_id)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializes PersonaConfig back into a dictionary."""
+        return {
+            "id": self.id,
+            "category": self.category,
+            "demographics": self.demographics,
+            "question_responses": self.question_responses,
+            "profile": self.profile,
+        }
+
+
+class PersonaBuilder:
+    """Fluid builder for configuring dynamic test personas."""
+
+    def __init__(self, persona_id: str):
+        self._id = persona_id
+        self._name: Optional[str] = None
+        self._category = "custom"
+        self._demographics: Dict[str, Any] = {
+            "age": 28,
+            "gender": "other",
+            "orientation": "straight",
+            "relationship_goal": "long-term",
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "preferred_age_min": 21,
+            "preferred_age_max": 35,
+            "preferred_genders": ["male", "female"],
+            "max_distance_km": 50,
+            "required_relationship_goal": "long-term",
+        }
+        self._responses: Dict[str, str] = {}
+        self._profile: Dict[str, Any] = {}
+
+    def with_name(self, name: str) -> "PersonaBuilder":
+        self._name = name
+        self._demographics["name"] = name
+        return self
+
+    def with_category(self, category: str) -> "PersonaBuilder":
+        self._category = category
+        return self
+
+    def with_age(self, age: int, preferred_min: int = 21, preferred_max: int = 35) -> "PersonaBuilder":
+        self._demographics["age"] = age
+        self._demographics["preferred_age_min"] = preferred_min
+        self._demographics["preferred_age_max"] = preferred_max
+        return self
+
+    def with_gender(self, gender: str, preferred_genders: Optional[List[str]] = None) -> "PersonaBuilder":
+        self._demographics["gender"] = gender
+        if preferred_genders is not None:
+            self._demographics["preferred_genders"] = preferred_genders
+        return self
+
+    def with_location(self, latitude: float, longitude: float, max_distance_km: int = 50) -> "PersonaBuilder":
+        self._demographics["latitude"] = latitude
+        self._demographics["longitude"] = longitude
+        self._demographics["max_distance_km"] = max_distance_km
+        return self
+
+    def with_relationship_goal(self, goal: str, required_goal: Optional[str] = None) -> "PersonaBuilder":
+        self._demographics["relationship_goal"] = goal
+        self._demographics["required_relationship_goal"] = required_goal
+        return self
+
+    def with_responses(self, **responses) -> "PersonaBuilder":
+        """
+        Pass responses by question key, e.g.:
+        with_responses(
+            q1_intent_partner="...",
+            q2_emotional_needs="...",
+            q3_conflict_provides="...",
+            q4_lifestyle_values="...",
+            q5_personality="...",
+            q6_dealbreakers="..."
+        )
+        """
+        self._responses.update(responses)
+        return self
+
+    def with_dealbreaker(self, dealbreaker_text: str) -> "PersonaBuilder":
+        self._responses["q6_dealbreakers"] = dealbreaker_text
+        return self
+
+    def with_profile(self, profile_dict: Dict[str, Any]) -> "PersonaBuilder":
+        """Explicitly sets structured self and wants profile traits."""
+        self._profile = profile_dict
+        return self
+
+    def build(self) -> PersonaConfig:
+        default_responses = {
+            "q1_intent_partner": "I want something real and long-term — someone emotionally available who actually communicates.",
+            "q2_emotional_needs": "I need someone who checks in when things are hard and doesn't disappear. reassurance matters to me.",
+            "q3_conflict_provides": "I take a bit of time to cool down then I talk it out. I try not to raise my voice. I show up for my partner when they're struggling.",
+            "q4_lifestyle_values": "I stay pretty active, I like being outside, and I try to take care of my health. I value consistency.",
+            "q5_personality": "I'm warm, pretty reliable, and I notice the small things. good listener.",
+            "q6_dealbreakers": "Dishonesty and disrespect are non-negotiable for me.",
+        }
+        merged_responses = {**default_responses, **self._responses}
+
+        profile = self._profile
+        if not profile:
+            # Build structured atomic signals with real verbatim quotes, IDs, and calibrated confidence
+            q1 = merged_responses.get("q1_intent_partner", "Looking for a committed partner.")
+            q2 = merged_responses.get("q2_emotional_needs", "I value calm reassurance.")
+            q3 = merged_responses.get("q3_conflict_provides", "I handle disagreements calmly.")
+            q4 = merged_responses.get("q4_lifestyle_values", "Active, healthy lifestyle.")
+            q5 = merged_responses.get("q5_personality", "Warm and dependable.")
+            q6 = merged_responses.get("q6_dealbreakers", "Dishonesty and disrespect.")
+
+            profile = {
+                "self": {
+                    "values": [
+                        {
+                            "id": "q4_lifestyle_values_s_values_00",
+                            "label": "Values healthy active living",
+                            "summary": f"User values {q4.lower()}",
+                            "quote": q4,
+                            "question_id": "q4_lifestyle_values",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "lifestyle": [
+                        {
+                            "id": "q4_lifestyle_values_s_lifestyle_00",
+                            "label": "Active lifestyle",
+                            "summary": f"Maintains routine: {q4}",
+                            "quote": q4,
+                            "question_id": "q4_lifestyle_values",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "personality_signals": [
+                        {
+                            "id": "q5_personality_s_personality_00",
+                            "label": "Grounded personality",
+                            "summary": f"Self-described: {q5}",
+                            "quote": q5,
+                            "question_id": "q5_personality",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "conflict_style": [
+                        {
+                            "id": "q3_conflict_provides_s_conflict_00",
+                            "label": "Thoughtful conflict style",
+                            "summary": f"Resolves tension: {q3}",
+                            "quote": q3,
+                            "question_id": "q3_conflict_provides",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "provides": [
+                        {
+                            "id": "probe_provides_s_provides_00",
+                            "label": "Patient listening & reassurance",
+                            "summary": "Naturally provides calm support, patient listening, and reassurance under stress.",
+                            "quote": "listening patiently when stressed and offering clear reassurance",
+                            "question_id": "probe_provides",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "emotional_needs": [
+                        {
+                            "id": "q2_emotional_needs_s_needs_00",
+                            "label": "Needs reassurance & respect",
+                            "summary": f"During stress: {q2}",
+                            "quote": q2,
+                            "question_id": "q2_emotional_needs",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ]
+                },
+                "wants": {
+                    "partner_traits": [
+                        {
+                            "id": "q1_intent_partner_w_traits_00",
+                            "label": "Partner traits desired",
+                            "summary": f"Seeking: {q1}",
+                            "quote": q1,
+                            "question_id": "q1_intent_partner",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "partner_values": [
+                        {
+                            "id": "q1_intent_partner_w_values_00",
+                            "label": "Shared commitment & growth",
+                            "summary": f"Values alignment: {q1}",
+                            "quote": q1,
+                            "question_id": "q1_intent_partner",
+                            "confidence": 0.95,
+                            "evidence_type": "explicit"
+                        }
+                    ],
+                    "relationship_expectations": [
+                        {
+                            "id": "q1_intent_partner_w_expectations_00",
+                            "label": "Long-term partnership intent",
+                            "summary": f"Expectations: {q1}",
+                            "quote": q1,
+                            "question_id": "q1_intent_partner",
+                            "confidence": 0.98,
+                            "evidence_type": "explicit"
+                        }
+                    ]
+                },
+                "constraints": {
+                    "dealbreakers": [
+                        {
+                            "id": "q6_dealbreakers_c_dealbreakers_00",
+                            "label": "Non-negotiable boundaries",
+                            "summary": f"Dealbreakers: {q6}",
+                            "quote": q6,
+                            "question_id": "q6_dealbreakers",
+                            "confidence": 0.99,
+                            "evidence_type": "explicit"
+                        }
+                    ]
+                }
+            }
+
+        return PersonaConfig(
+            id=self._id,
+            name=self._name,
+            category=self._category,
+            demographics=self._demographics,
+            question_responses=merged_responses,
+            profile=profile,
+        )
+
+
+
+class UserSimulator:
+    """Actor simulating a human user's actions during onboarding & matching."""
+
+    def __init__(self, persona: PersonaConfig, user_id: Optional[str] = None):
+        self.persona = persona
+        self.user_id: str = user_id or str(uuid4())
+        self.conversation_id: Optional[str] = None
+        self.status: str = "initialized"
+        self.extracted_profile: Optional[Dict[str, Any]] = None
+
+    def profile_payload(self) -> Dict[str, Any]:
+        """Constructs API payload for POST /profiles."""
+        demo = self.persona.demographics
+        return {
+            "user_id": self.user_id,
+            "name": self.persona.name or demo.get("name"),
+            "age": demo.get("age", 25),
+            "gender": demo.get("gender", "other"),
+            "orientation": demo.get("orientation", "straight"),
+            "relationship_goal": demo.get("relationship_goal", "long-term"),
+            "latitude": demo.get("latitude", 37.7749),
+            "longitude": demo.get("longitude", -122.4194),
+            "preferred_age_min": demo.get("preferred_age_min", 21),
+            "preferred_age_max": demo.get("preferred_age_max", 35),
+            "max_distance_km": demo.get("max_distance_km", 50),
+            "preferred_genders": demo.get("preferred_genders", []),
+            "required_relationship_goal": demo.get("required_relationship_goal"),
+            "profile": self.persona.profile,
+        }
+
+    async def _post_with_fallback(self, client: httpx.AsyncClient, path: str, **kwargs) -> httpx.Response:
+        """Helper to try route directly first, then with /api prefix if 404."""
+        res = await client.post(path, **kwargs)
+        if res.status_code == 404:
+            target_path = path if path.startswith("/api") else f"/api{path}"
+            res = await client.post(target_path, **kwargs)
+        return res
+
+    async def _get_with_fallback(self, client: httpx.AsyncClient, path: str, **kwargs) -> httpx.Response:
+        """Helper to try GET route directly first, then with /api prefix if 404."""
+        res = await client.get(path, **kwargs)
+        if res.status_code == 404:
+            target_path = path if path.startswith("/api") else f"/api{path}"
+            res = await client.get(target_path, **kwargs)
+        return res
+
+
+    async def create_profile_async(self, client: httpx.AsyncClient) -> bool:
+        """Registers the user profile via API."""
+        payload = self.profile_payload()
+        res = await self._post_with_fallback(client, "/profiles", json=payload)
+        if res.status_code in (200, 201):
+            self.status = "profile_created"
+            return True
+        return False
+
+    async def run_onboarding_async(self, client: httpx.AsyncClient) -> bool:
+        """Simulates multi-turn interactive conversational onboarding.
+
+        Sends scripted responses keyed by the question_id the server returns,
+        so follow-up turns don't shift the index and cause wrong answers.
+        Falls back to a generic reply for adaptive probes beyond the script.
+        Capped at MAX_TURNS to prevent infinite loops.
+        """
+        start_res = await self._post_with_fallback(client, "/onboarding/session", json={"user_id": self.user_id})
+        if start_res.status_code != 201:
+            return False
+
+        session_data = start_res.json()
+        self.conversation_id = session_data["conversation_id"]
+
+        # Map question_id → scripted response (server echoes question_id in reply)
+        scripted = {
+            "q1_intent_partner":    self.persona.question_responses.get("q1_intent_partner", ""),
+            "q2_emotional_needs":   self.persona.question_responses.get("q2_emotional_needs", ""),
+            "q3_conflict_provides": self.persona.question_responses.get("q3_conflict_provides", ""),
+            "q4_lifestyle_values":  self.persona.question_responses.get("q4_lifestyle_values", ""),
+            "q5_personality":       self.persona.question_responses.get("q5_personality", ""),
+            "q6_dealbreakers":      self.persona.question_responses.get("q6_dealbreakers", ""),
+        }
+        # Sent when the server is in adaptive-probe phase (question_id == "probe" or None).
+        # Describes what the user naturally does for a partner — covers self.provides,
+        # self.emotional_needs, and self.conflict_style, the most common probe targets.
+        fallback_reply = (
+            "I naturally support my partner by listening patiently when they are stressed, "
+            "offering clear reassurance, and communicating transparently during difficult times."
+        )
+
+        MAX_TURNS = 20
+        conv_status = "active"
+        # Server tells us which question it just asked via question_id in the reply;
+        # seed the first turn so we answer q1 correctly.
+        current_question_id = "q1_intent_partner"
+
+        for turn in range(MAX_TURNS):
+            if conv_status == "completed":
+                break
+
+            # Use scripted answer for core questions; fallback for probe turns.
+            # "probe" sentinel or None both mean the system is in adaptive-probe phase.
+            if current_question_id in scripted:
+                user_msg = scripted[current_question_id]
+            else:
+                user_msg = fallback_reply
+
+            msg_res = await self._post_with_fallback(
+                client,
+                "/onboarding/message",
+                json={
+                    "conversation_id": self.conversation_id,
+                    "message": user_msg,
+                },
+            )
+
+            if msg_res.status_code != 200:
+                return False
+
+            reply_data = msg_res.json()
+            conv_status = reply_data.get("status", "active")
+            # Advance to whatever question the server says is next.
+            # "probe" means adaptive follow-up phase — keep as "probe" so the
+            # next loop iteration sends fallback_reply instead of re-sending a
+            # stale core answer.
+            # None means completed (no next question).
+            next_qid = reply_data.get("question_id")
+            if next_qid is not None:
+                current_question_id = next_qid
+            # If next_qid is None the conversation is completing — loop exits on
+            # conv_status == "completed" at the top of the next iteration.
+
+            await asyncio.sleep(6.0)
+
+        self.status = conv_status
+        return conv_status == "completed"
+
+    async def trigger_embeddings_async(self, client: httpx.AsyncClient) -> bool:
+        """Triggers embedding extraction job."""
+        res = await self._post_with_fallback(client, f"/profiles/{self.user_id}/embeddings")
+        if res.status_code in (200, 202):
+            self.status = "embeddings_triggered"
+            return True
+        return False
+
+    async def request_matches_async(self, client: httpx.AsyncClient) -> Optional[str]:
+        """Triggers matching calculation for user."""
+        res = await self._post_with_fallback(client, "/matches", headers={"X-User-ID": self.user_id})
+        if res.status_code in (200, 202):
+            data = res.json()
+            return data.get("job_id")
+        return None
+
+
+    def evaluate_match_outcome(
+        self,
+        other_user: "UserSimulator",
+        match_result: Optional[Dict[str, Any]],
+        expected_spec: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Evaluates whether the generated match result between self and other_user
+        satisfies expected invariant rules.
+        """
+        evaluation = {
+            "pair": f"{self.persona.id} -> {other_user.persona.id}",
+            "passed": True,
+            "reasons": [],
+        }
+
+        if not expected_spec:
+            return evaluation
+
+        # Geographic distance exclusion check
+        if expected_spec.get("expected_in_recall") is False:
+            if match_result is not None and match_result.get("score", 0) > 0:
+                evaluation["passed"] = False
+                evaluation["reasons"].append(
+                    f"Expected exclusion (e.g. distance), but received match score {match_result.get('score')}"
+                )
+            return evaluation
+
+        # Expect in recall check
+        if expected_spec.get("expected_in_recall") is True:
+            if not match_result:
+                evaluation["passed"] = False
+                evaluation["reasons"].append(
+                    f"Expected {other_user.persona.id} in recall, but no match was found."
+                )
+                return evaluation
+
+            # Verdict check
+            allowed_verdicts = expected_spec.get("allowed_verdicts", [])
+            actual_verdict = match_result.get("verdict")
+            if allowed_verdicts and actual_verdict not in allowed_verdicts:
+                evaluation["passed"] = False
+                evaluation["reasons"].append(
+                    f"Verdict '{actual_verdict}' not in allowed verdicts {allowed_verdicts}"
+                )
+
+            # Dealbreaker check
+            if expected_spec.get("must_have_dealbreakers") is True:
+                dealbreakers = match_result.get("dealbreakers", [])
+                if not dealbreakers:
+                    evaluation["passed"] = False
+                    evaluation["reasons"].append("Expected dealbreakers, but none were returned.")
+
+        return evaluation
+
+
+
+====================================================================================================
+FILE: tests\test_e2e_integration.py
+====================================================================================================
+
+"""
+Layer 4: Full Microservice End-to-End Integration Tests
+======================================================
+WHAT THIS FILE DOES:
+- Tests the complete async pipeline against live running services (belong-api, belong-workers, PostgreSQL, RabbitMQ).
+- Steps executed:
+  1. POST /profiles -> Creates User A & User B profiles in DB.
+  2. POST /profiles/{id}/embeddings -> Publishes job to RabbitMQ -> EmbeddingWorker generates embeddings & updates DB.
+  3. POST /matches -> Triggers async matching job -> MatchingWorker runs Stage 1 pgvector retrieval & Stage 2 LLM reasoning.
+  4. GET /matches -> Verifies persisted compatibility results.
+- REQUIRES: Microservices running locally (e.g. via `docker compose up -d` or running belong-api on port 8000).
+
+HOW TO RUN:
+    pytest tests/test_e2e_integration.py -m e2e -v
+"""
+
+import asyncio
+import os
+import unittest
+import pytest
+from uuid import uuid4
+import httpx
+
+@pytest.mark.e2e
+class TestLayer4E2EIntegration(unittest.IsolatedAsyncioTestCase):
+    """Layer 4 Full Microservice Integration test against running services."""
+
+    def setUp(self):
+        self.api_base_url = os.getenv("BELONG_API_URL", "http://localhost:8000")
+
+    async def test_full_async_matching_pipeline(self):
+        """Exercises: Create Profiles -> Embedding Jobs -> RabbitMQ -> EmbeddingWorker -> POST /matches -> MatchingWorker -> GET /matches."""
+        user_a_id = str(uuid4())
+        user_b_id = str(uuid4())
+
+        async with httpx.AsyncClient(base_url=self.api_base_url, timeout=30.0) as client:
+            # 1. Create User A Profile
+            res_a = await client.post("/profiles", json={
+                "user_id": user_a_id,
+                "age": 28,
+                "gender": "female",
+                "relationship_goal": "long-term",
+                "latitude": 37.7749,
+                "longitude": -122.4194,
+                "preferred_genders": ["male"],
+                "profile": {
+                    "self": {"values": [{"summary": "honesty", "confidence": 0.9, "evidence": "honesty"}]},
+                    "wants": {"partner_traits": [{"summary": "communicative", "confidence": 0.9, "evidence": "communicative"}]}
+                }
+            })
+            self.assertIn(res_a.status_code, [200, 201])
+
+            # 2. Create User B Profile
+            res_b = await client.post("/profiles", json={
+                "user_id": user_b_id,
+                "age": 30,
+                "gender": "male",
+                "relationship_goal": "long-term",
+                "latitude": 37.7800,
+                "longitude": -122.4100,
+                "preferred_genders": ["female"],
+                "profile": {
+                    "self": {"values": [{"summary": "integrity", "confidence": 0.9, "evidence": "integrity"}]},
+                    "wants": {"partner_traits": [{"summary": "thoughtful", "confidence": 0.9, "evidence": "thoughtful"}]}
+                }
+            })
+            self.assertIn(res_b.status_code, [200, 201])
+
+            # 3. Trigger Asynchronous Embedding Jobs
+            emb_res_a = await client.post(f"/profiles/{user_a_id}/embeddings")
+            emb_res_b = await client.post(f"/profiles/{user_b_id}/embeddings")
+            self.assertIn(emb_res_a.status_code, [200, 202])
+            self.assertIn(emb_res_b.status_code, [200, 202])
+
+            # 4. Trigger Asynchronous Matching Job for User A
+            match_trigger = await client.post("/matches", headers={"X-User-ID": user_a_id})
+            self.assertEqual(match_trigger.status_code, 202)
+            job_data = match_trigger.json()
+            job_id = job_data["job_id"]
+
+            # 5. Poll Job status until completion (up to 20 seconds)
+            job_completed = False
+            for _ in range(10):
+                await asyncio.sleep(2)
+                job_check = await client.get(f"/matches/jobs/{job_id}")
+                if job_check.status_code == 200:
+                    status_val = job_check.json().get("status")
+                    if status_val == "completed":
+                        job_completed = True
+                        break
+
+            # 6. Fetch persisted qualitative matches for User A
+            matches_res = await client.get(f"/matches/{user_a_id}")
+            self.assertEqual(matches_res.status_code, 200)
+            matches_data = matches_res.json()
+            self.assertIn("total_matches", matches_data)
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+
+====================================================================================================
+FILE: tests\test_matching_pipeline.py
+====================================================================================================
+
+"""
+Matching Pipeline Integration Test
+===================================
+Exercises the full Stage 1 → Stage 2 → DB persist path by calling
+MatchingWorker.execute() directly — no HTTP, no RabbitMQ needed.
+
+What this proves:
+  1. CandidateRetriever.retrieve_candidates() returns >= 1 result for Bob
+     (verifies the @> jsonb_build_array fix for preferred_genders).
+  2. PairwiseCompatibilityAgent produces a valid output for each candidate.
+  3. At least one row is inserted into compatibility_results with
+     user_a_id = Bob's UUID.
+
+Pre-conditions (already satisfied by tests/results.md data):
+  - Bob  (198001d8-a5e2-4112-af89-3f398cd1e4dd) has both embeddings,
+    gender='male', preferred_genders=['female'], relationship_goal='long-term'
+  - Alice (53ee7eb9-17c9-4d54-b058-3bf0294157a2) has both embeddings,
+    gender='female', preferred_genders=['male'], relationship_goal='long-term'
+
+Markers:
+  - e2e   : requires running Postgres
+  - live  : makes real Groq LLM calls
+
+Run:
+    pytest tests/test_matching_pipeline.py -m "e2e and live" -v -s
+"""
+
+# ---------------------------------------------------------------------------
+# Windows: psycopg async requires SelectorEventLoop, not ProactorEventLoop.
+# MUST be set before any asyncio import is used for loop creation.
+# ---------------------------------------------------------------------------
+import sys
+import selectors
+import asyncio
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+import logging
+from pathlib import Path
+from uuid import UUID, uuid4
+
+import pytest
+from psycopg.rows import dict_row
+
+# ---------------------------------------------------------------------------
+# Path setup — belong-workers must be first so its modules shadow belong-api
+# ---------------------------------------------------------------------------
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT / "belong-workers"))
+sys.path.insert(1, str(ROOT / "belong-api"))
+
+# ---------------------------------------------------------------------------
+# Load env vars — try belong-workers/.env first, then root .env.
+# Ensures GROQ_API_KEY etc. are available when running tests directly.
+# ---------------------------------------------------------------------------
+try:
+    from dotenv import load_dotenv
+    # Root .env has the real keys — load it first with override=True so it wins
+    # over any placeholder values in belong-workers/.env
+    _root_env   = ROOT / ".env"
+    _worker_env = ROOT / "belong-workers" / ".env"
+    if _root_env.exists():
+        load_dotenv(_root_env, override=True)
+    if _worker_env.exists():
+        load_dotenv(_worker_env, override=False)  # fills in any worker-only vars
+except ImportError:
+    pass  # dotenv not available; rely on env vars already being set
+
+from db.connection import get_db_connection, init_pool, close_pool
+from workers.matching_worker import MatchingWorker
+
+logger = logging.getLogger(__name__)
+
+# Known UUIDs from tests/results.md
+BOB_USER_ID   = UUID("198001d8-a5e2-4112-af89-3f398cd1e4dd")
+ALICE_USER_ID = UUID("53ee7eb9-17c9-4d54-b058-3bf0294157a2")
+
+
+# ---------------------------------------------------------------------------
+# Per-test DB pool fixture (function scope keeps each test independent)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+async def db_pool():
+    """Open and close the worker DB pool around each test."""
+    await init_pool()
+    yield
+    await close_pool()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+async def _count_compatibility_results(user_a_id: UUID) -> int:
+    async with get_db_connection() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "SELECT COUNT(*) FROM compatibility_results WHERE user_a_id = %s;",
+                (str(user_a_id),)
+            )
+            row = await cur.fetchone()
+            return row[0] if row else 0
+
+
+async def _get_latest_compatibility_rows(user_a_id: UUID):
+    async with get_db_connection() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """
+                SELECT cr.user_b_id, cr.overall_reasoning, cr.dimension_results,
+                       cr.strong_alignments, cr.complementary_alignments,
+                       cr.shared_alignments, cr.potential_conflicts,
+                       cr.dealbreaker_violations, cr.uncertainties,
+                       cr.is_latest, cr.match_id, cr.updated_at,
+                       mr.status AS match_run_status
+                FROM compatibility_results cr
+                LEFT JOIN match_runs mr ON mr.id = cr.match_id
+                WHERE cr.user_a_id = %s AND cr.is_latest = true
+                ORDER BY cr.updated_at DESC;
+                """,
+                (str(user_a_id),)
+            )
+            return await cur.fetchall()
+
+
+async def _verify_profiles_have_embeddings() -> bool:
+    async with get_db_connection() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """
+                SELECT user_id, name, gender, preferred_genders,
+                       self_embedding IS NOT NULL  AS has_self,
+                       wants_embedding IS NOT NULL AS has_wants
+                FROM profiles
+                WHERE user_id = ANY(%s::uuid[]);
+                """,
+                ([str(BOB_USER_ID), str(ALICE_USER_ID)],)
+            )
+            rows = await cur.fetchall()
+
+    found = {UUID(str(r["user_id"])): r for r in rows}
+    ok = True
+    for uid, label in [(BOB_USER_ID, "Bob"), (ALICE_USER_ID, "Alice")]:
+        if uid not in found:
+            logger.error(f"Pre-condition FAILED: {label} ({uid}) not in profiles table")
+            ok = False
+            continue
+        r = found[uid]
+        if not r["has_self"] or not r["has_wants"]:
+            logger.error(
+                f"Pre-condition FAILED: {label} missing embeddings "
+                f"(has_self={r['has_self']}, has_wants={r['has_wants']})"
+            )
+            ok = False
+        else:
+            logger.info(
+                f"Pre-condition OK: {label} ({uid}) "
+                f"gender={r['gender']} preferred_genders={r['preferred_genders']}"
+            )
+    return ok
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.e2e
+@pytest.mark.live
+async def test_stage1_retrieval_finds_alice_for_bob():
+    """
+    Stage 1 only: Bob's retriever must return Alice as a candidate.
+
+    This is the direct regression test for the preferred_genders JSONB bug.
+    The @> fix means Alice (preferred_genders=['male']) is NOT filtered out
+    when Bob (gender='male') runs retrieval.
+    """
+    from matching.retrieval import CandidateRetriever
+    from matching.schemas import RetrievalOptions
+
+    retriever = CandidateRetriever(
+        options=RetrievalOptions(
+            require_mutual_gender=True,
+            require_mutual_age=True,
+            require_mutual_relationship_goal=True,
+        )
+    )
+
+    candidates = await retriever.retrieve_candidates(BOB_USER_ID)
+
+    assert len(candidates) >= 1, (
+        f"Stage 1 returned 0 candidates for Bob. "
+        f"The @> jsonb_build_array fix may not be active or Alice's profile is missing embeddings."
+    )
+
+    candidate_ids = [c.user_id for c in candidates]
+    assert ALICE_USER_ID in candidate_ids, (
+        f"Alice ({ALICE_USER_ID}) not in Bob's candidates. "
+        f"Found: {candidate_ids}"
+    )
+
+    alice = next(c for c in candidates if c.user_id == ALICE_USER_ID)
+    logger.info(
+        f"✓ Stage 1 found Alice: cosine_similarity={alice.cosine_similarity}, "
+        f"combined_score={alice.combined_score}"
+    )
+    assert alice.combined_score > 0.0
+
+
+@pytest.mark.e2e
+@pytest.mark.live
+async def test_matching_worker_inserts_compatibility_results():
+    """
+    Full pipeline: MatchingWorker.execute() for Bob must insert at least one
+    row into compatibility_results with user_a_id = Bob's UUID and is_latest = true.
+
+    This is the end-to-end regression for 'compatibility_results has 0 rows'.
+    """
+    # Count rows before
+    before = await _count_compatibility_results(BOB_USER_ID)
+    logger.info(f"compatibility_results rows for Bob before run: {before}")
+
+    # Pre-condition check
+    embeddings_ok = await _verify_profiles_have_embeddings()
+    assert embeddings_ok, "Pre-conditions not met — Bob or Alice missing embeddings."
+
+    # Run the worker directly (no RabbitMQ needed)
+    job_id = str(uuid4())
+    worker = MatchingWorker()
+    result = await worker.execute({
+        "job_id": job_id,
+        "user_id": str(BOB_USER_ID),
+        "type": "matching",
+    })
+
+    logger.info(f"MatchingWorker result: {result}")
+
+    # --- Core assertion: at least 1 match ---
+    assert result["total_matches"] >= 1, (
+        f"MatchingWorker reported 0 total_matches. "
+        f"Stage 1 returned no candidates — check the retrieval fix."
+    )
+    assert result["matches_persisted"] >= 1, (
+        f"MatchingWorker reported 0 matches_persisted even though candidates were found."
+    )
+
+    after = await _count_compatibility_results(BOB_USER_ID)
+    logger.info(f"compatibility_results rows for Bob after run: {after}")
+    assert after > before, (
+        f"No new rows in compatibility_results after worker run "
+        f"(before={before}, after={after})."
+    )
+
+    # --- Structural assertions on the persisted rows ---
+    rows = await _get_latest_compatibility_rows(BOB_USER_ID)
+    assert len(rows) >= 1
+
+    for row in rows:
+        user_b = UUID(str(row["user_b_id"]))
+        logger.info(
+            f"  Match: user_b={user_b}, "
+            f"match_run_status={row['match_run_status']}, "
+            f"updated_at={row['updated_at']}"
+        )
+
+        # match_run must be completed
+        assert row["match_run_status"] == "completed", (
+            f"match_run for job {job_id} is '{row['match_run_status']}', expected 'completed'."
+        )
+
+        # dimension_results must be a non-empty dict
+        dim = row["dimension_results"]
+        assert isinstance(dim, dict) and len(dim) > 0, (
+            f"dimension_results is empty or wrong type for user_b={user_b}"
+        )
+        for expected_dim in ("emotional_needs", "core_values", "lifestyle", "conflict_style"):
+            assert expected_dim in dim, (
+                f"dimension_results missing '{expected_dim}' for user_b={user_b}"
+            )
+
+        # overall_reasoning must be a non-empty string
+        assert isinstance(row["overall_reasoning"], str) and len(row["overall_reasoning"]) > 10, (
+            f"overall_reasoning is missing or too short for user_b={user_b}: "
+            f"'{row['overall_reasoning']}'"
+        )
+
+        # alignment lists must exist
+        for field in ("strong_alignments", "complementary_alignments", "shared_alignments",
+                      "potential_conflicts", "dealbreaker_violations", "uncertainties"):
+            assert isinstance(row[field], list), (
+                f"Field '{field}' should be a list, got {type(row[field])} for user_b={user_b}"
+            )
+
+    # --- Alice specifically should appear ---
+    result_user_b_ids = [UUID(str(r["user_b_id"])) for r in rows]
+    assert ALICE_USER_ID in result_user_b_ids, (
+        f"Alice ({ALICE_USER_ID}) not in Bob's compatibility_results. "
+        f"Found user_b_ids: {result_user_b_ids}"
+    )
+    logger.info("✓ Alice found in Bob's compatibility_results.")
+
+
+
+====================================================================================================
+FILE: tests\test_onboarding_invariants.py
+====================================================================================================
+
+"""
+Unit tests for Onboarding State Machine Invariants, Terminal Conditions,
+Coverage Validation, and Extraction Rules.
+"""
+
+import pytest
+from typing import Dict, Any, List
+from unittest.mock import AsyncMock, patch
+
+from onboarding.graph import (
+    find_missing_high_priority_field,
+    HIGH_PRIORITY_FIELDS,
+    COVERAGE_MIN_CONFIDENCE,
+    generate_response_node,
+    extract_signals_node,
+)
+from onboarding.state import OnboardingState
+from config import settings
+
+
+# ---------------------------------------------------------------------------
+# HIGH_PRIORITY_FIELDS spec checks
+# ---------------------------------------------------------------------------
+
+def test_high_priority_fields_behavioral_probe():
+    """Ensures self.provides uses the concrete behavioral probe."""
+    provides_spec = next((s for s in HIGH_PRIORITY_FIELDS if "self.provides" in s["keys"]), None)
+    assert provides_spec is not None
+    assert "naturally do for a partner" in provides_spec["prompt"].lower()
+    assert "how do you support them" in provides_spec["prompt"].lower()
+
+
+# ---------------------------------------------------------------------------
+# find_missing_high_priority_field — basic coverage logic
+# ---------------------------------------------------------------------------
+
+def test_find_missing_high_priority_field_empty():
+    """Identifies missing field when signals are empty."""
+    signals: Dict[str, Any] = {}
+    missing = find_missing_high_priority_field(signals, covered_areas=[])
+    assert missing is not None
+    assert missing["keys"][0] == "self.provides"
+
+
+def test_find_missing_high_priority_field_duplicate_guard():
+    """Prevents asking the same follow-up probe if already in covered_areas."""
+    signals: Dict[str, Any] = {}
+    covered_areas = ["probe:self.provides"]
+    missing = find_missing_high_priority_field(signals, covered_areas=covered_areas)
+    assert missing is not None
+    assert missing["keys"][0] != "self.provides"
+    assert missing["keys"][0] == "self.emotional_needs"
+
+
+def test_find_missing_high_priority_field_all_covered():
+    """Returns None when all high-priority fields have at least one confident signal."""
+    signals = {
+        "self.provides":          [{"label": "Listening",   "quote": "I listen patiently",  "confidence": 0.95}],
+        "self.emotional_needs":   [{"label": "Reassurance", "quote": "clear reassurance",    "confidence": 0.90}],
+        "self.conflict_style":    [{"label": "Calm",        "quote": "stay calm",            "confidence": 0.95}],
+        "constraints.dealbreakers":[{"label": "Dishonesty", "quote": "dishonesty",           "confidence": 0.98}],
+        "wants.partner_traits":   [{"label": "Active",      "quote": "active living",        "confidence": 0.90}],
+    }
+    missing = find_missing_high_priority_field(signals, covered_areas=[])
+    assert missing is None
+
+
+# ---------------------------------------------------------------------------
+# Bug fix #2 — confidence-gated coverage (low-confidence signal must NOT count)
+# ---------------------------------------------------------------------------
+
+def test_coverage_requires_min_confidence():
+    """A field with only low-confidence signals (< COVERAGE_MIN_CONFIDENCE) must still
+    be considered missing, so that an adaptive probe is triggered for it.
+
+    Regression: previously len(signals) > 0 was the only check, meaning an off-topic
+    answer that produced a 0.51-confidence extraction would suppress further probing.
+    """
+    below_threshold = COVERAGE_MIN_CONFIDENCE - 0.01
+    signals = {
+        # self.provides has a signal but below the confidence floor — should still be flagged missing
+        "self.provides": [{"label": "Something vague", "quote": "idk", "confidence": below_threshold}],
+        # All others absent
+    }
+    missing = find_missing_high_priority_field(signals, covered_areas=[])
+    assert missing is not None
+    assert missing["keys"][0] == "self.provides", (
+        f"Expected self.provides to be flagged missing due to low confidence "
+        f"({below_threshold} < {COVERAGE_MIN_CONFIDENCE}), got: {missing['keys'][0]}"
+    )
+
+
+def test_coverage_passes_at_threshold():
+    """A signal exactly at COVERAGE_MIN_CONFIDENCE must count as covering the field."""
+    signals = {
+        "self.provides":          [{"label": "Listening", "quote": "I listen", "confidence": COVERAGE_MIN_CONFIDENCE}],
+        "self.emotional_needs":   [{"label": "Space",     "quote": "give me space", "confidence": 0.90}],
+        "self.conflict_style":    [{"label": "Calm",      "quote": "stay calm",    "confidence": 0.95}],
+        "constraints.dealbreakers":[{"label": "Lies",     "quote": "no lying",     "confidence": 0.99}],
+        "wants.partner_traits":   [{"label": "Honest",    "quote": "be honest",    "confidence": 0.88}],
+    }
+    missing = find_missing_high_priority_field(signals, covered_areas=[])
+    assert missing is None, f"All fields at/above threshold should be covered; got missing: {missing}"
+
+
+def test_coverage_missing_when_signals_have_no_confidence_key():
+    """Signals stored without a confidence key default to 0.0 and should NOT count as coverage."""
+    signals = {
+        # No confidence key — should default to 0.0, below threshold
+        "self.provides": [{"label": "Something", "quote": "something"}],
+    }
+    missing = find_missing_high_priority_field(signals, covered_areas=[])
+    assert missing is not None
+    assert missing["keys"][0] == "self.provides"
+
+
+# ---------------------------------------------------------------------------
+# Dealbreaker Extraction Tests
+# ---------------------------------------------------------------------------
+
+def test_dealbreaker_keywords_should_route_to_constraints():
+    """Ensures that dealbreaker keywords route signals to constraints.dealbreakers, not wants.partner_values."""
+    # This is a conceptual test - actual extraction would need the full LLM pipeline
+    # But we can verify the prompt includes the rules
+    from onboarding.prompts import SIGNAL_EXTRACTION_PROMPT
+    
+    assert "constraints.dealbreakers" in SIGNAL_EXTRACTION_PROMPT
+    assert "hard no" in SIGNAL_EXTRACTION_PROMPT.lower()
+    assert "dealbreaker" in SIGNAL_EXTRACTION_PROMPT.lower()
+    assert "non-negotiable" in SIGNAL_EXTRACTION_PROMPT.lower()
+
+
+def test_q6_targets_dealbreakers():
+    """Ensures Q6 configuration explicitly targets constraints.dealbreakers."""
+    q6 = next((q for q in settings.ONBOARDING_QUESTIONS if q.id == "q6_dealbreakers"), None)
+    assert q6 is not None
+    assert "constraints.dealbreakers" in q6.targets
+    assert "dealbreaker" in q6.prompt.lower() or "constraint" in q6.prompt.lower()
+
+
+# ---------------------------------------------------------------------------
+# Q4 Multi-Dimension Extraction Tests
+# ---------------------------------------------------------------------------
+
+def test_q4_targets_multiple_lifestyle_dimensions():
+    """Ensures Q4 configuration targets lifestyle, interests, values, and life_goals."""
+    q4 = next((q for q in settings.ONBOARDING_QUESTIONS if q.id == "q4_lifestyle_values"), None)
+    assert q4 is not None
+    
+    # Must target all key dimensions
+    assert "self.lifestyle" in q4.targets
+    assert "self.interests" in q4.targets
+    assert "self.values" in q4.targets
+    assert "self.life_goals" in q4.targets
+
+
+def test_q4_extraction_rules_in_prompt():
+    """Ensures extraction prompt includes specific Q4 multi-dimension guidance."""
+    from onboarding.prompts import SIGNAL_EXTRACTION_PROMPT
+    
+    # Check for Q4-specific guidance
+    assert "LIFESTYLE" in SIGNAL_EXTRACTION_PROMPT.upper()
+    assert "INTERESTS" in SIGNAL_EXTRACTION_PROMPT.upper()
+    assert "VALUES" in SIGNAL_EXTRACTION_PROMPT.upper()
+    assert "LIFE GOALS" in SIGNAL_EXTRACTION_PROMPT.upper() or "LIFE_GOALS" in SIGNAL_EXTRACTION_PROMPT.upper()
+    
+    # Check for multi-dimension extraction guidance
+    assert "multiple dimensions" in SIGNAL_EXTRACTION_PROMPT.lower() or "all applicable dimensions" in SIGNAL_EXTRACTION_PROMPT.lower()
+
+
+# ---------------------------------------------------------------------------
+# Bug fix #1 — off-topic probe answer must not loop; hard cap must complete
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_follow_up_hard_cap_invariant():
+    """Ensures that when follow_up_count reaches MAX_FOLLOW_UPS, state immediately completes
+    even when signals are entirely empty."""
+    max_fups = settings.MAX_FOLLOW_UPS  # 2
+    state: OnboardingState = {
+        "conversation_id": "test-conv",
+        "user_id": "test-user",
+        "current_area_index": len(settings.ONBOARDING_QUESTIONS),  # core questions done
+        "follow_up_count": max_fups,  # already at cap
+        "covered_areas": ["q1", "q2", "q3", "q4", "q5", "q6"],
+        "extracted_signals": {},  # no signals — must still terminate
+        "latest_user_input": "I value communication and empathy.",
+        "status": "active",
+    }
+
+    with patch("onboarding.graph.finalize_profile", new_callable=AsyncMock) as mock_finalize, \
+         patch("onboarding.graph.get_llm") as mock_llm:
+        mock_client = AsyncMock()
+        mock_client.ainvoke.return_value = "Thank you! Profile completed."
+        mock_llm.return_value = mock_client
+
+        res = await generate_response_node(state)
+        assert res["status"] == "completed"
+        assert res["follow_up_count"] <= max_fups
+        mock_finalize.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_off_topic_probe_answer_still_completes():
+    """Simulates Alice's bug: user answers a probe with completely off-topic content.
+    The off-topic answer produces only low-confidence signals for the probed field,
+    but after MAX_FOLLOW_UPS the conversation must complete — not loop.
+
+    Previously this caused an infinite loop because:
+    1. _active_probe was re-introduced by a double assignment in extract_signals_node.
+    2. Low-confidence off-topic signals weren't suppressing the re-probe guard,
+       so the system attempted a third probe and hit an AssertionError, leaving
+       status='active' permanently in the database.
+    """
+    max_fups = settings.MAX_FOLLOW_UPS  # 2
+
+    # After 6 core questions + 1 probe (for self.provides), simulate probe answer turn
+    # with follow_up_count already at 1 and _active_probe still in extracted_signals (as
+    # it would be when loaded from DB).
+    state_before_probe_answer: OnboardingState = {
+        "conversation_id": "test-alice",
+        "user_id": "test-user",
+        "current_area_index": len(settings.ONBOARDING_QUESTIONS),  # 6
+        "follow_up_count": 1,
+        "covered_areas": [
+            "q1_intent_partner", "q2_emotional_needs", "q3_conflict_provides",
+            "q4_lifestyle_values", "q5_personality", "q6_dealbreakers",
+            "probe:self.provides",
+        ],
+        # _active_probe carried via extracted_signals (as persisted in DB)
+        "extracted_signals": {
+            "_active_probe": {"field": "self.provides", "prompt": "What do you naturally do for a partner?"},
+            # self.provides is still empty (probe answer was off-topic)
+            "constraints.dealbreakers": [
+                {"label": "No smoking", "quote": "smoking is a hard no", "confidence": 0.99}
+            ],
+        },
+        "latest_user_input": "smoking is a hard no, I have asthma. also dishonesty in any form.",
+        "status": "active",
+    }
+
+    with patch("onboarding.graph.finalize_profile", new_callable=AsyncMock) as mock_finalize, \
+         patch("onboarding.graph.get_llm") as mock_llm:
+        mock_client = AsyncMock()
+        mock_client.ainvoke.return_value = "Assistant response."
+        mock_llm.return_value = mock_client
+
+        # Step 1: extraction node cleans _active_probe, extracts from off-topic answer
+        extract_result = await extract_signals_node(state_before_probe_answer)
+
+        # _active_probe must NOT be in the returned signals
+        assert "_active_probe" not in extract_result["extracted_signals"], \
+            "_active_probe leaked into persisted signals"
+
+        # Merge extraction result into state (as LangGraph would)
+        merged_state = {**state_before_probe_answer, **extract_result}
+
+        # Step 2: generate_response uses the merged (clean) state
+        gen_result = await generate_response_node(merged_state)
+
+        # With follow_up_count=1 after the off-topic answer, the system can fire one more probe
+        # (follow_up_count→2) OR complete if already at cap.
+        # Either way it must NEVER exceed MAX_FOLLOW_UPS and must eventually complete.
+        assert gen_result["follow_up_count"] <= max_fups, \
+            f"follow_up_count {gen_result['follow_up_count']} exceeded cap {max_fups}"
+
+        # Simulate the second probe answer (also off-topic — worst case)
+        if gen_result["status"] == "active":
+            state2: OnboardingState = {
+                **merged_state,
+                **gen_result,
+                "latest_user_input": "smoking is a hard no, dishonesty is a dealbreaker",
+            }
+            extract_result2 = await extract_signals_node(state2)
+            merged_state2 = {**state2, **extract_result2}
+            gen_result2 = await generate_response_node(merged_state2)
+
+            # Now at MAX_FOLLOW_UPS — must be completed
+            assert gen_result2["status"] == "completed", \
+                f"Expected 'completed' after {max_fups} follow-ups with off-topic answers; got '{gen_result2['status']}'"
+            assert gen_result2["follow_up_count"] <= max_fups
+            mock_finalize.assert_called()
+        else:
+            # Already completed after first probe — also valid
+            assert gen_result["status"] == "completed"
+            mock_finalize.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# Hard turn-count invariant
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_max_total_answers_never_exceeds_8():
+    """
+    Simulates a worst-case user who gives answers triggering probes.
+    Asserts that total user turns never exceeds 6 core + 2 follow-ups = 8.
+    Never reaches Q9 or Q10.
+    """
+    max_fups = settings.MAX_FOLLOW_UPS
+    assert max_fups == 2
+    num_core = len(settings.ONBOARDING_QUESTIONS)
+    assert num_core == 6
+
+    current_area_index = 0
+    follow_up_count = 0
+    covered_areas: List[str] = []
+    extracted_signals: Dict[str, Any] = {}
+    status = "active"
+    turns = 0
+
+    with patch("onboarding.graph.finalize_profile", new_callable=AsyncMock), \
+         patch("onboarding.graph.get_llm") as mock_llm:
+        mock_client = AsyncMock()
+        mock_client.ainvoke.return_value = "Assistant response."
+        mock_llm.return_value = mock_client
+
+        while status == "active" and turns < 15:
+            turns += 1
+            state: OnboardingState = {
+                "conversation_id": "test-conv",
+                "user_id": "test-user",
+                "current_area_index": current_area_index,
+                "follow_up_count": follow_up_count,
+                "covered_areas": covered_areas,
+                "extracted_signals": extracted_signals,
+                "latest_user_input": "Generic response",
+                "status": status,
+            }
+
+            res = await generate_response_node(state)
+            current_area_index = res["current_area_index"]
+            follow_up_count = res["follow_up_count"]
+            covered_areas = res["covered_areas"]
+            status = res["status"]
+
+            assert follow_up_count <= max_fups, f"follow_up_count exceeded limit on turn {turns}"
+
+    assert status == "completed", "Conversation failed to complete"
+    assert turns <= 8, f"Conversation took {turns} turns — must never exceed 8 (6 core + 2 follow-ups)."
+
+
+
+====================================================================================================
+FILE: tests\trigger_matching.py
+====================================================================================================
+
+"""
+Trigger Matching Jobs for Profiles
+==================================
+Creates matching jobs for all profiles that have embeddings but no compatibility results.
+
+Usage:
+    python tests/trigger_matching.py [--all]
+    
+    --all: Create matching jobs for ALL profiles, not just those without results
+"""
+
+import asyncio
+import sys
+import logging
+from pathlib import Path
+from uuid import UUID
+
+# Add belong-api directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "belong-api"))
+
+from db.connection import get_db_connection
+from jobs.repository import job_repository
+from psycopg.rows import dict_row
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger("trigger_matching")
+
+
+async def get_profiles_needing_matches(all_profiles: bool = False):
+    """Fetch profiles that need matching jobs."""
+    async with get_db_connection() as conn:
+        async with conn.cursor(row_factory=dict_row) as cur:
+            if all_profiles:
+                # Get all profiles with embeddings
+                query = """
+                    SELECT user_id, name
+                    FROM profiles
+                    WHERE self_embedding IS NOT NULL 
+                      AND wants_embedding IS NOT NULL
+                    ORDER BY created_at DESC
+                """
+            else:
+                # Get profiles that have no compatibility results
+                query = """
+                    SELECT p.user_id, p.name
+                    FROM profiles p
+                    WHERE p.self_embedding IS NOT NULL 
+                      AND p.wants_embedding IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1 FROM compatibility_results cr
+                          WHERE cr.user_a_id = p.user_id OR cr.user_b_id = p.user_id
+                      )
+                    ORDER BY p.created_at DESC
+                """
+            
+            await cur.execute(query)
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+
+async def create_matching_jobs(profiles: list):
+    """Create matching jobs for given profiles."""
+    created = 0
+    failed = 0
+    
+    for profile in profiles:
+        raw_id = profile["user_id"]
+        user_id = raw_id if isinstance(raw_id, UUID) else UUID(str(raw_id))
+        name = profile.get("name", "Unknown")
+        
+        try:
+            job_data = await job_repository.create_job(
+                user_id=user_id,
+                job_type="matching",
+                payload={"user_id": str(user_id)}
+            )
+            logger.info(f"✓ Created matching job {job_data['id']} for user {name} ({user_id})")
+            created += 1
+        except Exception as e:
+            logger.error(f"✗ Failed to create matching job for user {name} ({user_id}): {e}")
+            failed += 1
+    
+    return created, failed
+
+
+async def main():
+    all_profiles = "--all" in sys.argv
+    
+    logger.info("Fetching profiles needing matching jobs...")
+    profiles = await get_profiles_needing_matches(all_profiles)
+    
+    if not profiles:
+        logger.info("No profiles found needing matching jobs.")
+        return
+    
+    logger.info(f"Found {len(profiles)} profiles needing matching")
+    for p in profiles:
+        logger.info(f"  - {p.get('name', 'Unknown')} ({p['user_id']})")
+    
+    auto_yes = "--yes" in sys.argv or "-y" in sys.argv
+    if not auto_yes:
+        print("\nCreate matching jobs for these profiles? [y/N]: ", end="")
+        confirm = input().strip().lower()
+        if confirm != 'y':
+            logger.info("Cancelled.")
+            return
+    
+    logger.info("Creating matching jobs...")
+    created, failed = await create_matching_jobs(profiles)
+    
+    logger.info(f"\n✓ Created {created} matching jobs")
+    if failed:
+        logger.warning(f"✗ Failed to create {failed} jobs")
+    
+    logger.info("\nNote: Jobs will be processed by the worker. Check job status with:")
+    logger.info("  docker exec -i belong-postgres psql -U belong_user -d belong -c \"SELECT id, user_id, type, status FROM jobs ORDER BY created_at DESC LIMIT 10;\"")
+
+
+if __name__ == "__main__":
+    import sys
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.run(main())
+
+
+
+====================================================================================================
+FILE: tests\trigger_matching_only.py
+====================================================================================================
+
+import asyncio
+import json
+import subprocess
+import sys
+import httpx
+
+API_BASE = "http://localhost:8000"
+
+# Fix Windows console UTF-8 output
+sys.stdout.reconfigure(encoding='utf-8')
+
+def run_psql_query(query_sql: str):
+    """Executes a SQL query against belong-postgres via docker exec."""
+    json_query = f"SELECT json_agg(t) FROM ({query_sql}) t;"
+    cmd = [
+        "docker", "exec", "-i", "belong-postgres",
+        "psql", "-U", "belong_user", "-d", "belong", "-t", "-A", "-c",
+        json_query
+    ]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=False, check=True)
+        out = res.stdout.decode('utf-8', errors='replace').strip()
+        if not out or out == "null":
+            return []
+        return json.loads(out)
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return []
+
+async def main():
+    print("=" * 70)
+    print("BELONG MATCH TRIGGER TEST (MATCHING ONLY)")
+    print("=" * 70)
+
+    # 1. Fetch available profiles from Postgres
+    profiles = run_psql_query("""
+        SELECT user_id, gender, relationship_goal, 
+               (self_embedding IS NOT NULL) AS has_self_vec,
+               (wants_embedding IS NOT NULL) AS has_wants_vec
+        FROM profiles
+        ORDER BY updated_at DESC
+        LIMIT 5
+    """)
+
+    if not profiles:
+        print("[ERROR] No profiles found in PostgreSQL.")
+        return
+
+    print("Found profiles in DB:")
+    for r in profiles:
+        print(f"  User {r['user_id']} | Gender: {r['gender']} | SelfVec: {r['has_self_vec']} | WantsVec: {r['has_wants_vec']}")
+
+    target_user_id = str(profiles[0]["user_id"])
+    print(f"\nTarget User for matching: {target_user_id}")
+
+    # 2. Trigger matching via API with X-User-ID header
+    headers = {"X-User-ID": target_user_id}
+    async with httpx.AsyncClient(base_url=API_BASE, timeout=60.0) as client:
+        print(f"Triggering POST /matches with header X-User-ID: {target_user_id}...")
+        res = await client.post("/matches", headers=headers)
+        if res.status_code not in (200, 202):
+            print(f"[ERROR] Failed to request matches: {res.status_code} - {res.text}")
+            return
+
+        job_data = res.json()
+        job_id = job_data.get("job_id")
+        print(f"[OK] Match job queued! Job ID: {job_id}")
+
+        # 3. Poll match job
+        print("Polling job status...")
+        for i in range(35):
+            await asyncio.sleep(2)
+            poll_res = await client.get(f"/matches/jobs/{job_id}")
+            if poll_res.status_code == 200:
+                poll_data = poll_res.json()
+                status = poll_data.get("status")
+                print(f"  [{(i+1)*2}s] Status: {status}")
+                if status == "completed":
+                    break
+                elif status == "failed":
+                    print(f"[ERROR] Job failed: {poll_data.get('error')}")
+                    break
+        else:
+            print("[WARN] Polling timed out.")
+
+        # 4. Fetch compatibility matches from API
+        print("\nFetching match results from API...")
+        match_res = await client.get(f"/matches/{target_user_id}", headers=headers)
+        if match_res.status_code == 200:
+            data = match_res.json()
+            matches = data.get("matches", [])
+            print(f"Total Matches Returned from API: {len(matches)}")
+            for m in matches:
+                print("\n" + "-" * 50)
+                print(f"Matched User   : {m.get('matched_user_id')}")
+                print(f"Overall Verdict: {m.get('overall_verdict')}")
+                print(f"Combined Score : {m.get('combined_score')}")
+                print(f"Reasoning      : {m.get('overall_reasoning')}")
+                print(f"Alignments     : {m.get('complementary_alignments')}")
+        else:
+            print(f"Failed to fetch matches: {match_res.status_code} - {match_res.text}")
+
+    # 5. Direct Database Verification
+    c_rows = run_psql_query("""
+        SELECT match_id, user_a_id, user_b_id, overall_reasoning,
+               dimension_results, complementary_alignments, created_at
+        FROM compatibility_results
+        ORDER BY created_at DESC
+        LIMIT 5
+    """)
+    print("\n" + "=" * 70)
+    print(f"DIRECT DATABASE CHECK: {len(c_rows)} rows in compatibility_results")
+    print("=" * 70)
+    for cr in c_rows:
+        dim_res = cr.get('dimension_results') or {}
+        verdict = dim_res.get('overall_verdict', 'N/A') if isinstance(dim_res, dict) else 'N/A'
+        print(f"Pair: {cr.get('user_a_id')} <-> {cr.get('user_b_id')}")
+        print(f"Verdict: {verdict}")
+        print(f"Reasoning: {cr.get('overall_reasoning')}")
+        print(f"Created: {cr.get('created_at')}")
+        print("-" * 50)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
 

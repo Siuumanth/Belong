@@ -1,0 +1,233 @@
+
+====================================================================================================
+FILE: 001_init_extensions.sql
+====================================================================================================
+
+-- Belong Migration: 001_init_extensions.sql
+-- Description: Initialize required PostgreSQL extensions (pgvector and UUID generators)
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "vector";
+
+
+
+====================================================================================================
+FILE: 002_create_profiles.sql
+====================================================================================================
+
+-- Belong Migration: 002_create_profiles.sql
+-- Description: Create profiles table and semantic vector indexes according to Section 11
+
+CREATE TABLE IF NOT EXISTS profiles (
+    user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT,
+    age INT,
+
+    gender TEXT,
+    orientation TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    relationship_goal TEXT,
+    preferred_age_min INT,
+    preferred_age_max INT,
+    max_distance_km INT,
+    preferred_genders JSONB NOT NULL DEFAULT '[]'::jsonb,
+    required_relationship_goal TEXT,
+    profile JSONB NOT NULL DEFAULT '{}'::jsonb,
+    self_embedding VECTOR(384),
+    wants_embedding VECTOR(384),
+    embedding_source_text JSONB NOT NULL DEFAULT '{}'::jsonb,
+    extraction_version TEXT NOT NULL DEFAULT 'v1',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for HNSW cosine similarity search on self_embedding
+CREATE INDEX IF NOT EXISTS idx_profiles_self_embedding 
+ON profiles USING hnsw (self_embedding vector_cosine_ops);
+
+-- Index for HNSW cosine similarity search on wants_embedding
+CREATE INDEX IF NOT EXISTS idx_profiles_wants_embedding 
+ON profiles USING hnsw (wants_embedding vector_cosine_ops);
+
+-- Composite index for fast hard constraint SQL filtering
+CREATE INDEX IF NOT EXISTS idx_profiles_filters 
+ON profiles (gender, relationship_goal, age);
+
+-- Index for geographic coordinates
+CREATE INDEX IF NOT EXISTS idx_profiles_lat_lon 
+ON profiles (latitude, longitude);
+
+
+
+====================================================================================================
+FILE: 003_create_conversations.sql
+====================================================================================================
+
+-- Belong Migration: 003_create_conversations.sql
+-- Description: Create conversations and conversation_messages tables according to Section 11
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    current_area_index INT NOT NULL DEFAULT 0,
+    follow_up_count INT NOT NULL DEFAULT 0,
+    covered_areas JSONB NOT NULL DEFAULT '[]'::jsonb,
+    extracted_signals JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS conversation_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    question_id TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for conversations
+CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
+
+-- Indexes for conversation messages
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_conversation_id ON conversation_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_created_at ON conversation_messages(created_at);
+
+
+
+====================================================================================================
+FILE: 004_create_jobs.sql
+====================================================================================================
+
+-- Belong Migration: 004_create_jobs.sql
+-- Description: Create jobs table for asynchronous worker task queue according to Section 11
+
+CREATE TABLE IF NOT EXISTS jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    type TEXT NOT NULL,                   -- 'matching' or 'embedding'
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'running', 'completed', 'failed', 'cancelled'
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    result JSONB NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    error TEXT NULL,
+    available_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMPTZ NULL,
+    completed_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for worker polling and atomic claiming using SKIP LOCKED
+CREATE INDEX IF NOT EXISTS idx_jobs_claim 
+ON jobs (status, available_at, created_at);
+
+-- Index for checking job status by user
+CREATE INDEX IF NOT EXISTS idx_jobs_user_id 
+ON jobs (user_id);
+
+
+
+====================================================================================================
+FILE: 005_create_compatibility_results.sql
+====================================================================================================
+
+-- Belong Migration: 005_create_compatibility_results.sql
+-- Description: Create compatibility_results table according to Section 11
+
+CREATE TABLE IF NOT EXISTS compatibility_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_a_id UUID NOT NULL,
+    user_b_id UUID NOT NULL,
+    dimension_results JSONB NOT NULL DEFAULT '{}'::jsonb,
+    strong_alignments JSONB NOT NULL DEFAULT '[]'::jsonb,
+    potential_conflicts JSONB NOT NULL DEFAULT '[]'::jsonb,
+    dealbreaker_violations JSONB NOT NULL DEFAULT '[]'::jsonb,
+    uncertainties JSONB NOT NULL DEFAULT '[]'::jsonb,
+    model_name TEXT,
+    reasoning_version TEXT NOT NULL DEFAULT 'v1',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_compatibility_pair_version UNIQUE (user_a_id, user_b_id, reasoning_version)
+);
+
+-- Indexes for querying compatibility results by user
+CREATE INDEX IF NOT EXISTS idx_compatibility_results_user_a ON compatibility_results (user_a_id);
+CREATE INDEX IF NOT EXISTS idx_compatibility_results_user_b ON compatibility_results (user_b_id);
+CREATE INDEX IF NOT EXISTS idx_compatibility_results_created_at ON compatibility_results (created_at);
+
+
+
+====================================================================================================
+FILE: 006_add_alignments_to_compatibility_results.sql
+====================================================================================================
+
+-- Belong Migration: 006_add_alignments_to_compatibility_results.sql
+-- Description: Add complementary_alignments and shared_alignments JSONB columns to compatibility_results
+
+ALTER TABLE compatibility_results 
+ADD COLUMN IF NOT EXISTS complementary_alignments JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE compatibility_results 
+ADD COLUMN IF NOT EXISTS shared_alignments JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+
+
+====================================================================================================
+FILE: 006_add_name_to_profiles.sql
+====================================================================================================
+
+-- Belong Migration: 006_add_name_to_profiles.sql
+-- Description: Add optional name column to profiles table
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS name TEXT;
+
+
+
+====================================================================================================
+FILE: 007_match_runs_and_reasoning.sql
+====================================================================================================
+
+-- Migration 007: Create match_runs table and extend compatibility_results with match_id and overall_reasoning
+
+-- 1. Create match_runs table for tracking matching job sessions
+CREATE TABLE IF NOT EXISTS match_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES profiles(user_id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
+    candidate_count INT DEFAULT 0,
+    error_message TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_match_runs_user ON match_runs(user_id, created_at DESC);
+
+-- 2. Modify compatibility_results table
+ALTER TABLE compatibility_results
+    ADD COLUMN IF NOT EXISTS match_id UUID REFERENCES match_runs(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS overall_reasoning TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS is_latest BOOLEAN NOT NULL DEFAULT true;
+
+-- 3. Drop old unique constraint that enforced 1 row per pair version
+ALTER TABLE compatibility_results DROP CONSTRAINT IF EXISTS uq_compatibility_pair_version;
+
+-- 4. Create new indices for fast lookups & active pair filtering
+CREATE INDEX IF NOT EXISTS idx_compatibility_match_id ON compatibility_results(match_id);
+CREATE INDEX IF NOT EXISTS idx_compatibility_user_a_latest ON compatibility_results(user_a_id, is_latest) WHERE is_latest = true;
+
+
+
+====================================================================================================
+FILE: 008_add_overall_verdict_to_compatibility_results.sql
+====================================================================================================
+
+-- Migration 008: Add overall_verdict column to compatibility_results
+ALTER TABLE compatibility_results
+    ADD COLUMN IF NOT EXISTS overall_verdict TEXT NOT NULL DEFAULT 'unclear';
+
+
