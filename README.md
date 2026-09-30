@@ -1,166 +1,194 @@
 # Belong
 
-An AI-native Relationship Matchmaking & Deep Compatibility Engine that replaces shallow swipes with dynamic conversational onboarding, structured psychographic profile extraction, and a 2-stage vector + LLM pairwise compatibility reasoning engine.
+A backend matchmaking system that evaluates relationship compatibility using conversational AI onboarding, structured trait extraction, and a 2-stage vector + LLM matching pipeline.
 
 ---
 
 # Dependencies
 
-- **Language & Core Backend:** Python 3.12+, FastAPI, Uvicorn, AsyncIO, Pydantic v2, Go (Golang for Gateway & Auth)
-- **AI Orchestration & Agents:** LangGraph (State Graph workflow), LangChain, Groq API (`openai/gpt-oss-120b`), OpenAI Embeddings (`text-embedding-3-small`)
-- **Database & Vector Search:** PostgreSQL 16, `pgvector` extension, SQLModel / SQLAlchemy
-- **Messaging & Event-Driven Workers:** RabbitMQ (AMQP), Pika, Asynchronous Background Workers (`belong-workers`)
-- **Authentication & Gateway:** API Gateway (Port 9000), JWT token validation, Bcrypt
-- **Containerization & Deployment:** Docker, Docker Compose
-- **Testing & Simulation Framework:** Custom Async Multi-Agent Persona Simulator (`httpx`)
+- **Backend Services:** Go (Gateway & Auth Service), Python 3.12 (FastAPI API server & Worker process)
+- **AI & Graph Frameworks:** LangGraph, LangChain, Groq API (`openai/gpt-oss-120b`), Hugging Face / local `sentence-transformers` (`all-MiniLM-L6-v2`)
+- **Database:** PostgreSQL 16 + `pgvector` extension
+- **Messaging:** RabbitMQ (AMQP) for asynchronous task queues
+- **Containerization:** Docker & Docker Compose
+- **Testing:** Custom multi-user simulation suite (`httpx` + `asyncio`)
 
 ---
 
 ## 1. System Overview
 
-Most dating platforms optimize for surface-level similarity or high swipe volume, which is a poor proxy for long-term compatibility. **Belong** evaluates whether two individuals' **emotional needs, behavioral patterns, and relationship expectations are complementary** — even if their surface-level interests differ.
+Belong evaluates whether two people's emotional needs, lifestyle preferences, and relationship goals align. Instead of matching purely on shared hobbies or numeric trait ratings, it looks for **complementary patterns** (e.g., *User A seeks a reassuring partner* $\leftrightarrow$ *User B naturally provides supportive listening*).
 
 ![](https://github.com/Siuumanth/Belong/blob/main/images/architecure.png?raw=true)
 
-### Key Architectural Pillars:
-1. **Conversational AI Onboarding:** Replaces static forms with an adaptive 6-question dialogue powered by a LangGraph state machine.
-2. **Evidence-Grounded Signal Extraction:** Extracts structured psychographic traits into a multi-dimensional schema, preserving verbatim quotes and confidence scores while leaving unknown fields null.
-3. **Event-Driven Embeddings Generation:** Asynchronously computes dual vector embeddings (`self` vs. `wants`) via RabbitMQ worker queues.
-4. **2-Stage Hybrid Compatibility Engine:** Uses PostgreSQL `pgvector` + hard SQL filters for rapid candidate shortlist retrieval (Stage 1), followed by deep pairwise LLM reasoning (Stage 2).
+### Key Components:
+1. **Conversational Onboarding:** A 6-question AI-guided dialogue that dynamically asks follow-up probes if an answer is vague or incomplete.
+2. **Evidence-Grounded Extraction:** Parses user responses into a multi-dimensional JSON schema, storing verbatim quotes as evidence and keeping unknown fields `null`.
+3. **Async Embeddings Generation:** Computes dual semantic vector representations (`self` vs. `wants`) in background RabbitMQ workers.
+4. **2-Stage Match Pipeline:** Fast SQL + `pgvector` filtering (Stage 1), followed by detailed pairwise LLM compatibility reasoning (Stage 2).
 
 ---
 
 ## 2. Architecture & Service Boundaries
 
-### High-Level Microservices Architecture
+### System Architecture
 
 ```text
-                        Clients / Simulator
-                                 │
-                                 ▼
-                     ┌───────────────────────┐
-                     │  API Gateway (Go)     │ Port 9000
-                     │  Routing, Auth, CORS  │
-                     └───────────┬───────────┘
-                                 │
-             ┌───────────────────┴───────────────────┐
-             ▼                                       ▼
-    Auth Service (Go)                        belong-api (FastAPI)
-    ├── User Registration                    ├── Profile Management
-    ├── JWT Issuance                         ├── Onboarding (LangGraph)
-    └── Auth Database                        └── Job Queueing
-                                                     │
-                                                     ▼
-                                                 RabbitMQ
-                                                /        \
-                                               ▼          ▼
-                                       Embedding      Matching
-                                        Worker         Worker
-                                           │              │
-                                           └──────┬───────┘
-                                                  ▼
-                                       PostgreSQL + pgvector
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Web / Mobile Client                             │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP Requests
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Go API Gateway (Port 9000)                      │
+│                  (CORS, Token Verification, Routing)                   │
+└───────────┬────────────────────────────────────────────────┬───────────┘
+            │                                                │
+            ▼                                                ▼
+┌───────────────────────┐                        ┌───────────────────────┐
+│  Go Auth Service      │                        │  Belong API (FastAPI) │
+│  (Port 9001)          │                        │  (Port 8000)          │
+│  - User Reg & Auth    │                        │  - Profile Management │
+│  - JWT Generation     │                        │  - Onboarding Graph   │
+└───────────┬───────────┘                        │  - Job Dispatcher     │
+            │                                    └───────────┬───────────┘
+            ▼                                                │
+┌───────────────────────┐                                    │ Publish Jobs
+│  Auth Database (Postgres)                                  ▼
+└───────────────────────┘                        ┌───────────────────────┐
+                                                 │   RabbitMQ Broker     │
+                                                 │   ├── embedding_jobs  │
+                                                 │   └── matching_jobs   │
+                                                 └───────────┬───────────┘
+                                                             │
+                                        ┌────────────────────┴────────────────────┐
+                                        │ Consume Queues                          │
+                                        ▼                                         ▼
+                            ┌───────────────────────┐                 ┌───────────────────────┐
+                            │  Embedding Worker     │                 │  Matching Worker      │
+                            │  (worker_embedding.py)│                 │  (worker_matching.py) │
+                            │  - SentenceTransf.    │                 │  - Stage 1 pgvector   │
+                            │  - Generates 384d Vec │                 │  - Stage 2 LLM Agent  │
+                            └───────────┬───────────┘                 └───────────┬───────────┘
+                                        │                                         │
+                                        └────────────────────┬────────────────────┘
+                                                             │ DB Read/Write
+                                                             ▼
+                                                ┌──────────────────────────┐
+                                                │  PostgreSQL + pgvector   │
+                                                │  - profiles              │
+                                                │  - match_jobs            │
+                                                │  - compatibility_results │
+                                                └──────────────────────────┘
 ```
 
-### Microservices Responsibilities
+### Service Breakdown
 
-* **`gateway` (Go / Port 9000):** Central entry point, route prefixing (`/api/...`), CORS handling, JWT authentication, and request forwarding.
-* **`auth` (Go / Port 9001):** Manages user registration, credential hashing (bcrypt), and stateless JWT generation.
-* **`belong-api` (Python FastAPI / Port 8000):** Core application server. Manages profile CRUD, orchestrates the multi-turn LangGraph onboarding graph, and dispatches async processing jobs.
-* **`belong-workers` (Python):** Event-driven background workers consuming RabbitMQ queues:
-  - **`embedding-queue`:** Computes 1536-dimensional `self` and `partner` vector embeddings.
-  - **`matching-queue`:** Executes Stage 1 hard SQL filtering + vector similarity search and Stage 2 pairwise LLM compatibility analysis.
-* **`belong-postgres`:** PostgreSQL database with `pgvector` extension enabled for high-dimensional vector similarity indexing.
-* **`belong-rabbitmq`:** Message broker for asynchronous task distribution and worker decoupling.
+* **`gateway` (Go):** Single entry point on port 9000. Forwards authenticated `/api/...` traffic to internal microservices.
+* **`auth` (Go):** Manages user registration, bcrypt password hashing, and JWT token issuance.
+* **`belong-api` (FastAPI):** Handles profile updates, executes the LangGraph onboarding flow, and queues background jobs.
+* **`belong-workers` (Python):** Background worker container running dedicated queue listeners:
+  - `embedding_jobs`: Serializes profiles and generates semantic vector embeddings.
+  - `matching_jobs`: Runs Stage 1 retrieval and Stage 2 pairwise LLM evaluation.
+* **`belong-postgres`:** PostgreSQL storage holding profiles, vectors, conversations, and persisted match reports.
+* **`belong-rabbitmq`:** AMQP message broker managing background execution tasks.
 
 ---
 
-## 3. Code Architecture & Conversational Onboarding
+## 3. Onboarding & Signal Extraction Flow
 
-### Onboarding & Signal Extraction Flow
-
-![](https://github.com/Siuumanth/Belong/blob/main/images/onboarding-flow.png?raw=true)
+The onboarding system separates **gathering user input** from **extracting psychographic evidence**:
 
 ```text
-                    ┌────────────────────────┐
-                    │ Profile Schema Schema  │
-                    │ (Psychographic Target) │
-                    └───────────┬────────────┘
-                                │
-                                ▼
-┌─────────────────┐    ┌─────────────────┐    ┌──────────────────────┐
-│  Onboarding     │───►│ Evidence Items  │───►│ Coverage Policy      │
-│  State Machine  │    │ Raw Text Quotes │    │ Dynamic Probe Decider│
-└─────────────────┘    └─────────────────┘    └──────────────────────┘
+ ┌──────────────────────┐        ┌──────────────────────┐        ┌──────────────────────┐
+ │  User Response Text  │ ────►  │  LLM Trait Extractor │ ────►  │ Psychographic Profile│
+ └──────────────────────┘        └──────────────────────┘        │ (Lifestyle, Values,  │
+                                            │                    │  Interests, Needs)   │
+                                            ▼                    └──────────────────────┘
+                                 ┌──────────────────────┐
+                                 │   Coverage Policy    │
+                                 │ Evaluates completeness│
+                                 └──────────┬───────────┘
+                                            │
+                                  Vague?    │   Clear?
+                             ┌──────────────┴──────────────┐
+                             ▼                             ▼
+                ┌─────────────────────────┐   ┌─────────────────────────┐
+                │ Generate Contextual     │   │ Advance to Next         │
+                │ Follow-up Probe Question│   │ Onboarding Question     │
+                └─────────────────────────┘   └─────────────────────────┘
 ```
 
-The system strictly decouples evidence collection from interpretation:
-- **`OnboardingFlow` (State Graph):** Drives the 6 core dialogue topics (intent, emotional needs, conflict style, lifestyle/values, self-description, dealbreakers) and dynamically triggers up to 2 adaptive probes per topic if answers are vague.
-- **`Extractor` (LLM Engine):** Converts raw user statements into a 12+ dimension psychographic model (`lifestyle`, `values`, `interests`, `communication_style`, `conflict_resolution`, `relationship_expectations`, `constraints.dealbreakers`).
-- **`CoveragePolicy`:** Evaluates completeness score per topic to determine whether follow-up clarification is needed.
-
-### Key Extraction Principles Enforced
-
-- **Multi-Dimension Extraction:** Target dimensions act as hints rather than strict boundaries. When a user reveals lifestyle habits, values, or interests within a single response, the extractor files them into their respective dimensions simultaneously.
-- **Strict Dual-Filing Rule:** Dealbreakers (e.g., "non-smoker", "monogamous only") are routed exclusively into `constraints.dealbreakers` and never duplicated into general values or lifestyle preferences.
-- **Zero Hallucination Guarantee:** Extracted claims require verbatim quotes from user inputs. Unknown fields remain `null`.
+### Extraction Principles:
+- **Hint-Based Extraction:** Target dimensions serve as hints, not rigid restrictions. If a user describes lifestyle habits and personal values in a single answer, both dimensions are extracted.
+- **Dual-Filing Rule:** Explicit dealbreakers (e.g., "must be non-smoker", "monogamy only") are saved exclusively into `constraints.dealbreakers` and omitted from general preference fields.
+- **Evidence Traceability:** Claims include verbatim quotes from user responses, ensuring predictions are grounded in real inputs.
 
 ---
 
-## 4. Two-Stage Matchmaking & Compatibility Engine
+## 4. Two-Stage Matchmaking Pipeline
 
-Instead of relying solely on vector distance or arbitrary numeric scores, Belong combines rapid candidate retrieval with deep LLM pairwise reasoning.
-
-![](https://github.com/Siuumanth/Belong/blob/main/images/matching-flow.png?raw=true)
+To scale matching efficiently without sending every candidate pair to expensive LLM calls, Belong uses a two-stage pipeline:
 
 ```text
-Stage 1: SQL Hard Filtering + pgvector
-  │ (Gender, Age Range, Distance, Dealbreakers, Cosine Distance)
-  ▼
-Candidate Shortlist (Top-K)
-  │
-  ▼
-Stage 2: Pairwise LLM Compatibility Reasoning
-  │ (Reciprocal Analysis: A's Needs ↔ B's Profile & B's Needs ↔ A's Profile)
-  ▼
-Persisted Compatibility Verdict & Evidence Matrix
+[ Incoming Match Request ]
+           │
+           ▼
+┌────────────────────────────────────────────────────────┐
+│ STAGE 1: SQL Filtering & pgvector Similarity           │
+│ - Filter hard constraints (gender, age, location, dealbreakers)│
+│ - Compute cosine distance on self_embedding vs wants_embedding │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼ Top Candidate Shortlist (K)
+┌────────────────────────────────────────────────────────┐
+│ STAGE 2: Pairwise LLM Compatibility Reasoning          │
+│ - Evaluate reciprocal alignment (User A Needs ↔ User B)│
+│ - Evaluate complementary traits (User B Needs ↔ User A)│
+│ - Assign dimensional verdicts & overall score          │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+                           ▼
+[ Persist Results to PostgreSQL & Return Job Complete ]
 ```
 
-### Stage 1: Fast Candidate Retrieval (SQL + `pgvector`)
-1. **Hard Filtering:** Filters candidate pool by gender preferences, age bounds (`preferred_age_min/max`), geographical radius (`max_distance_km`), and exact dealbreaker matching.
-2. **Vector Similarity Search:** Uses cosine distance on `pgvector` HNSW indexes comparing:
-   - User A `wants_embedding` $\longleftrightarrow$ User B `self_embedding`
-   - User B `wants_embedding` $\longleftrightarrow$ User A `self_embedding`
+### Stage 1: Retrieval (SQL + `pgvector`)
+- Filters candidates by hard constraints: age range, distance radius, gender, and hard dealbreakers.
+- Computes vector similarity between User A's `wants_embedding` and User B's `self_embedding` using `pgvector` HNSW indexes.
 
-### Stage 2: Deep Pairwise LLM Reasoning
-- **Model-Agnostic Execution:** Directly invokes the LLM (`openai/gpt-oss-120b`) with JSON schema instructions, bypassing fragile model-dependent tool/function calling wrappers.
-- **Bi-Directional Reciprocal Analysis:** Evaluates how User A's unexpressed emotional needs match User B's strengths, and vice-versa.
-- **Structured Compatibility Breakdown:** Outputs categorical verdicts across key dimensions (`strong_alignment`, `partial`, `unclear`, `conflict`) alongside specific evidence IDs and an overall compatibility synthesis.
+### Stage 2: Reasoning (Pairwise LLM Agent)
+- Direct LLM execution with strict JSON output validation (no complex tool-calling dependency wrappers).
+- Evaluates bi-directional alignment across key areas (`relationship_expectations`, `communication_style`, `conflict_resolution`, `lifestyle`).
+- Outputs detailed verdicts (`strong_alignment`, `partial`, `unclear`, `conflict`) along with evidence mappings.
 
 ---
 
-## 5. Event-Driven Worker Choreography
+## 5. Async Worker Choreography
 
-Matching and embedding generation are fully asynchronous, ensuring API endpoints respond immediately.
+All long-running tasks (vector embedding generation and match evaluations) are fully asynchronous.
 
-### Communication Flow:
-
-1. **Profile Embedding Generation:**
-   - User completes profile update / onboarding turn $\rightarrow$ API publishes message to `embedding-queue`.
-   - `EmbeddingWorker` calculates vector embeddings via OpenAI API $\rightarrow$ Updates `profiles` table.
-
-2. **Async Match Job Execution:**
-   - Client requests matches $\rightarrow$ `belong-api` creates a `match_jobs` record (`status: pending`) and returns HTTP `202 Accepted` with a `job_id`.
-   - API publishes `job_id` to `matching-queue`.
-   - `MatchingWorker` claims the job $\rightarrow$ Executes Stage 1 SQL/vector retrieval $\rightarrow$ Executes Stage 2 LLM reasoning for shortlisted candidates.
-   - Results are written to `compatibility_results` table and `match_jobs` status is updated to `completed`.
-   - Client polls `GET /matches/jobs/{job_id}` until completion.
+```text
+Client                  FastAPI (belong-api)              RabbitMQ               Worker (belong-workers)           PostgreSQL
+  │                              │                           │                              │                           │
+  ├─ POST /matches ─────────────►│                           │                              │                           │
+  │                              ├─ Create Job (pending) ────┼──────────────────────────────┼──────────────────────────►│
+  │                              │                           │                              │                           │
+  │                              ├─ Publish matching_job ───►│                              │                           │
+  │◄─ 202 Accepted (job_id) ─────┤                           │                              │                           │
+  │                              │                           ├─ Consume matching_job ──────►│                           │
+  │                              │                           │                              ├─ Execute Stage 1 & 2      │
+  │                              │                           │                              ├─ Write Results & Status ─►│
+  │                              │                           │                              │  (status = 'completed')   │
+  │                              │                           │                              │                           │
+  ├─ GET /matches/jobs/{id} ────►│                           │                              │                           │
+  │◄─ 200 OK (status: completed)─┴───────────────────────────┴──────────────────────────────┴──────────────────────────►│
+```
 
 ---
 
-## 6. Database Design & Vector Schema
+## 6. Database Design & Schema
 
-All data integrity and relational constraints are enforced in PostgreSQL 16.
+Database constraints and relational schemas are defined in PostgreSQL 16.
 
 ![](https://github.com/Siuumanth/Belong/blob/main/images/schema.png?raw=true)
 
@@ -172,8 +200,8 @@ All data integrity and relational constraints are enforced in PostgreSQL 16.
 │ user_id (UUID, FK -> users.id)                         │
 │ gender, age, location (POINT)                          │
 │ profile_data (JSONB - Psychographic Dimensions)        │
-│ self_embedding (VECTOR(1536))                          │
-│ partner_embedding (VECTOR(1536))                      │
+│ self_embedding (VECTOR(384))                           │
+│ wants_embedding (VECTOR(384))                          │
 │ created_at, updated_at                                 │
 └────────────────────────────────────────────────────────┘
                            │
@@ -186,7 +214,7 @@ All data integrity and relational constraints are enforced in PostgreSQL 16.
 │ user_a_id (UUID), user_b_id (UUID)                     │
 │ overall_verdict (VARCHAR)                              │
 │ compatibility_score (FLOAT)                            │
-│ dimension_results (JSONB - Categorical Breakdown)      │
+│ dimension_results (JSONB)                              │
 │ reciprocal_alignments (JSONB)                          │
 │ evidence_mappings (JSONB)                              │
 └────────────────────────────────────────────────────────┘
@@ -194,34 +222,20 @@ All data integrity and relational constraints are enforced in PostgreSQL 16.
 
 ---
 
-## 7. Containerization & Deployment
+## 7. Local Setup & Container Deployment
 
-The entire system is containerized with multi-stage Docker builds and orchestrated via Docker Compose.
+### Prerequisites
+- Docker & Docker Compose installed
 
+### Running the System
 ```powershell
-# Build and start all microservices, workers, postgres, and rabbitmq
+# Build and start all services (API, Auth, Gateway, Workers, Postgres, RabbitMQ)
 docker compose up -d --build
 ```
 
-### Service Health Checks & Order
-- `belong-postgres` boots pgvector extension and executes migration scripts in `/db/migrations`.
-- `belong-rabbitmq` initiates AMQP broker on port 5672.
-- `belong-api` and `belong-workers` wait for PostgreSQL and RabbitMQ health checks to pass before starting application loops.
-
----
-
-## 8. Simulation & Verification Framework
-
-To test end-to-end multi-user interactions and verify matchmaking quality without manual UI clicks, Belong includes an asynchronous persona simulation suite.
-
+### Running Simulations & Integration Tests
 ```powershell
-# Run synthetic multi-user onboarding & matchmaking simulation
+# Execute the end-to-end multi-persona simulator
 cd tests
 python run_custom_simulation.py
 ```
-
-### What the Simulation Tests:
-1. **Demographic Profile Registration:** Registers synthetic test personas (e.g., Alice & Bob).
-2. **Multi-Turn Onboarding Dialogue:** Executes multi-turn AI onboarding conversations across all users concurrently.
-3. **Async Embedding Generation:** Verifies that RabbitMQ workers compute and persist 1536-dimensional vector embeddings.
-4. **Job Polling & Match Verification:** Triggers a match job, polls until `completed`, and fetches persisted compatibility evidence matrix.
