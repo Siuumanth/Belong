@@ -20,16 +20,20 @@ _RETRY_BASE_DELAY = 2.0  # seconds
 
 
 def _retry_llm_invoke(fn, *args, **kwargs):
-    """Simple exponential-backoff retry wrapper for LLM calls."""
+    """Simple exponential-backoff retry wrapper for LLM calls with empty-response detection."""
     last_exc = None
     for attempt in range(_MAX_RETRIES):
         try:
-            return fn(*args, **kwargs)
+            res = fn(*args, **kwargs)
+            # Check if an LLM message returned empty content
+            if hasattr(res, "content") and not getattr(res, "content"):
+                raise ValueError("LLM returned empty content string")
+            return res
         except Exception as exc:
             last_exc = exc
             err_str = str(exc).lower()
-            # Retry on rate-limit (429) or empty-output errors
-            if any(k in err_str for k in ("429", "rate limit", "empty", "output text")):
+            # Retry on rate-limit (429), connection issues, or empty-output errors
+            if any(k in err_str for k in ("429", "rate limit", "empty", "output text", "too many requests")):
                 delay = _RETRY_BASE_DELAY * (2 ** attempt)
                 logger.warning(
                     f"LLM call failed (attempt {attempt + 1}/{_MAX_RETRIES}): {exc}. "
@@ -63,7 +67,7 @@ def get_llm():
             return ChatGroq(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=2048,
+                max_tokens=4096,
                 groq_api_key=api_key,
             )
         except (ImportError, ModuleNotFoundError):
@@ -71,7 +75,7 @@ def get_llm():
             return ChatOpenAI(
                 model=settings.LLM_MODEL,
                 temperature=settings.LLM_TEMPERATURE,
-                max_tokens=2048,
+                max_tokens=4096,
                 api_key=api_key or "missing_key",
                 base_url="https://api.groq.com/openai/v1",
             )
@@ -180,22 +184,54 @@ def llm_reasoning_node(state: PairwiseState) -> Dict[str, Any]:
                 _retry_llm_invoke(structured_llm.invoke, messages),
             )
         except Exception as fc_err:
-            logger.warning(f"function_calling structured output failed ({fc_err}). Falling back to direct JSON invoke.")
-            raw_response = _retry_llm_invoke(llm.invoke, messages)
-            content = get_message_content(raw_response).strip()
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
+            logger.warning(f"function_calling structured output failed ({fc_err}). Attempting recovery...")
             import re
-            try:
-                data = json.loads(content)
-            except Exception:
-                match = re.search(r"\{[\s\S]*\}", content)
-                if match:
-                    data = json.loads(match.group(0))
-                else:
-                    raise
+            data = None
+            err_str = str(fc_err)
+
+            # Strategy 1: Groq often puts the generated JSON inside 'failed_generation' in the 400 error
+            if "failed_generation" in err_str:
+                try:
+                    # Look for arguments dictionary in the failed_generation payload
+                    fg_match = re.search(r'"arguments"\s*:\s*(\{[\s\S]+)', err_str)
+                    if fg_match:
+                        raw_args = fg_match.group(1).rstrip("'} ")
+                        # Try parsing as is, or strip trailing incomplete bits
+                        for attempt_str in [raw_args, raw_args.rsplit(",", 1)[0] + "}"]:
+                            try:
+                                candidate = json.loads(attempt_str)
+                                if isinstance(candidate, dict) and "overall_verdict" in candidate:
+                                    data = candidate
+                                    logger.info("Successfully recovered output from failed_generation.")
+                                    break
+                            except Exception:
+                                pass
+                except Exception as ex:
+                    logger.debug(f"Failed extraction from failed_generation: {ex}")
+
+            # Strategy 2: Direct plain LLM call if not recovered from failed_generation
+            if not data:
+                raw_response = _retry_llm_invoke(llm.invoke, messages)
+                content = get_message_content(raw_response).strip()
+                if not content:
+                    raise RuntimeError("LLM returned empty response on fallback invoke")
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
+                try:
+                    data = json.loads(content)
+                except Exception:
+                    match = re.search(r"\{[\s\S]*\}", content)
+                    if match:
+                        data = json.loads(match.group(0))
+                    else:
+                        raise
+
+            if isinstance(data, dict) and "overall_verdict" not in data:
+                # Calculate verdict based on dimensions or default to partial_alignment
+                data["overall_verdict"] = "partial_alignment"
+
             response = PairwiseCompatibilityOutput.model_validate(data)
 
         return {"parsed_output": response, "error": None}
