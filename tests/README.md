@@ -11,7 +11,13 @@ tests/
 ├── README.md                              # This guide
 ├── pytest.ini                             # Pytest configuration & markers
 ├── conftest.py                            # Pytest session fixtures & persona loaders
-├── run_onboarding_simulation.py           # CLI runner for live onboarding simulation
+├── run_custom_simulation.py              # Custom user simulation CLI runner (Alice, Bob, customizable personas)
+├── get_latest_results.py                 # Fetches & formats latest compatibility match results
+├── trigger_matching.py                   # Helper script to trigger matching jobs for profiles
+├── trigger_matching_only.py              # Lightweight trigger script for matching jobs
+├── nuke_data.py                          # Cross-platform PostgreSQL test data wipe utility
+├── results.md                            # Compatibility match results output log
+├── results/                              # Historical milestone snapshot outputs (results1.md..results5-works.md)
 ├── fixtures/
 │   ├── personas.json                      # Golden synthetic user personas (Alice, Bob, etc.)
 │   └── expected_outcomes.json             # Ground-truth compatibility & filter outcome invariants
@@ -136,13 +142,13 @@ Tests full async worker pipeline (FastAPI + PostgreSQL pgvector + RabbitMQ + Wor
 
 ---
 
-### 6. Interactive CLI Simulation Runner (`run_onboarding_simulation.py`)
-CLI script that runs full multi-turn onboarding dialogues for all synthetic personas in `personas.json` against a live API service.
+### 6. Interactive CLI Custom Simulation Runner (`run_custom_simulation.py`)
+CLI script that runs full multi-turn onboarding dialogues, embedding generation, matching jobs, and formats results for customizable personas (e.g. Alice & Bob).
 
 - **Requires**: `belong-api` running on port 8000.
 - **Command**:
   ```bash
-  python tests/run_onboarding_simulation.py
+  python tests/run_custom_simulation.py
   ```
 
 ---
