@@ -272,8 +272,22 @@ async def run_simulation():
                 else:
                     logger.error(f"❌ Embedding trigger failed for '{user.persona.id}'")
 
-            logger.info("Waiting 5s for background EmbeddingWorker to process vectors in PostgreSQL...")
-            await asyncio.sleep(5)
+            logger.info("Waiting for background EmbeddingWorker to complete vector generation...")
+            for w in range(15):
+                await asyncio.sleep(2)
+                try:
+                    res1 = await client.get(f"/api/profiles/{sim_user_1.user_id}")
+                    res2 = await client.get(f"/api/profiles/{sim_user_2.user_id}")
+                    p1 = res1.json() if res1.status_code == 200 else {}
+                    p2 = res2.json() if res2.status_code == 200 else {}
+                    # Check if embedding status is completed or source text is populated
+                    if p1.get("embedding_source_text") or p2.get("embedding_source_text"):
+                        logger.info(f"✅ Embeddings confirmed in PostgreSQL after {(w + 1) * 2}s!")
+                        break
+                except Exception:
+                    pass
+            else:
+                logger.info("Proceeding to matching after wait interval...")
 
         # -----------------------------------------------------------------
         # STEP 4: TRIGGER MATCHING & FETCH RESULTS

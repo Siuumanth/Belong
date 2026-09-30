@@ -80,11 +80,11 @@ class EmbeddingClient:
         if hf_token:
             headers["Authorization"] = f"Bearer {hf_token}"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=3.0) as client:
             try:
                 response = await client.post(
                     api_url,
-                    json={"inputs": texts, "options": {"wait_for_model": True}},
+                    json={"inputs": texts, "options": {"wait_for_model": False}},
                     headers=headers,
                 )
                 response.raise_for_status()
