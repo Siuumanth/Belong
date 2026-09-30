@@ -8,15 +8,15 @@ type VerdictStyle = { dot: string; badge: string; label: string; text: string };
 
 const VERDICT_MAP: Record<string, VerdictStyle> = {
   strong_alignment: {
-    dot: "bg-emerald-400",
-    badge: "bg-emerald-400/10 text-emerald-400 border-emerald-400/20",
-    label: "text-emerald-400",
+    dot: "bg-[#d4a843]",
+    badge: "bg-[#d4a843]/10 text-[#d4a843] border-[#d4a843]/25",
+    label: "text-[#d4a843]",
     text: "Strong alignment",
   },
   partial_alignment: {
-    dot: "bg-amber-400",
-    badge: "bg-amber-400/10 text-amber-400 border-amber-400/20",
-    label: "text-amber-400",
+    dot: "bg-[#fb923c]",
+    badge: "bg-[#fb923c]/10 text-[#fb923c] border-[#fb923c]/25",
+    label: "text-[#fb923c]",
     text: "Partial alignment",
   },
   conflict: {
@@ -220,12 +220,12 @@ function MatchCard({ match, index }: { match: MatchResultItem; index: number }) 
         {/* Dimension summary pills */}
         <div className="hidden sm:flex shrink-0 flex-col items-end gap-1 text-[10px]">
           {strongCount > 0 && (
-            <span className="rounded-full bg-emerald-400/10 px-2.5 py-0.5 text-emerald-400">
+            <span className="rounded-full bg-[#d4a843]/10 px-2.5 py-0.5 text-[#d4a843]">
               {strongCount} strong
             </span>
           )}
           {partialCount > 0 && (
-            <span className="rounded-full bg-amber-400/10 px-2.5 py-0.5 text-amber-400">
+            <span className="rounded-full bg-[#fb923c]/10 px-2.5 py-0.5 text-[#fb923c]">
               {partialCount} partial
             </span>
           )}
@@ -272,10 +272,10 @@ function MatchCard({ match, index }: { match: MatchResultItem; index: number }) 
             </ul>
           )}
 
-          <TagSection label="Complementary alignments" items={match.complementary_alignments} tone="text-blue" icon="⟷" />
-          <TagSection label="Shared alignments" items={match.shared_alignments} tone="text-emerald-400" icon="≈" />
-          <TagSection label="Strong alignments" items={match.strong_alignments} tone="text-emerald-400" icon="✦" />
-          <TagSection label="Potential conflicts" items={match.potential_conflicts} tone="text-amber-400" icon="△" />
+          <TagSection label="Complementary alignments" items={match.complementary_alignments} tone="text-indigo-400" icon="⟷" />
+          <TagSection label="Shared alignments" items={match.shared_alignments} tone="text-[#d4a843]" icon="≈" />
+          <TagSection label="Strong alignments" items={match.strong_alignments} tone="text-[#d4a843]" icon="✦" />
+          <TagSection label="Potential conflicts" items={match.potential_conflicts} tone="text-[#fb923c]" icon="△" />
           {(match.dealbreaker_violations?.length ?? 0) > 0 && (
             <TagSection label="Dealbreaker violations" items={match.dealbreaker_violations} tone="text-rose-400" icon="✕" />
           )}

@@ -5,7 +5,6 @@ import { useAuth } from "../lib/auth";
 
 const storageKey = (userId: string) => `belong_conversation_${userId}`;
 
-// ─── Topic list (maps to the 6 core onboarding questions) ────────────────────
 const TOPICS = [
   "Relationship goal",
   "Emotional needs",
@@ -67,9 +66,7 @@ function Bubble({ msg, visible }: { msg: ChatMessage; visible: boolean }) {
 
 // ─── Progress stepper ─────────────────────────────────────────────────────────
 function ProgressStepper({ assistantCount }: { assistantCount: number }) {
-  // 6 core questions + up to 2 follow-ups per = ~8 assistant messages total
-  const activeIdx = Math.min(Math.floor(assistantCount) - 1, TOPICS.length - 1);
-
+  const activeIdx = Math.min(assistantCount - 1, TOPICS.length - 1);
   return (
     <div className="hidden lg:flex flex-col gap-2 w-48 shrink-0">
       <p className="mb-2 text-[10px] uppercase tracking-widest text-[#4a6080]">Topics</p>
@@ -81,7 +78,7 @@ function ProgressStepper({ assistantCount }: { assistantCount: number }) {
             <div
               className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[9px] transition-all ${
                 done
-                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-400"
+                  ? "border-[#d4a843]/40 bg-[#d4a843]/10 text-[#d4a843]"
                   : active
                   ? "border-blue/50 bg-blue/15 text-blue"
                   : "border-line text-[#4a6080]"
@@ -94,7 +91,7 @@ function ProgressStepper({ assistantCount }: { assistantCount: number }) {
                 done
                   ? "text-[#4a6080] line-through"
                   : active
-                  ? "text-[#e8edf8]"
+                  ? "text-[#eaedfa]"
                   : "text-[#4a6080]"
               }`}
             >
@@ -107,7 +104,7 @@ function ProgressStepper({ assistantCount }: { assistantCount: number }) {
   );
 }
 
-// ─── Thin progress bar ────────────────────────────────────────────────────────
+// ─── Progress bar ─────────────────────────────────────────────────────────────
 function ProgressBar({ count }: { count: number }) {
   const pct = Math.min((count / 8) * 100, 98);
   return (
@@ -125,8 +122,8 @@ function CompletionScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-20 text-center animate-float-up">
       <div className="relative flex h-20 w-20 items-center justify-center">
-        <div className="absolute inset-0 rounded-full bg-emerald-400/10 animate-pulse-ring" />
-        <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-400/15 text-3xl text-emerald-400">
+        <div className="absolute inset-0 rounded-full bg-[#d4a843]/10 animate-pulse-ring" />
+        <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#d4a843]/15 text-3xl text-[#d4a843]">
           ✓
         </div>
       </div>
@@ -141,13 +138,11 @@ function CompletionScreen({ onContinue }: { onContinue: () => void }) {
         <button
           type="button"
           onClick={onContinue}
-          className="rounded-xl bg-blue px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-blue/20 hover:bg-blue-dim hover:shadow-blue/30 transition-all hover:-translate-y-0.5"
+          className="rounded-xl bg-blue px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-blue/20 hover:bg-blue-dim transition-all hover:-translate-y-0.5"
         >
           See my matches →
         </button>
-        <p className="text-xs text-[#4a6080]">
-          Embeddings generate in the background
-        </p>
+        <p className="text-xs text-[#4a6080]">Embeddings generate in the background</p>
       </div>
     </div>
   );
@@ -172,27 +167,17 @@ function LandingState({
         </div>
       </div>
       <div>
-        <h1 className="font-display text-4xl font-light text-[#e8edf8]">
-          Let's get to know you
-        </h1>
+        <h1 className="font-display text-4xl font-light text-[#e8edf8]">Let's get to know you</h1>
         <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#8fa3bf]">
-          A short conversation — six topics, no checklists. Just tell us
-          what's true for you. Takes about 5 minutes.
+          A short conversation — six topics, no checklists. Just tell us what's true for you.
         </p>
       </div>
-
       <div className="flex flex-wrap justify-center gap-3 text-xs text-[#4a6080]">
         {TOPICS.map((t) => (
-          <span key={t} className="rounded-full border border-line px-3 py-1">
-            {t}
-          </span>
+          <span key={t} className="rounded-full border border-line px-3 py-1">{t}</span>
         ))}
       </div>
-
-      {error && (
-        <p className="text-sm text-rose-400">{error}</p>
-      )}
-
+      {error && <p className="text-sm text-rose-400">{error}</p>}
       <button
         type="button"
         onClick={onStart}
@@ -205,18 +190,39 @@ function LandingState({
   );
 }
 
+// ─── Loading screen ───────────────────────────────────────────────────────────
+function LoadingScreen() {
+  return (
+    <div className="flex h-60 items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-blue" />
+        <span className="text-xs text-[#4a6080]">Loading conversation…</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
+// View states (explicit — avoids multi-boolean race conditions):
+// "loading"     — have a conversationId in localStorage, fetching history from API
+// "landing"     — no conversation, waiting for user to click Begin
+// "chat"        — conversation active, user is typing answers
+// "completed"   — onboarding finished
+type ViewState = "loading" | "landing" | "chat" | "completed";
+
 export function OnboardingPage() {
   const { session } = useAuth();
   const userId = session!.userId;
   const navigate = useNavigate();
 
-  const [conversationId, setConversationId] = useState<string | null>(
-    () => localStorage.getItem(storageKey(userId)),
-  );
+  // Read stored ID once — stable, not re-read on every render
+  const storedIdRef = useRef<string | null>(localStorage.getItem(storageKey(userId)));
+  const storedId = storedIdRef.current;
+
+  const [view, setView] = useState<ViewState>(storedId ? "loading" : "landing");
+  const [conversationId, setConversationId] = useState<string | null>(storedId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [visibleCount, setVisibleCount] = useState(0);
-  const [status, setStatus] = useState<"idle" | "in_progress" | "completed">("idle");
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -225,46 +231,58 @@ export function OnboardingPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Restore existing conversation
+  // ── Restore conversation from API on mount if we have a stored ID ──────────
   useEffect(() => {
-    if (!conversationId) return;
+    if (!storedId) return;
     let cancelled = false;
     onboardingApi
-      .state(conversationId)
+      .state(storedId)
       .then((state) => {
         if (cancelled) return;
-        const msgs = state.messages ?? [];
+        // Normalize messages — backend rows may have extra DB fields
+        const msgs: ChatMessage[] = (state.messages ?? []).map((m) => ({
+          role: String(m.role ?? "assistant"),
+          content: String(m.content ?? ""),
+          question_id: m.question_id ?? null,
+          created_at: m.created_at ? String(m.created_at) : undefined,
+        }));
         setMessages(msgs);
         setVisibleCount(msgs.length);
-        setStatus(state.status as "idle" | "in_progress" | "completed");
+        setView(state.status === "completed" ? "completed" : "chat");
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
+        console.error("Failed to restore conversation:", err);
+        // Stale or broken ID — clear and go to landing
         localStorage.removeItem(storageKey(userId));
+        storedIdRef.current = null;
         setConversationId(null);
+        setView("landing");
       });
     return () => { cancelled = true; };
-  }, [conversationId, userId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only
 
-  // Animate messages in one-by-one
+  // ── Animate messages in one-by-one ────────────────────────────────────────
   useEffect(() => {
     if (visibleCount >= messages.length) return;
     const t = setTimeout(() => setVisibleCount((c) => c + 1), 80);
     return () => clearTimeout(t);
   }, [visibleCount, messages.length]);
 
-  // Auto-scroll
+  // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [visibleCount, typing]);
 
-  // Re-focus input after AI replies
+  // ── Re-focus input ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!typing && status === "in_progress") {
+    if (!typing && view === "chat") {
       inputRef.current?.focus();
     }
-  }, [typing, status]);
+  }, [typing, view]);
 
+  // ─── Start a new session ──────────────────────────────────────────────────
   async function startSession() {
     setBusy(true);
     setError(null);
@@ -272,14 +290,16 @@ export function OnboardingPage() {
       const res = await onboardingApi.start(userId);
       localStorage.setItem(storageKey(userId), res.conversation_id);
       setConversationId(res.conversation_id);
-      setStatus("in_progress");
+      // backend returns first_question, fallback to message for future compat
+      const firstText = res.first_question ?? res.message ?? "";
       const firstMsg: ChatMessage = {
         role: "assistant",
-        content: res.message,
+        content: firstText,
         question_id: res.question_id,
       };
       setMessages([firstMsg]);
       setVisibleCount(0);
+      setView("chat");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start onboarding");
     } finally {
@@ -287,6 +307,7 @@ export function OnboardingPage() {
     }
   }
 
+  // ─── Send a message ───────────────────────────────────────────────────────
   async function send(e: FormEvent) {
     e.preventDefault();
     if (!conversationId || !draft.trim() || busy) return;
@@ -299,35 +320,48 @@ export function OnboardingPage() {
     setMessages((prev) => [...prev, userMsg]);
     setTyping(true);
 
+    // Hard timeout — LLM calls can be slow
+    const timeoutId = setTimeout(() => {
+      setTyping(false);
+      setBusy(false);
+      setError("The server took too long to respond. Please try again.");
+    }, 90_000);
+
     try {
       const reply = await onboardingApi.send(conversationId, text);
+      clearTimeout(timeoutId);
       setTyping(false);
-      setStatus(reply.status);
-      if (reply.message) {
+      // backend returns assistant_response, fallback to message for future compat
+      const replyText = reply.assistant_response ?? reply.message;
+      if (replyText) {
         const assistantMsg: ChatMessage = {
           role: "assistant",
-          content: reply.message,
+          content: replyText,
           question_id: reply.question_id,
         };
         setMessages((prev) => [...prev, assistantMsg]);
       }
+      // backend uses "completed"; "in_progress" kept for forward compat
       if (reply.status === "completed") {
         profileApi.triggerEmbedding(userId).catch(() => {/* best-effort */});
+        setView("completed");
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       setTyping(false);
-      setError(err instanceof Error ? err.message : "Message failed");
+      setError(err instanceof Error ? err.message : "Message failed — please try again.");
     } finally {
       setBusy(false);
     }
   }
 
+  // ─── Reset session ────────────────────────────────────────────────────────
   function resetSession() {
     localStorage.removeItem(storageKey(userId));
     setConversationId(null);
     setMessages([]);
     setVisibleCount(0);
-    setStatus("idle");
+    setView("landing");
     setTyping(false);
     setDraft("");
     setError(null);
@@ -335,8 +369,10 @@ export function OnboardingPage() {
 
   const assistantCount = messages.filter((m) => m.role === "assistant").length;
 
-  // ── Landing ──
-  if (!conversationId && status === "idle") {
+  // ── Render by explicit view state ─────────────────────────────────────────
+  if (view === "loading") return <LoadingScreen />;
+
+  if (view === "landing") {
     return (
       <div className="mx-auto max-w-xl">
         <LandingState onStart={startSession} busy={busy} error={error} />
@@ -344,8 +380,7 @@ export function OnboardingPage() {
     );
   }
 
-  // ── Completed ──
-  if (status === "completed") {
+  if (view === "completed") {
     return (
       <div className="mx-auto max-w-xl">
         <CompletionScreen onContinue={() => navigate("/matches")} />
@@ -353,13 +388,11 @@ export function OnboardingPage() {
     );
   }
 
-  // ── Chat ──
+  // view === "chat"
   return (
     <div className="mx-auto flex max-w-5xl gap-8" style={{ height: "calc(100vh - 88px)" }}>
-      {/* Side stepper */}
       <ProgressStepper assistantCount={assistantCount} />
 
-      {/* Chat panel */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Top bar */}
         <div className="flex items-center justify-between pb-3">
@@ -378,7 +411,6 @@ export function OnboardingPage() {
           </button>
         </div>
 
-        {/* Progress bar */}
         <ProgressBar count={assistantCount} />
 
         {/* Messages */}
@@ -401,7 +433,18 @@ export function OnboardingPage() {
 
         {/* Input */}
         <div className="border-t border-line pt-4 pb-2">
-          {error && <p className="mb-2 text-sm text-rose-400">{error}</p>}
+          {error && (
+            <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-rose-400/20 bg-rose-400/8 px-3 py-2">
+              <p className="text-sm text-rose-400">{error}</p>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="shrink-0 text-xs text-rose-400/60 hover:text-rose-400 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <form onSubmit={send} className="flex items-end gap-2">
             <textarea
               ref={inputRef}

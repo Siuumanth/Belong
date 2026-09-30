@@ -6,35 +6,43 @@
   --font-display: "Fraunces", ui-serif, Georgia, serif;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
-  /* Base surfaces — deep navy */
-  --color-ink:       #080d18;
-  --color-ink-mid:   #0d1424;
-  --color-panel:     #101828;
-  --color-panel-alt: #141f30;
-  --color-line:      #1e2d45;
-  --color-line-soft: #162038;
+  /* ── Surfaces — slightly warm deep navy ──────────────────────────────────── */
+  --color-ink:       #090b15;
+  --color-ink-mid:   #0e1220;
+  --color-panel:     #121728;
+  --color-panel-alt: #171d30;
+  --color-line:      #232d45;
+  --color-line-soft: #1a2238;
 
-  /* Brand blue */
-  --color-blue:       #2952e3;
-  --color-blue-dim:   #1a3aad;
-  --color-blue-soft:  rgba(41,82,227,0.12);
-  --color-blue-glow:  rgba(41,82,227,0.25);
+  /* ── Brand — indigo/periwinkle (warmer than old #2952e3) ─────────────────── */
+  --color-blue:       #6366f1;
+  --color-blue-dim:   #4f52d4;
+  --color-blue-soft:  rgba(99,102,241,0.12);
+  --color-blue-glow:  rgba(99,102,241,0.22);
 
-  /* Accents */
-  --color-violet:     #7c5cbf;
-  --color-violet-soft: rgba(124,92,191,0.15);
-  --color-teal:       #0ea5a0;
-  --color-teal-soft:  rgba(14,165,160,0.12);
+  /* ── Violet — now a first-class accent ───────────────────────────────────── */
+  --color-violet:      #9333ea;
+  --color-violet-mid:  #7c22d4;
+  --color-violet-soft: rgba(147,51,234,0.14);
+  --color-violet-glow: rgba(147,51,234,0.20);
 
-  /* Semantic */
-  --color-success:    #34d399;
-  --color-warn:       #fbbf24;
-  --color-danger:     #f87171;
+  /* ── Gold — replaces generic emerald for "strong alignment" ─────────────── */
+  --color-gold:      #d4a843;
+  --color-gold-soft: rgba(212,168,67,0.14);
 
-  /* Text scale */
-  --color-text-primary:   #e8edf8;
-  --color-text-secondary: #8fa3bf;
-  --color-text-muted:     #4a6080;
+  /* ── Teal — kept as tertiary ─────────────────────────────────────────────── */
+  --color-teal:      #2dd4bf;
+  --color-teal-soft: rgba(45,212,191,0.12);
+
+  /* ── Semantic ─────────────────────────────────────────────────────────────── */
+  --color-success:   #4ade80;
+  --color-warn:      #fb923c;
+  --color-danger:    #f87171;
+
+  /* ── Text scale — slightly warmer midtones ───────────────────────────────── */
+  --color-text-primary:   #eaedfa;
+  --color-text-secondary: #96a7c4;
+  --color-text-muted:     #5a7090;
 }
 
 /* ── Reset & base ──────────────────────────────────────────────────────────── */
@@ -61,15 +69,15 @@ body {
 /* ── Selection ─────────────────────────────────────────────────────────────── */
 ::selection { background: var(--color-blue-glow); color: #fff; }
 
-/* ── Custom keyframes ──────────────────────────────────────────────────────── */
+/* ── Keyframes ─────────────────────────────────────────────────────────────── */
 @keyframes float-up {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulse-ring {
-  0%   { transform: scale(1);    opacity: 0.6; }
-  100% { transform: scale(1.8);  opacity: 0; }
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(1.9); opacity: 0; }
 }
 
 @keyframes dot-bounce {
@@ -82,49 +90,80 @@ body {
   to   { background-position:  200% center; }
 }
 
-/* ── Utility classes ───────────────────────────────────────────────────────── */
+@keyframes aurora {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+/* ── Utilities ─────────────────────────────────────────────────────────────── */
 .animate-float-up   { animation: float-up 0.45s ease both; }
-.animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
+.animate-pulse-ring { animation: pulse-ring 1.6s ease-out infinite; }
 
+/* Hero background — indigo-to-violet aurora */
 .gradient-hero {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, var(--color-blue-glow) 0%, transparent 70%),
-              radial-gradient(ellipse 50% 40% at 80% 60%, var(--color-violet-soft) 0%, transparent 60%);
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -5%,  rgba(99,102,241,0.20) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 45% at 85% 55%,  rgba(147,51,234,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 15% 70%,  rgba(99,102,241,0.08) 0%, transparent 55%);
 }
 
+/* Frosted-glass nav / panels */
 .glass {
-  background: rgba(16,24,40,0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(12, 15, 28, 0.75);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
+/* Card lift on hover */
 .card-hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 40px rgba(41,82,227,0.12);
-  border-color: rgba(41,82,227,0.3);
+  box-shadow: 0 8px 40px rgba(99,102,241,0.14);
+  border-color: rgba(99,102,241,0.32);
 }
 
+/* Heading gradient — cool white fading to slate */
 .text-gradient {
-  background: linear-gradient(135deg, #e8edf8 0%, #8fa3bf 100%);
+  background: linear-gradient(135deg, #eaedfa 0%, #96a7c4 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+/* Brand gradient — indigo → violet */
 .text-gradient-blue {
-  background: linear-gradient(135deg, #4f78ff 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+/* Animated shimmer for CTA headings */
 .shimmer-text {
-  background: linear-gradient(90deg, #8fa3bf 0%, #e8edf8 40%, #a78bfa 60%, #8fa3bf 100%);
-  background-size: 200% auto;
+  background: linear-gradient(
+    90deg,
+    #96a7c4  0%,
+    #eaedfa 35%,
+    #c084fc 55%,
+    #818cf8 75%,
+    #96a7c4 100%
+  );
+  background-size: 220% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: shimmer 4s linear infinite;
+  animation: shimmer 4.5s linear infinite;
+}
+
+/* Aurora border — used on featured cards */
+.border-aurora {
+  border-image: linear-gradient(135deg, #6366f1, #9333ea, #6366f1) 1;
+}
+
+/* Subtle inner glow for active/focus states */
+.ring-brand {
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.35);
 }

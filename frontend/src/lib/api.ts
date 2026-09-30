@@ -125,7 +125,9 @@ export type EmbeddingStatus = {
 export type OnboardingSession = {
   conversation_id: string;
   question_id?: string;
-  message: string;
+  // backend returns first_question, message is a frontend alias
+  first_question?: string;
+  message?: string;
 };
 
 export type ChatMessage = {
@@ -133,6 +135,9 @@ export type ChatMessage = {
   content: string;
   question_id?: string | null;
   created_at?: string;
+  // DB rows may include these extra fields — ignored by UI
+  id?: string;
+  conversation_id?: string;
 };
 
 export type OnboardingState = {
@@ -144,8 +149,11 @@ export type OnboardingState = {
 
 export type OnboardingReply = {
   conversation_id: string;
-  status: "in_progress" | "completed";
+  // backend sends "active" | "completed", not "in_progress"
+  status: "active" | "in_progress" | "completed";
   question_id?: string | null;
+  // backend field is assistant_response
+  assistant_response?: string;
   message?: string;
 };
 
@@ -235,48 +243,48 @@ export const authApi = {
 export const profileApi = {
   get: async (userId: string): Promise<Profile | null> => {
     try {
-      return await api<Profile>(`/profiles/${userId}`);
+      return await api<Profile>(`/api/profiles/${userId}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) return null;
       throw err;
     }
   },
   create: (body: ProfileWrite & { user_id: string }) =>
-    api<Profile>("/profiles", { method: "POST", body: JSON.stringify(body) }),
+    api<Profile>("/api/profiles", { method: "POST", body: JSON.stringify(body) }),
   update: (userId: string, body: Partial<ProfileWrite>) =>
-    api<Profile>(`/profiles/${userId}`, {
+    api<Profile>(`/api/profiles/${userId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
   triggerEmbedding: (userId: string) =>
-    api<JobAcceptedResponse>(`/profiles/${userId}/embeddings`, {
+    api<JobAcceptedResponse>(`/api/profiles/${userId}/embeddings`, {
       method: "POST",
     }),
   getEmbeddingStatus: (userId: string) =>
-    api<EmbeddingStatus>(`/profiles/${userId}/embeddings`),
+    api<EmbeddingStatus>(`/api/profiles/${userId}/embeddings`),
 };
 
 export const onboardingApi = {
   start: (userId: string) =>
-    api<OnboardingSession>("/onboarding/session", {
+    api<OnboardingSession>("/api/onboarding/session", {
       method: "POST",
       body: JSON.stringify({ user_id: userId }),
     }),
   send: (conversationId: string, message: string) =>
-    api<OnboardingReply>("/onboarding/message", {
+    api<OnboardingReply>("/api/onboarding/message", {
       method: "POST",
       body: JSON.stringify({ conversation_id: conversationId, message }),
     }),
   state: (conversationId: string) =>
-    api<OnboardingState>(`/onboarding/${conversationId}`),
+    api<OnboardingState>(`/api/onboarding/${conversationId}`),
 };
 
 export const matchApi = {
   createJob: (userId: string, limit = 5) =>
-    api<JobAcceptedResponse>("/matches", {
+    api<JobAcceptedResponse>("/api/matches", {
       method: "POST",
       body: JSON.stringify({ user_id: userId, limit }),
     }),
-  job: (jobId: string) => api<MatchJob>(`/matches/jobs/${jobId}`),
-  latest: (userId: string) => api<MatchesListResponse>(`/matches/${userId}`),
+  job: (jobId: string) => api<MatchJob>(`/api/matches/jobs/${jobId}`),
+  latest: (userId: string) => api<MatchesListResponse>(`/api/matches/${userId}`),
 };

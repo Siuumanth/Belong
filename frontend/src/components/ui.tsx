@@ -55,7 +55,7 @@ export function Layout() {
       <header className="sticky top-0 z-20 border-b border-line glass">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">
           {/* Logo */}
-          <NavLink to="/dashboard" className="shrink-0">
+          <NavLink to="/" className="shrink-0">
             <img src="/belong-logo.png" alt="Belong" className="h-7 object-contain" />
           </NavLink>
 

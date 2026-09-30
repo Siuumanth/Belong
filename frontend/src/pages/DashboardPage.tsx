@@ -29,7 +29,7 @@ function QuickCard({
           {icon}
         </div>
         {done && (
-          <span className="flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/8 px-2.5 py-0.5 text-[10px] text-emerald-400">
+          <span className="flex items-center gap-1 rounded-full border border-[#d4a843]/30 bg-[#d4a843]/8 px-2.5 py-0.5 text-[10px] text-[#d4a843]">
             <span>✓</span> Done
           </span>
         )}
@@ -73,7 +73,7 @@ function PipelineStep({
       <div
         className={`flex h-9 w-9 items-center justify-center rounded-full border text-xs transition-all ${
           done
-            ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-400"
+            ? "border-[#d4a843]/40 bg-[#d4a843]/10 text-[#d4a843]"
             : active
             ? "border-blue/50 bg-blue/15 text-blue"
             : "border-line text-[#4a6080]"
@@ -81,7 +81,7 @@ function PipelineStep({
       >
         {done ? "✓" : active ? "◎" : "·"}
       </div>
-      <span className={`text-[10px] text-center leading-tight ${done ? "text-[#8fa3bf]" : active ? "text-[#e8edf8]" : "text-[#4a6080]"}`}>
+      <span className={`text-[10px] text-center leading-tight ${done ? "text-[#96a7c4]" : active ? "text-[#eaedfa]" : "text-[#5a7090]"}`}>
         {label}
       </span>
     </div>
@@ -152,7 +152,7 @@ export function DashboardPage() {
           </p>
         )}
         {hasSignals && (
-          <p className="mt-4 text-xs text-emerald-400">
+          <p className="mt-4 text-xs text-[#d4a843]">
             All set — you can run a match any time.
           </p>
         )}

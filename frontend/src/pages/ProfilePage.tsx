@@ -167,7 +167,7 @@ function CompletionBanner({
             <div
               className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] transition-colors ${
                 s.done
-                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-400"
+                  ? "border-[#d4a843]/40 bg-[#d4a843]/10 text-[#d4a843]"
                   : "border-line text-[#4a6080]"
               }`}
             >

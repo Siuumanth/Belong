@@ -7,35 +7,19 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Auth service: Go on :9001 — strip the /auth prefix
+      // Auth goes to gateway → gateway strips /auth and forwards to auth service :9001
       "/auth": {
-        target: "http://localhost:9001",
+        target: "http://localhost:9000",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/auth/, ""),
       },
-      // Python API: FastAPI on :8000 — strip the leading slash and let /api prefix through
-      "/profiles": {
-        target: "http://localhost:8000",
+      // All domain API calls go through the gateway under /api
+      // Gateway mounts /api → strips prefix → forwards to Python :8000 with /api prefix intact
+      "/api": {
+        target: "http://localhost:9000",
         changeOrigin: true,
-        rewrite: (path) => `/api${path}`,
-      },
-      "/onboarding": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-        rewrite: (path) => `/api${path}`,
-      },
-      "/matches": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-        rewrite: (path) => `/api${path}`,
-      },
-      "/embeddings": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-        rewrite: (path) => `/api${path}`,
       },
       "/health": {
-        target: "http://localhost:9001",
+        target: "http://localhost:9000",
         changeOrigin: true,
       },
     },

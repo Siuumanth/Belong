@@ -211,9 +211,9 @@ export function HomePage() {
                     initials="AK"
                     verdict="Strong alignment"
                     dims={[
-                      { name: "emotional needs", color: "bg-emerald-400" },
-                      { name: "core values", color: "bg-emerald-400" },
-                      { name: "lifestyle", color: "bg-emerald-400" },
+                      { name: "emotional needs", color: "bg-[#d4a843]" },
+                      { name: "core values", color: "bg-[#d4a843]" },
+                      { name: "lifestyle", color: "bg-[#d4a843]" },
                     ]}
                     delay="0s"
                   />
@@ -223,9 +223,9 @@ export function HomePage() {
                     initials="MR"
                     verdict="Partial alignment"
                     dims={[
-                      { name: "conflict style", color: "bg-amber-400" },
-                      { name: "lifestyle", color: "bg-emerald-400" },
-                      { name: "core values", color: "bg-amber-400" },
+                      { name: "conflict style", color: "bg-[#fb923c]" },
+                      { name: "lifestyle", color: "bg-[#d4a843]" },
+                      { name: "core values", color: "bg-[#fb923c]" },
                     ]}
                     delay="0.15s"
                   />
@@ -343,12 +343,12 @@ export function HomePage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                dot: "bg-emerald-400",
+                dot: "bg-[#d4a843]",
                 verdict: "Strong alignment",
                 desc: "Both people's needs and values are clearly reciprocated.",
               },
               {
-                dot: "bg-amber-400",
+                dot: "bg-[#fb923c]",
                 verdict: "Partial alignment",
                 desc: "Some strong signals, some areas worth exploring together.",
               },
