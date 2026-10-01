@@ -7,17 +7,17 @@ import { ErrorText, Field, inputClass } from "../components/ui";
 const emptyForm: ProfileWrite = {
   name: "",
   age: 25,
-  gender: "woman",
+  gender: "female",
   orientation: "heterosexual",
   relationship_goal: "long-term",
   preferred_age_min: 22,
   preferred_age_max: 35,
   max_distance_km: 25,
-  preferred_genders: ["man"],
+  preferred_genders: ["male"],
 };
 
 // ─── Gender chips ─────────────────────────────────────────────────────────────
-const GENDER_OPTIONS = ["man", "woman", "nonbinary"];
+const GENDER_OPTIONS = ["male", "female"];
 
 function GenderChips({
   value,
@@ -321,9 +321,8 @@ export function ProfilePage() {
                 value={form.gender}
                 onChange={(e) => set("gender", e.target.value)}
               >
-                <option value="woman">Woman</option>
-                <option value="man">Man</option>
-                <option value="nonbinary">Nonbinary</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
               </select>
             </Field>
             <Field label="Orientation">

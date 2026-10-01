@@ -741,6 +741,7 @@ components:
         reverse_cosine_distance: { type: number, nullable: true, example: 0.1920 }
         reverse_cosine_similarity: { type: number, nullable: true, example: 0.8080 }
         combined_score: { type: number, example: 0.8114 }
+        compatibility_percentage: { type: integer, example: 75, description: "Normalized user-friendly match percentage from 0% to 99%" }
 
     RetrievalOptions:
       type: object

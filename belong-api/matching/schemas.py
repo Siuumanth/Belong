@@ -125,12 +125,13 @@ class CandidateMatch(BaseModel):
     distance_km: Optional[float] = None
     profile: Dict[str, Any] = Field(default_factory=dict)
     
-    # Vector Metrics
+    # Vector Metrics & UI Match Percentage
     cosine_distance: float
     cosine_similarity: float
     reverse_cosine_distance: Optional[float] = None
     reverse_cosine_similarity: Optional[float] = None
     combined_score: float
+    compatibility_percentage: int = Field(0, description="Normalized user-friendly match percentage from 0% to 99%")
 
 class RetrievalOptions(BaseModel):
     """Configurable options for candidate retrieval and pre-ranking."""

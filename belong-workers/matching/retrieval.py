@@ -203,6 +203,8 @@ class CandidateRetriever:
             if combined_score < config["min_similarity_threshold"]:
                 continue
 
+            compat_pct = min(99, max(0, round((combined_score / 0.25) * 100)))
+
             candidates.append(CandidateMatch(
                 user_id=UUID(str(row["user_id"])),
                 name=row.get("name"),
@@ -219,7 +221,8 @@ class CandidateRetriever:
                 cosine_similarity=round(cos_sim, 4),
                 reverse_cosine_distance=round(rev_cos_dist, 4) if rev_cos_dist is not None else None,
                 reverse_cosine_similarity=round(rev_cos_sim, 4) if rev_cos_sim is not None else None,
-                combined_score=round(combined_score, 4)
+                combined_score=round(combined_score, 4),
+                compatibility_percentage=compat_pct
             ))
 
         candidates.sort(key=lambda c: c.combined_score, reverse=True)

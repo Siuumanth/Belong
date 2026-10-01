@@ -81,6 +81,21 @@ class CandidateRetriever:
                 user_goal = user_row.get("relationship_goal")
                 self_vec_str = str(user_row["self_embedding"]) if user_row.get("self_embedding") is not None else None
 
+                # Normalize gender values — collapse all variants to "male"/"female"
+                GENDER_NORM: Dict[str, str] = {
+                    "man": "male", "male": "male",
+                    "woman": "female", "female": "female",
+                }
+
+                def norm_gender(g: str) -> str:
+                    return GENDER_NORM.get(g.lower(), g.lower())
+
+                def norm_genders(gs: List[str]) -> List[str]:
+                    return list({norm_gender(g) for g in gs if g})
+
+                user_gender_norm = norm_gender(user_gender) if user_gender else None
+                user_pref_genders_norm = norm_genders(user_pref_genders)
+
                 # 2. Build dynamic SQL query for Candidate Recall
                 conditions = [
                     "p.user_id != %(user_id)s",
@@ -92,17 +107,23 @@ class CandidateRetriever:
                     "pool_limit": config["candidate_pool_limit"]
                 }
 
-                # Hard Filter: Gender & Preferred Genders
+                # Hard Filter: Gender & Preferred Genders (normalized)
                 if config["require_mutual_gender"]:
-                    if user_pref_genders and len(user_pref_genders) > 0:
-                        conditions.append("p.gender = ANY(%(user_pref_genders)s)")
-                        params["user_pref_genders"] = user_pref_genders
-
-                    if user_gender:
+                    if user_pref_genders_norm:
+                        # Normalize candidate gender inline so "man"/"male" both match
                         conditions.append(
-                            "(p.preferred_genders = '[]'::jsonb OR p.preferred_genders @> jsonb_build_array(%(user_gender)s::text))"
+                            "LOWER(REPLACE(REPLACE(p.gender, 'woman', 'female'), 'man', 'male')) = ANY(%(user_pref_genders)s)"
                         )
-                        params["user_gender"] = user_gender
+                        params["user_pref_genders"] = user_pref_genders_norm
+
+                    if user_gender_norm:
+                        # Candidate must prefer user's normalized gender
+                        conditions.append(
+                            "(p.preferred_genders = '[]'::jsonb OR "
+                            "EXISTS (SELECT 1 FROM jsonb_array_elements_text(p.preferred_genders) pg "
+                            "WHERE LOWER(REPLACE(REPLACE(pg, 'woman', 'female'), 'man', 'male')) = %(user_gender)s))"
+                        )
+                        params["user_gender"] = user_gender_norm
 
                 # Hard Filter: Mutual Age Constraints
                 if config["require_mutual_age"]:
@@ -193,6 +214,8 @@ class CandidateRetriever:
             if combined_score < config["min_similarity_threshold"]:
                 continue
 
+            compat_pct = min(99, max(0, round((combined_score / 0.25) * 100)))
+
             candidates.append(CandidateMatch(
                 user_id=UUID(str(row["user_id"])),
                 name=row.get("name"),
@@ -208,7 +231,8 @@ class CandidateRetriever:
                 cosine_similarity=round(cos_sim, 4),
                 reverse_cosine_distance=round(rev_cos_dist, 4) if rev_cos_dist is not None else None,
                 reverse_cosine_similarity=round(rev_cos_sim, 4) if rev_cos_sim is not None else None,
-                combined_score=round(combined_score, 4)
+                combined_score=round(combined_score, 4),
+                compatibility_percentage=compat_pct
             ))
 
         candidates.sort(key=lambda c: c.combined_score, reverse=True)
