@@ -89,20 +89,25 @@ class JobStatusResponse(BaseModel):
 
 class MatchCandidateResponse(BaseModel):
     """Detailed qualitative compatibility breakdown for a single matched candidate."""
-    match_id: Optional[UUID] = None
-    user_b_id: UUID
-    overall_verdict: str
-    overall_reasoning: Optional[str] = ""
-    dimension_results: Dict[str, Any]
-    strong_alignments: List[str]
-    complementary_alignments: List[str] = Field(default_factory=list)
-    shared_alignments: List[str] = Field(default_factory=list)
-    potential_conflicts: List[str]
-    dealbreaker_violations: List[str]
-    uncertainties: List[str]
+    id: Optional[UUID] = Field(None, description="Unique compatibility result record ID")
+    match_id: Optional[UUID] = Field(None, description="Matching job run ID that generated this evaluation")
+    user_a_id: Optional[UUID] = Field(None, description="UUID of the target user receiving the analysis")
+    user_b_id: UUID = Field(..., description="UUID of the matched candidate user")
+    user_b_name: Optional[str] = Field(None, description="Name or handle of the candidate user")
+    overall_verdict: str = Field(..., description="Overall verdict: 'strong_alignment', 'partial_alignment', 'unclear', or 'conflict'")
+    overall_reasoning: Optional[str] = Field("", description="Executive summary conclusion addressed directly to the user ('You').")
+    dimension_results: Dict[str, Any] = Field(default_factory=dict, description="Detailed evaluations per dimension with evidence citations.")
+    strong_alignments: List[str] = Field(default_factory=list, description="All positive alignment highlights")
+    complementary_alignments: List[str] = Field(default_factory=list, description="Reciprocal fulfillment alignments (what You seek -> candidate provides)")
+    shared_alignments: List[str] = Field(default_factory=list, description="Mutual similarity alignments (shared values, habits, interests)")
+    potential_conflicts: List[str] = Field(default_factory=list, description="Areas of friction or misalignment")
+    dealbreaker_violations: List[str] = Field(default_factory=list, description="Hard constraints or dealbreakers triggered")
+    uncertainties: List[str] = Field(default_factory=list, description="Areas where info was ambiguous or insufficient")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 class MatchesListResponse(BaseModel):
     """Response containing list of compatibility matches for a user."""
-    user_id: UUID
-    total_matches: int
-    matches: List[MatchCandidateResponse]
+    user_id: UUID = Field(..., description="Target user ID")
+    total_matches: int = Field(..., description="Count of matched candidates")
+    matches: List[MatchCandidateResponse] = Field(..., description="List of match candidate details")

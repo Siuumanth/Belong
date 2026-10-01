@@ -24,7 +24,16 @@ class Settings(BaseModel):
     PAIRWISE_REASONING_PROMPT_TEMPLATE: str = os.getenv(
         "PAIRWISE_REASONING_PROMPT_TEMPLATE",
         """You are an expert AI compatibility matchmaking reasoning agent for Belong.
-Your task is to analyze complete user evidence packages (User A and User B) to determine their relational compatibility using evidence-grounded, open-ended reasoning.
+Your task is to analyze complete user evidence packages for User A (the user receiving this report) and User B (their matched candidate) to determine their relational compatibility.
+
+PERSPECTIVE & VOICE INSTRUCTIONS (CRITICAL):
+- Write ALL reasoning, executive conclusions (`overall_reasoning`), dimension explanations, alignments, and friction points directly TO User A in the second-person ("You").
+- Refer to User B by their name (e.g. "Alex") or as "your candidate" / "they".
+- NEVER write in cold third-person system report style like "User A and User B..." or "The LLM finds...".
+- Address the user naturally:
+  - Good: "You and Alex both prioritize clear communication and daily outdoor activity."
+  - Good: "You seek a patient listener during stressful moments, which Alex provides through steady, calm presence."
+  - Bad: "User A requires quiet support which User B provides."
 
 INPUT EVIDENCE STRUCTURE:
 Each user profile includes:
@@ -35,15 +44,15 @@ Each user profile includes:
 REASONING GUIDELINES:
 1. GROUND FACTUAL CLAIMS IN EVIDENCE: All assertions must cite exact signal ID strings ("evidence_a_ids" and "evidence_b_ids") from the user profiles. Do NOT invent traits, motivations, or behaviors.
 2. OPEN-ENDED ANALYSIS: Identify organic compatibility patterns, complementary relationships, shared similarities, tensions, and uncertainties. You are NOT restricted to predefined profile dimensions.
-3. RECIPROCAL FULFILLMENT (`complementary_alignments`): Highlight specific instances where Person A's wants/needs are satisfied by Person B's self/provides (and vice-versa).
-   Format: "A seeks [X] -> B provides/embodies [Y]"
-4. SHARED ALIGNMENTS (`shared_alignments`): List genuine similarities, shared values, and mutual lifestyle habits.
+3. RECIPROCAL FULFILLMENT (`complementary_alignments`): Highlight specific instances where what You seek is satisfied by your candidate's self/provides (and vice-versa).
+   Format: "You seek [X] -> [Candidate] provides [Y]"
+4. SHARED ALIGNMENTS (`shared_alignments`): List genuine similarities, shared values, and mutual lifestyle habits between You and your candidate.
 5. PREVENT OVER-INFERENCE & UNSUPPORTED CLAIMS: If a trait is ambiguous or merely plausible, record it under "uncertainties" — do NOT stretch interpretations into false alignments.
 
-USER A PROFILE:
+USER A PROFILE (Target User - "You"):
 {user_a_profile}
 
-USER B PROFILE:
+USER B PROFILE (Matched Candidate):
 {user_b_profile}
 
 OUTPUT FORMAT REQUIREMENT:
@@ -51,41 +60,41 @@ You MUST return your response ONLY as a JSON object matching this EXACT format:
 ```json
 {{
   "overall_verdict": "strong_alignment",
-  "overall_reasoning": "Executive conclusion highlighting organic synergies and main friction points.",
+  "overall_reasoning": "Executive summary conclusion addressed directly to you ('You') explaining overall compatibility and key synergies with your candidate.",
   "dimension_results": {{
     "emotional_needs": {{
       "verdict": "strong_alignment",
       "evidence_a_ids": ["q2_emotional_needs_s_emotional_needs_00"],
       "evidence_b_ids": ["q2_emotional_needs_s_provides_00"],
-      "reasoning": "Explanation of emotional support alignment based on cited evidence."
+      "reasoning": "Explanation of emotional support alignment written directly to you based on cited evidence."
     }},
     "core_values": {{
       "verdict": "strong_alignment",
       "evidence_a_ids": ["q4_lifestyle_values_s_values_00"],
       "evidence_b_ids": ["q4_lifestyle_values_s_values_00"],
-      "reasoning": "Explanation of shared core values and goals based on cited evidence."
+      "reasoning": "Explanation of shared core values and goals written directly to you."
     }},
     "lifestyle": {{
       "verdict": "partial_alignment",
       "evidence_a_ids": ["q4_lifestyle_values_s_lifestyle_00"],
       "evidence_b_ids": ["q4_lifestyle_values_s_lifestyle_00"],
-      "reasoning": "Explanation of daily habits and lifestyle alignment."
+      "reasoning": "Explanation of daily habits and lifestyle alignment written directly to you."
     }},
     "conflict_style": {{
       "verdict": "strong_alignment",
       "evidence_a_ids": ["q3_conflict_provides_s_conflict_style_00"],
       "evidence_b_ids": ["q3_conflict_provides_s_conflict_style_00"],
-      "reasoning": "Explanation of conflict resolution alignment."
+      "reasoning": "Explanation of conflict resolution alignment written directly to you."
     }}
   }},
   "complementary_alignments": [
-    "A seeks [X] -> B provides [Y]"
+    "You seek [X] -> [Candidate] provides [Y]"
   ],
   "shared_alignments": [
-    "Both share interest/value in [Z]"
+    "You and [Candidate] both share interest/value in [Z]"
   ],
   "potential_conflicts": [
-    "Potential friction point between A and B"
+    "Potential friction point between you and [Candidate]"
   ],
   "dealbreaker_violations": [],
   "uncertainties": []
