@@ -15,7 +15,7 @@ servers:
     description: Python Belong FastAPI Service (Direct Internal)
 
 paths:
-  # =========================================
+  # ==========================================
   # GATEWAY SYSTEM ENDPOINTS
   # ==========================================
   /health:
@@ -274,10 +274,44 @@ paths:
   # ==========================================
   # MATCHING ENDPOINTS (/matches/*)
   # ==========================================
-  /matches:
+
+  # 1. FIND MATCHES (Stage 1 Candidate Match Retrieval)
+  /matches/candidates/{user_id}:
+    get:
+      summary: Find Candidate Matches (Stage 1 Retrieval)
+      description: Fast retrieval of top-K candidate matches using SQL hard constraints + pgvector similarity search. Does NOT invoke LLM reasoning.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: candidate_pool_limit
+          in: query
+          required: false
+          schema: { type: integer, example: 50 }
+        - name: pre_rank_limit
+          in: query
+          required: false
+          schema: { type: integer, example: 15 }
+        - name: max_distance_km
+          in: query
+          required: false
+          schema: { type: integer, example: 100 }
+      responses:
+        '200':
+          description: Candidate matches retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrievalListResponse'
+
+  /matches/candidates:
     post:
-      summary: Create Matching Job
-      description: Enqueues an asynchronous 2-stage matching job (SQL Hard Filters + pgvector Recall + Pairwise LLM Reasoning). Returns HTTP 202 immediately.
+      summary: Find Candidate Matches (POST Variant)
+      description: Fast Stage 1 candidate retrieval with custom configuration payload or X-User-ID header.
       tags: [Matching]
       security:
         - BearerAuth: []
@@ -285,47 +319,93 @@ paths:
         - name: X-User-ID
           in: header
           required: false
-          description: Authenticated user ID injected by Auth Gateway.
           schema: { type: string, format: uuid }
       requestBody:
         required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                user_id: { type: string, format: uuid }
-                limit: { type: integer, default: 5, example: 5 }
+              $ref: '#/components/schemas/RetrievalOptions'
       responses:
-        '202':
-          description: Job accepted and enqueued.
+        '200':
+          description: Candidate matches retrieved.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobAcceptedResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+                $ref: '#/components/schemas/RetrievalListResponse'
 
-  /matches/jobs/{job_id}:
+  /matches/retrieval/{user_id}:
     get:
-      summary: Get Matching Job Status & Results
-      description: Polls the state of an asynchronous matching job. Once completed, returns status and result metadata.
+      summary: Alias for Stage 1 Candidate Retrieval
+      description: Alias endpoint for Stage 1 candidate match retrieval.
       tags: [Matching]
       security:
         - BearerAuth: []
       parameters:
-        - name: job_id
+        - name: user_id
           in: path
           required: true
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Current job status and results (if completed).
+          description: Candidate matches retrieved.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobStatusResponse'
+                $ref: '#/components/schemas/RetrievalListResponse'
 
+  # 2. ANALYZE DEEPER (Stage 2 On-Demand LLM Matchmaking)
+  /matches/analyze:
+    post:
+      summary: Analyze Candidate Deeper (Stage 2 LLM Matchmaking)
+      description: Runs on-demand LangGraph LLM pairwise reasoning for a selected candidate, persists the result in compatibility_results, and returns the detailed qualitative breakdown.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: false
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeMatchRequest'
+      responses:
+        '200':
+          description: Deep qualitative compatibility analysis generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchCandidateResponse'
+
+  /matches/analyze/{candidate_user_id}:
+    post:
+      summary: Analyze Candidate Deeper by Candidate ID
+      description: Runs on-demand LLM pairwise reasoning for the specified candidate_user_id path parameter.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: candidate_user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-User-ID
+          in: header
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Deep qualitative compatibility analysis generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchCandidateResponse'
+
+  # 3. GET COMPLETED / PERSISTED MATCHES
   /matches/{user_id}:
     get:
       summary: Get Latest Persisted Matches
@@ -345,6 +425,121 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MatchesListResponse'
+
+  /matches/details/pair/{candidate_user_id}:
+    get:
+      summary: Get Detailed Match Analysis for Candidate Pair
+      description: Retrieves existing full detailed qualitative compatibility analysis for a specific candidate user pair.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: candidate_user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: X-User-ID
+          in: header
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Detailed match analysis found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchCandidateResponse'
+
+  /matches/details/{result_id}:
+    get:
+      summary: Get Detailed Match Analysis by Result ID
+      description: Retrieves full detailed qualitative compatibility analysis for a specific match result UUID.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: result_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Detailed match analysis found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchCandidateResponse'
+
+  # 4. ASYNC BATCH JOBS
+  /matches:
+    post:
+      summary: Create Async Matching Batch Job
+      description: Enqueues an asynchronous batch matching job (SQL Hard Filters + pgvector Recall + Pairwise LLM Reasoning). Returns HTTP 202 immediately.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-User-ID
+          in: header
+          required: false
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string, format: uuid }
+                limit: { type: integer, default: 5, example: 5 }
+      responses:
+        '202':
+          description: Job accepted and enqueued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+
+  /matches/jobs/{job_id}:
+    get:
+      summary: Get Matching Job Status
+      description: Polls the state of an asynchronous matching job.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current job status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatusResponse'
+
+  /matches/jobs/{job_id}/results:
+    get:
+      summary: Get Matching Job Results
+      description: Retrieves qualitative compatibility breakdowns generated by a specific matching job run.
+      tags: [Matching]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Matching job results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchesListResponse'
+
 
 # ==========================================
 # COMPONENTS & SCHEMAS
@@ -466,7 +661,6 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
-
     # Onboarding
     OnboardingSessionResponse:
       type: object
@@ -506,7 +700,7 @@ components:
               question_id: { type: string, nullable: true }
               created_at: { type: string, format: date-time }
 
-    # Matching
+    # Matching Schemas
     JobAcceptedResponse:
       type: object
       properties:
@@ -529,50 +723,80 @@ components:
         completed_at: { type: string, format: date-time, nullable: true }
         result: { type: object, nullable: true }
 
+    CandidateMatch:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        name: { type: string, nullable: true, example: "Bob" }
+        age: { type: integer, nullable: true, example: 27 }
+        gender: { type: string, nullable: true, example: "man" }
+        orientation: { type: string, nullable: true, example: "heterosexual" }
+        relationship_goal: { type: string, nullable: true, example: "long-term" }
+        latitude: { type: number, format: double, nullable: true }
+        longitude: { type: number, format: double, nullable: true }
+        distance_km: { type: number, format: double, nullable: true, example: 8.5 }
+        profile: { type: object }
+        cosine_distance: { type: number, example: 0.1852 }
+        cosine_similarity: { type: number, example: 0.8148 }
+        reverse_cosine_distance: { type: number, nullable: true, example: 0.1920 }
+        reverse_cosine_similarity: { type: number, nullable: true, example: 0.8080 }
+        combined_score: { type: number, example: 0.8114 }
+
+    RetrievalOptions:
+      type: object
+      properties:
+        candidate_pool_limit: { type: integer, example: 50 }
+        pre_rank_limit: { type: integer, example: 15 }
+        max_distance_km: { type: integer, example: 100 }
+        min_similarity_threshold: { type: number, example: 0.0 }
+        bidirectional_weight: { type: number, example: 0.5 }
+        require_mutual_age: { type: boolean, example: true }
+        require_mutual_gender: { type: boolean, example: true }
+        require_mutual_relationship_goal: { type: boolean, example: true }
+
+    RetrievalListResponse:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        total_candidates: { type: integer, example: 5 }
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CandidateMatch'
+
+    AnalyzeMatchRequest:
+      type: object
+      required: [candidate_user_id]
+      properties:
+        candidate_user_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid, nullable: true }
+
     MatchCandidateResponse:
       type: object
       properties:
+        id: { type: string, format: uuid, nullable: true }
         match_id: { type: string, format: uuid, nullable: true }
+        user_a_id: { type: string, format: uuid, nullable: true }
         user_b_id: { type: string, format: uuid }
+        user_b_name: { type: string, nullable: true, example: "Bob" }
         overall_verdict:
           type: string
           enum: [strong_alignment, partial_alignment, unclear, conflict]
-          example: "partial_alignment"
+          example: "strong_alignment"
         overall_reasoning:
           type: string
-          example: "The pair shows strong reciprocal emotional support—A's patient listening meets B's need for presence."
+          example: "You both share a deep commitment to emotional openness and long-term personal growth."
         dimension_results:
           type: object
-          description: Categorical verdicts and signal IDs per dimension
-          example:
-            lifestyle:
-              verdict: "strong_alignment"
-              evidence_a_ids: ["q4_lifestyle_values_s_lifestyle_00"]
-              evidence_b_ids: ["q4_lifestyle_values_s_lifestyle_03"]
-            emotional_needs:
-              verdict: "strong_alignment"
-              evidence_a_ids: ["q2_emotional_needs_s_needs_00"]
-              evidence_b_ids: ["probe_provides_s_provides_00"]
-            core_values:
-              verdict: "partial_alignment"
-            conflict_style:
-              verdict: "partial_alignment"
+          description: Categorical verdicts and evidence quotes per dimension
         complementary_alignments:
           type: array
-          description: Reciprocal fulfillment pairings (A's wants satisfied by B's provides, and vice versa)
           items: { type: string }
-          example:
-            - "A wants reassurance & respect -> B provides frequent check-ins (q3_conflict_provides_s_provides_01)"
-            - "B wants emotional presence -> A provides patient listening & reassurance (probe_provides_s_provides_00)"
         shared_alignments:
           type: array
-          description: Mutual similarities in hobbies, background, or goals
           items: { type: string }
-          example:
-            - "Both value long-term commitment and personal growth"
         strong_alignments:
           type: array
-          description: Combined key areas of alignment
           items: { type: string }
         potential_conflicts:
           type: array
@@ -583,6 +807,8 @@ components:
         uncertainties:
           type: array
           items: { type: string }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
 
     MatchesListResponse:
       type: object

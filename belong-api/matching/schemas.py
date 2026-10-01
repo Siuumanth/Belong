@@ -149,3 +149,9 @@ class RetrievalListResponse(BaseModel):
     total_candidates: int = Field(..., description="Count of retrieved candidates")
     candidates: List[CandidateMatch] = Field(..., description="List of Stage 1 candidate matches sorted by vector score")
 
+class AnalyzeMatchRequest(BaseModel):
+    """Request payload to trigger on-demand pairwise LLM reasoning for a candidate."""
+    candidate_user_id: UUID = Field(..., description="UUID of candidate to analyze")
+    user_id: Optional[UUID] = Field(None, description="UUID of target user (defaults to X-User-ID header if omitted)")
+
+
