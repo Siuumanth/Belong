@@ -515,8 +515,31 @@ async def finalize_profile(state: OnboardingState):
 
         # Strip internal bookkeeping key before persisting
         signals_clean = {k: v for k, v in signals.items() if not k.startswith("_")}
+        other_sigs = signals_clean.get("other_signals", []) or signals_clean.get("novel_signals", [])
 
-        # Structure profile into self/wants/constraints format
+        # Fetch raw onboarding messages to include original responses in profile
+        raw_responses = {}
+        raw_dialogue_text = ""
+        conv_id_str = state.get("conversation_id")
+        if conv_id_str:
+            try:
+                from onboarding.repository import OnboardingRepository
+                messages = await OnboardingRepository.get_messages(UUID(conv_id_str))
+                for m in messages:
+                    if m.get("role") == "user":
+                        q_id = m.get("question_id") or "q_general"
+                        content = m.get("content", "").strip()
+                        if content:
+                            if q_id not in raw_responses:
+                                raw_responses[q_id] = content
+                            else:
+                                raw_responses[q_id] += " " + content
+                if raw_responses:
+                    raw_dialogue_text = "\n".join([f"{q_id}: {txt}" for q_id, txt in raw_responses.items()])
+            except Exception as msg_err:
+                logger.warning(f"Could not fetch raw dialogue messages for finalize_profile: {msg_err}")
+
+        # Structure profile into self/wants/constraints format with other_signals and raw responses
         profile_json = {
             "self": {
                 "values": signals_clean.get("self.values", []),
@@ -536,7 +559,10 @@ async def finalize_profile(state: OnboardingState):
             },
             "constraints": {
                 "dealbreakers": signals_clean.get("constraints.dealbreakers", []),
-            }
+            },
+            "other_signals": other_sigs,
+            "raw_responses": raw_responses,
+            "raw_dialogue": raw_dialogue_text,
         }
 
         existing = await ProfileRepository.get_profile(user_id)

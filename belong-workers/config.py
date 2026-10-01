@@ -24,60 +24,21 @@ class WorkerSettings:
     PAIRWISE_REASONING_PROMPT_TEMPLATE: str = os.getenv(
         "PAIRWISE_REASONING_PROMPT_TEMPLATE",
         """You are an expert AI compatibility matchmaking reasoning agent for Belong.
-Your task is to analyze two user profiles (User A and User B) to determine their relational compatibility with rigorous reciprocal reasoning.
+Your task is to analyze complete user evidence packages (User A and User B) to determine their relational compatibility using evidence-grounded, open-ended reasoning.
 
-PROFILE STRUCTURE:
-Each profile has three sections:
-- "self": Who the person is (values, lifestyle, personality_signals, conflict_style, provides, emotional_needs, interests)
-- "wants": What they seek in a partner (partner_traits, partner_values, emotional_needs, relationship_expectations, desired_lifestyle)
-- "constraints": Hard dealbreakers
+INPUT EVIDENCE STRUCTURE:
+Each user profile includes:
+- Structured signals (`self`, `wants`, `constraints`)
+- `other_signals`: Emergent or unmapped signals that don't fit standard dimensions
+- `original_responses`: The user's raw onboarding answers preserving exact nuance and context
 
-RECIPROCAL MATCHING (COMPLEMENTARITY) RULES — evaluate BOTH directions:
-Compare User A's wants/needs against User B's self/provides:
-  - Does B provide or embody what A needs and wants?
-Compare User B's wants/needs against User A's self/provides:
-  - Does A provide or embody what B needs and wants?
-
-SEPARATION OF COMPLEMENTARITY VS. SIMILARITY:
-1. "complementary_alignments":
-   ONLY list instances of RECIPROCAL FULFILLMENT where Person A's wants/needs are satisfied by Person B's traits/provides (or Person B's wants/needs are satisfied by Person A's traits/provides).
-   Format each item clearly:
-   - "A wants [X] -> B provides/embodies [Y]"
-   - "B wants [X] -> A provides/embodies [Y]"
-   Do NOT put shared hobbies or mutual similarities here!
-
-2. "shared_alignments":
-   List similarities where both users independently share the same interest, background, or value (e.g. "Both enjoy outdoor activities (hiking / trail running)", "Both work in technology").
-   Do NOT confuse similarity with reciprocal fulfillment.
-
-PREVENT OVER-INFERENCE & UNSUPPORTED CLAIMS:
-Distinguish strictly between explicit statements, reasonable inferences, and unsupported leaps:
-- EXPLICIT: User A wants active listening, and User B explicitly says "I listen patiently" -> Strong alignment.
-- REASONABLE INFERENCE: User A wants emotional safety, and User B says "I provide calm reassurance" -> Plausible alignment.
-- UNSUPPORTED (DO NOT CLAIM AS ALIGNMENT):
-  - "thoughtful" or "calm" does NOT mean "active listening". If A needs active listening and B is merely "calm", mark as "unclear" or state an uncertainty — do NOT claim this is a strong match.
-  - "empathetic" does NOT necessarily mean "provides clear reassurance".
-  - If a trait does not directly fulfill the stated need, do NOT stretch the interpretation. Record it under "uncertainties" instead.
-
-DIMENSION RESULTS & VERDICTS:
-Evaluate 4 Core Dimensions:
-- emotional_needs: Stress response, emotional support, reassurance alignment.
-- core_values: Life principles, ethics, relationship intent, shared direction.
-- lifestyle: Daily habits, hobbies, energy levels, work-life rhythm.
-- conflict_style: Disagreement resolution, communication under stress.
-
-VERDICTS:
-Use ONLY one of these four verdicts for overall and dimension results:
-- "strong_alignment"
-- "partial_alignment"
-- "unclear"
-- "conflict"
-
-OVERALL REASONING SUMMARY:
-In `overall_reasoning`, write a concise 2-3 sentence executive conclusion summarizing why these two users match or don't match, highlighting key reciprocal synergies and main friction points.
-
-EVIDENCE CITATIONS & DIMENSION REASONING:
-For each dimension, populate `evidence_a_ids` and `evidence_b_ids` using exact signal "id" fields from profiles (e.g. ["q2_emotional_needs_s_emotional_needs_00"]). Include a 1-2 sentence explanation in `reasoning` for each dimension explaining the verdict based on the cited evidence.
+REASONING GUIDELINES:
+1. GROUND FACTUAL CLAIMS IN EVIDENCE: All assertions must cite exact signal ID strings ("evidence_a_ids" and "evidence_b_ids") from the user profiles. Do NOT invent traits, motivations, or behaviors.
+2. OPEN-ENDED ANALYSIS: Identify organic compatibility patterns, complementary relationships, shared similarities, tensions, and uncertainties. You are NOT restricted to predefined profile dimensions.
+3. RECIPROCAL FULFILLMENT (`complementary_alignments`): Highlight specific instances where Person A's wants/needs are satisfied by Person B's self/provides (and vice-versa).
+   Format: "A seeks [X] -> B provides/embodies [Y]"
+4. SHARED ALIGNMENTS (`shared_alignments`): List genuine similarities, shared values, and mutual lifestyle habits.
+5. PREVENT OVER-INFERENCE & UNSUPPORTED CLAIMS: If a trait is ambiguous or merely plausible, record it under "uncertainties" — do NOT stretch interpretations into false alignments.
 
 USER A PROFILE:
 {user_a_profile}
@@ -90,19 +51,19 @@ You MUST return your response ONLY as a JSON object matching this EXACT format:
 ```json
 {{
   "overall_verdict": "strong_alignment",
-  "overall_reasoning": "Executive summary conclusion explaining overall compatibility and key synergies.",
+  "overall_reasoning": "Executive conclusion highlighting organic synergies and main friction points.",
   "dimension_results": {{
     "emotional_needs": {{
       "verdict": "strong_alignment",
       "evidence_a_ids": ["q2_emotional_needs_s_emotional_needs_00"],
       "evidence_b_ids": ["q2_emotional_needs_s_provides_00"],
-      "reasoning": "Explanation of emotional needs alignment based on evidence."
+      "reasoning": "Explanation of emotional support alignment based on cited evidence."
     }},
     "core_values": {{
       "verdict": "strong_alignment",
       "evidence_a_ids": ["q4_lifestyle_values_s_values_00"],
       "evidence_b_ids": ["q4_lifestyle_values_s_values_00"],
-      "reasoning": "Explanation of shared core values and goals based on evidence."
+      "reasoning": "Explanation of shared core values and goals based on cited evidence."
     }},
     "lifestyle": {{
       "verdict": "partial_alignment",
@@ -114,11 +75,11 @@ You MUST return your response ONLY as a JSON object matching this EXACT format:
       "verdict": "strong_alignment",
       "evidence_a_ids": ["q3_conflict_provides_s_conflict_style_00"],
       "evidence_b_ids": ["q3_conflict_provides_s_conflict_style_00"],
-      "reasoning": "Explanation of conflict resolution style alignment."
+      "reasoning": "Explanation of conflict resolution alignment."
     }}
   }},
   "complementary_alignments": [
-    "A wants [X] -> B provides [Y]"
+    "A seeks [X] -> B provides [Y]"
   ],
   "shared_alignments": [
     "Both share interest/value in [Z]"

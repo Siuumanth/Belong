@@ -123,6 +123,16 @@ def _slim_profile(profile: Dict[str, Any]) -> Dict[str, Any]:
         elif section is not None:
             slimmed[section_key] = section
 
+    # Include other_signals (unmapped/novel signals)
+    other_sigs = profile.get("other_signals") or profile.get("novel_signals")
+    if other_sigs:
+        slimmed["other_signals"] = slim_signals(other_sigs)
+
+    # Include original raw responses/dialogue
+    raw_resp = profile.get("raw_responses") or profile.get("raw_dialogue")
+    if raw_resp:
+        slimmed["original_responses"] = raw_resp
+
     # Preserve top-level demographic fields (age, gender, relationship_goal)
     for key in ("age", "gender", "relationship_goal"):
         if key in profile:
@@ -225,6 +235,14 @@ def _build_signal_index(profile: Dict[str, Any]) -> Dict[str, str]:
             if not isinstance(field_signals, list):
                 continue
             for signal in field_signals:
+                if isinstance(signal, dict) and "id" in signal:
+                    index[signal["id"]] = signal.get("quote", signal.get("label", ""))
+
+    # Also index other_signals and novel_signals
+    for other_key in ("other_signals", "novel_signals"):
+        other_list = profile.get(other_key)
+        if isinstance(other_list, list):
+            for signal in other_list:
                 if isinstance(signal, dict) and "id" in signal:
                     index[signal["id"]] = signal.get("quote", signal.get("label", ""))
     return index
