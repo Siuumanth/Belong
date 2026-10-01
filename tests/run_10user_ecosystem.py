@@ -109,16 +109,19 @@ async def run_ecosystem_test():
 
         # STEP 2: ONBOARDING / TRAIT EXTRACTION
         print("\n-----------------------------------------------------------------")
-        print(f"STEP 2: Executing Conversational Onboarding for Ecosystem Population")
+        print(f"STEP 2: Executing Conversational Onboarding for Ecosystem Population (Pool Size: 3)")
         print("-----------------------------------------------------------------")
 
+        onboard_semaphore = asyncio.Semaphore(3)
+
         async def _onboard(user: UserSimulator):
-            ok = await user.run_onboarding_async(client)
-            if ok:
-                logger.info(f"  [OK] Onboarding complete: '{user.persona.id}'")
-            else:
-                logger.warning(f"  [WARN] Onboarding fallback/seeded: '{user.persona.id}'")
-            return ok
+            async with onboard_semaphore:
+                ok = await user.run_onboarding_async(client)
+                if ok:
+                    logger.info(f"  [OK] Onboarding complete: '{user.persona.id}'")
+                else:
+                    logger.warning(f"  [WARN] Onboarding fallback/seeded: '{user.persona.id}'")
+                return ok
 
         await asyncio.gather(*(_onboard(u) for u in simulated_users.values()))
 
