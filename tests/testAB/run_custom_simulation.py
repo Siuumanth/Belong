@@ -1,16 +1,11 @@
 """
-Custom User Simulation & Matching Test Script
-==============================================
-A fully configurable script to test custom user personas, AI onboarding dialogues,
+Custom User Simulation & Matching Test Script (Alice & Bob 2-User Testing)
+===========================================================================
+A fully configurable script to test custom user personas (Alice & Bob), AI onboarding dialogues,
 embedding generation, and match outcomes against the Belong backend API.
 
 USAGE:
-    python tests/run_custom_simulation.py
-
-HOW TO CUSTOMIZE:
-    1. Edit the User Personas (USER_1_CONFIG, USER_2_CONFIG) below.
-    2. Adjust the SIMULATION CONFIG flags (e.g. RUN_ONBOARDING, TRIGGER_MATCHING).
-    3. Run the script!
+    python tests/testAB/run_custom_simulation.py
 """
 
 import asyncio
@@ -24,8 +19,10 @@ from typing import Dict, Any, Optional
 import httpx
 
 # Ensure tests directory and root directory are in sys.path
-TESTS_DIR = Path(__file__).parent
+TESTAB_DIR = Path(__file__).parent
+TESTS_DIR = TESTAB_DIR.parent
 ROOT_DIR = TESTS_DIR.parent
+sys.path.insert(0, str(TESTAB_DIR))
 sys.path.insert(0, str(TESTS_DIR))
 sys.path.insert(0, str(ROOT_DIR))
 
@@ -37,13 +34,12 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("custom_simulation")
+logger = logging.getLogger("custom_simulation_ab")
 
 
 # =====================================================================
 # ⚙️ SIMULATION CONFIGURATION
 # =====================================================================
-# API endpoint: Use 8000 for direct API, or 9000 for API Gateway
 API_URL = os.getenv("BELONG_API_URL", "http://localhost:8000")
 
 # Flags to control execution steps
@@ -54,13 +50,11 @@ TRIGGER_MATCHING = True     # Step 4: Run vector search & LLM matching
 POLL_TIMEOUT_SECS = 90      # Max seconds to wait for matching job to finish
 
 
-
-
 # =====================================================================
 # 👤 DEFINE YOUR TEST USER PERSONAS HERE
 # =====================================================================
 
-# USER 1: Custom Persona
+# USER 1: Custom Persona (Alice)
 USER_1_CONFIG = (
     PersonaConfig.builder("custom_user_alice")
     .with_name("Alice")
@@ -112,7 +106,7 @@ USER_1_CONFIG = (
     .build()
 )
 
-# USER 2: Custom Candidate Persona
+# USER 2: Custom Candidate Persona (Bob)
 USER_2_CONFIG = (
     PersonaConfig.builder("custom_user_bob")
     .with_name("Bob")
@@ -166,10 +160,6 @@ USER_2_CONFIG = (
 )
 
 
-# =====================================================================
-# 🚀 SIMULATION RUNNER ENGINE
-# =====================================================================
-
 async def check_api_health(client: httpx.AsyncClient) -> bool:
     """Verifies backend API service is running and healthy."""
     try:
@@ -181,7 +171,7 @@ async def check_api_health(client: httpx.AsyncClient) -> bool:
         return False
     except Exception as e:
         logger.error(f"Cannot connect to Belong API at {API_URL}: {e}")
-        logger.error("Make sure your API server is running (e.g. docker compose up or uvicorn main:app).")
+        logger.error("Make sure your API server is running.")
         return False
 
 
@@ -204,8 +194,6 @@ async def poll_job_completion(client: httpx.AsyncClient, job_id: str, max_secs: 
                 elif status == "failed":
                     logger.error(f"  └─ Job failed: {data.get('error', 'No error detail')}")
                     return False
-            else:
-                logger.warning(f"  └─ Unexpected status code {res.status_code} polling job")
         except Exception as e:
             logger.warning(f"  └─ Error polling job: {e}")
 
@@ -216,7 +204,7 @@ async def poll_job_completion(client: httpx.AsyncClient, job_id: str, max_secs: 
 async def run_simulation():
     """Main execution workflow."""
     print("=" * 70)
-    print("      BELONG CUSTOM USER SIMULATION RUNNER")
+    print("      BELONG ALICE & BOB INDIVIDUAL PAIR SIMULATION RUNNER")
     print("=" * 70)
 
     sim_user_1 = UserSimulator(USER_1_CONFIG)
@@ -225,16 +213,12 @@ async def run_simulation():
 
     async with httpx.AsyncClient(base_url=API_URL, timeout=300.0) as client:
 
-        # Health check
         if not await check_api_health(client):
             return
 
-        # -----------------------------------------------------------------
-        # STEP 1: CREATE PROFILES
-        # -----------------------------------------------------------------
         if CREATE_PROFILES:
             print("\n-----------------------------------------------------------------")
-            print("STEP 1: Registering User Demographic Profiles (In Parallel)")
+            print("STEP 1: Registering User Demographic Profiles")
             print("-----------------------------------------------------------------")
             
             async def _create_profile(user: UserSimulator):
@@ -247,12 +231,9 @@ async def run_simulation():
 
             await asyncio.gather(*(_create_profile(user) for user in users))
 
-        # -----------------------------------------------------------------
-        # STEP 2: MULTI-TURN AI ONBOARDING CHAT (In Parallel)
-        # -----------------------------------------------------------------
         if RUN_ONBOARDING:
             print("\n-----------------------------------------------------------------")
-            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (In Parallel)")
+            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue")
             print("-----------------------------------------------------------------")
 
             async def _onboard_user(user: UserSimulator):
@@ -266,12 +247,9 @@ async def run_simulation():
 
             await asyncio.gather(*(_onboard_user(user) for user in users))
 
-        # -----------------------------------------------------------------
-        # STEP 3: TRIGGER EMBEDDING GENERATION
-        # -----------------------------------------------------------------
         if TRIGGER_EMBEDDINGS:
             print("\n-----------------------------------------------------------------")
-            print("STEP 3: Triggering Trait & Vector Embedding Generation (In Parallel)")
+            print("STEP 3: Triggering Trait & Vector Embedding Generation")
             print("-----------------------------------------------------------------")
 
             async def _trigger_embedding(user: UserSimulator):
@@ -292,18 +270,11 @@ async def run_simulation():
                     res2 = await client.get(f"/profiles/{sim_user_2.user_id}/embeddings")
                     p1 = res1.json() if res1.status_code == 200 else {}
                     p2 = res2.json() if res2.status_code == 200 else {}
-                    # Check if embeddings are confirmed generated
                     if p1.get("has_self_embedding") and p2.get("has_self_embedding"):
                         logger.info(f"✅ Both user embeddings confirmed in PostgreSQL after {(w + 1) * 2}s!")
                         break
                 except Exception:
                     pass
-            else:
-                logger.info("Proceeding to matching after wait interval...")
-
-        # -----------------------------------------------------------------
-        # STEP 4: TRIGGER MATCHING & FETCH RESULTS
-        # -----------------------------------------------------------------
 
         if TRIGGER_MATCHING:
             print("\n-----------------------------------------------------------------")
@@ -316,10 +287,8 @@ async def run_simulation():
             if job_id:
                 logger.info(f"✅ Match job successfully submitted! Job ID: {job_id}")
 
-                # Poll for completion
                 job_ok = await poll_job_completion(client, job_id, max_secs=POLL_TIMEOUT_SECS)
 
-                # Fetch matches regardless
                 print("\n-----------------------------------------------------------------")
                 print(f"STEP 5: Fetching Match Results for User '{target_user.persona.id}'")
                 print("-----------------------------------------------------------------")
@@ -333,9 +302,6 @@ async def run_simulation():
                     print(json.dumps(matches_data, indent=2))
                 else:
                     logger.error(f"Failed to fetch matches (Status Code: {res.status_code})")
-                    logger.error(res.text)
-            else:
-                logger.error("❌ Failed to request match job.")
 
     print("\n" + "=" * 70)
     print("SIMULATION COMPLETED!")

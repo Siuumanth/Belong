@@ -11,15 +11,17 @@ tests/
 ├── README.md                              # This guide
 ├── pytest.ini                             # Pytest configuration & markers
 ├── conftest.py                            # Pytest session fixtures & persona loaders
-├── run_custom_simulation.py              # Custom user simulation CLI runner (Alice, Bob, customizable personas)
+├── run_10user_ecosystem.py                # 10-User Whole Population Ecosystem Simulation (Phase 12)
 ├── get_latest_results.py                 # Fetches & formats latest compatibility match results
 ├── trigger_matching.py                   # Helper script to trigger matching jobs for profiles
-├── trigger_matching_only.py              # Lightweight trigger script for matching jobs
 ├── nuke_data.py                          # Cross-platform PostgreSQL test data wipe utility
 ├── results.md                            # Compatibility match results output log
 ├── results/                              # Historical milestone snapshot outputs (results1.md..results5-works.md)
+├── testAB/                               # Isolated 2-user testing folder (Alice & Bob)
+│   ├── README.md                          # Guide for 2-user individual testing
+│   └── run_custom_simulation.py          # Custom 2-user simulation CLI runner (Alice & Bob)
 ├── fixtures/
-│   ├── personas.json                      # Golden synthetic user personas (Alice, Bob, etc.)
+│   ├── personas.json                      # Golden synthetic user personas (Alice, Bob, Elena, etc.)
 │   └── expected_outcomes.json             # Ground-truth compatibility & filter outcome invariants
 ├── simulators/
 │   ├── __init__.py                        # Package exports (UserSimulator, PersonaConfig)

@@ -228,4 +228,10 @@ class CandidateRetriever:
             f"Stage 1 Recall for user {user_id}: Retrieved {len(candidate_rows)} pool candidates, "
             f"pre-ranked top {len(pre_ranked_candidates)} (limit={config['pre_rank_limit']})."
         )
+        for idx, cand in enumerate(pre_ranked_candidates, 1):
+            logger.info(
+                f"  └─ [{idx}] Candidate '{cand.name or str(cand.user_id)[:8]}' ({cand.gender}, age {cand.age}) | "
+                f"Vector Sim: {cand.cosine_similarity:.4f} | Reverse Sim: {cand.reverse_cosine_similarity or 0.0:.4f} | "
+                f"Combined Vector Score: {cand.combined_score:.4f}"
+            )
         return pre_ranked_candidates

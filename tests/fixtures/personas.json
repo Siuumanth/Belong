@@ -10,8 +10,8 @@
         "relationship_goal": "long-term",
         "latitude": 37.7749,
         "longitude": -122.4194,
-        "preferred_age_min": 26,
-        "preferred_age_max": 35,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["male"],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
@@ -53,8 +53,8 @@
         "relationship_goal": "long-term",
         "latitude": 37.7800,
         "longitude": -122.4100,
-        "preferred_age_min": 25,
-        "preferred_age_max": 33,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["female"],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
@@ -92,14 +92,14 @@
       "demographics": {
         "age": 31,
         "gender": "female",
-        "orientation": "bisexual",
+        "orientation": "straight",
         "relationship_goal": "long-term",
-        "latitude": 34.0522,
-        "longitude": -118.2437,
-        "preferred_age_min": 28,
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["male", "female"],
-        "max_distance_km": 60,
+        "preferred_genders": ["male"],
+        "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
@@ -137,12 +137,12 @@
         "gender": "male",
         "orientation": "straight",
         "relationship_goal": "long-term",
-        "latitude": 34.0600,
-        "longitude": -118.2500,
-        "preferred_age_min": 27,
-        "preferred_age_max": 35,
+        "latitude": 37.7800,
+        "longitude": -122.4100,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["female"],
-        "max_distance_km": 60,
+        "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
@@ -182,10 +182,10 @@
         "relationship_goal": "long-term",
         "latitude": 37.7749,
         "longitude": -122.4194,
-        "preferred_age_min": 25,
-        "preferred_age_max": 33,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["female"],
-        "max_distance_km": 40,
+        "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
@@ -225,10 +225,10 @@
         "relationship_goal": "long-term",
         "latitude": 37.7800,
         "longitude": -122.4100,
-        "preferred_age_min": 26,
-        "preferred_age_max": 34,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["male"],
-        "max_distance_km": 40,
+        "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
@@ -268,8 +268,8 @@
         "relationship_goal": "long-term",
         "latitude": 37.7749,
         "longitude": -122.4194,
-        "preferred_age_min": 26,
-        "preferred_age_max": 35,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["male"],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
@@ -311,8 +311,8 @@
         "relationship_goal": "long-term",
         "latitude": 37.7800,
         "longitude": -122.4100,
-        "preferred_age_min": 25,
-        "preferred_age_max": 33,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["female"],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
@@ -355,10 +355,10 @@
         "latitude": 37.7749,
         "longitude": -122.4194,
         "preferred_age_min": 24,
-        "preferred_age_max": 32,
+        "preferred_age_max": 38,
         "preferred_genders": ["female"],
         "max_distance_km": 50,
-        "required_relationship_goal": null
+        "required_relationship_goal": "long-term"
       },
       "question_responses": {
         "q1_intent_partner": "Just seeing what happens. Looking for someone cool.",
@@ -395,28 +395,28 @@
         "gender": "male",
         "orientation": "straight",
         "relationship_goal": "long-term",
-        "latitude": 47.6062,
-        "longitude": -122.3321,
-        "preferred_age_min": 25,
-        "preferred_age_max": 33,
+        "latitude": 37.7800,
+        "longitude": -122.4100,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["female"],
-        "max_distance_km": 30,
+        "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "Looking for a long-term partner in Seattle.",
-        "q2_emotional_needs": "Good communication.",
-        "q3_conflict_provides": "Calm talks.",
-        "q4_lifestyle_values": "Tech, coffee, hiking.",
-        "q5_personality": "Friendly.",
+        "q1_intent_partner": "Looking for a long-term partner who loves tech, coffee, and urban walks.",
+        "q2_emotional_needs": "Good communication and mutual respect.",
+        "q3_conflict_provides": "Calm talks and active listening.",
+        "q4_lifestyle_values": "Tech, coffee brewing, morning runs.",
+        "q5_personality": "Friendly, optimistic, curious.",
         "q6_dealbreakers": "Dishonesty."
       },
       "profile": {
         "self": {
           "values": [{"summary": "honesty", "confidence": 0.9, "evidence": "Dishonesty"}],
-          "lifestyle": [{"summary": "hiking and coffee in Seattle", "confidence": 0.9, "evidence": "coffee, hiking"}],
+          "lifestyle": [{"summary": "running and coffee in SF", "confidence": 0.9, "evidence": "coffee, running"}],
           "personality_signals": [{"summary": "friendly", "confidence": 0.9, "evidence": "Friendly"}],
-          "interests": [{"summary": "hiking, tech, coffee", "confidence": 0.9, "evidence": "Tech, coffee, hiking"}],
+          "interests": [{"summary": "running, tech, coffee", "confidence": 0.9, "evidence": "Tech, coffee, running"}],
           "life_goals": [],
           "conflict_style": [{"summary": "calm", "confidence": 0.85, "evidence": "Calm talks"}],
           "provides": [],
@@ -425,7 +425,7 @@
         "wants": {
           "partner_traits": [{"summary": "communicative female partner", "confidence": 0.9, "evidence": "Good communication"}],
           "partner_values": [],
-          "relationship_expectations": [{"summary": "long-term relationship in Seattle", "confidence": 0.9, "evidence": "long-term partner in Seattle"}],
+          "relationship_expectations": [{"summary": "long-term partner", "confidence": 0.9, "evidence": "long-term partner"}],
           "desired_lifestyle": []
         }
       }
@@ -440,10 +440,10 @@
         "relationship_goal": "long-term",
         "latitude": 37.7749,
         "longitude": -122.4194,
-        "preferred_age_min": 25,
-        "preferred_age_max": 33,
+        "preferred_age_min": 24,
+        "preferred_age_max": 38,
         "preferred_genders": ["male"],
-        "max_distance_km": 30,
+        "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {

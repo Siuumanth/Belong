@@ -167,18 +167,21 @@ export type OverallVerdict =
 
 export type DimensionResult = {
   verdict?: string;
-  evidence_a_ids?: string[];
-  evidence_b_ids?: string[];
-  // legacy fields kept for compat
+  reasoning?: string;
   evidence_a?: string;
   evidence_b?: string;
+  evidence_a_ids?: string[];
+  evidence_b_ids?: string[];
 };
 
 export type MatchResultItem = {
-  // openapi.yaml: MatchCandidateResponse
+  // Phase 11 fields
+  id?: string | null;
   match_id?: string | null;
+  user_a_id?: string | null;
   user_b_id?: string;
-  // legacy field name used by the existing service
+  user_b_name?: string | null;
+  // legacy field name kept for compat
   candidate_id?: string;
   overall_verdict?: OverallVerdict;
   overall_reasoning?: string;
@@ -189,6 +192,8 @@ export type MatchResultItem = {
   potential_conflicts?: string[];
   dealbreaker_violations?: string[];
   uncertainties?: string[];
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export type JobAcceptedResponse = {
@@ -289,5 +294,7 @@ export const matchApi = {
       body: JSON.stringify({ user_id: userId, limit }),
     }),
   job: (jobId: string) => api<MatchJob>(`/matches/jobs/${jobId}`),
+  jobResults: (jobId: string) => api<MatchesListResponse>(`/matches/jobs/${jobId}/results`),
   latest: (userId: string) => api<MatchesListResponse>(`/matches/${userId}`),
+  detail: (resultId: string) => api<MatchResultItem>(`/matches/details/${resultId}`),
 };

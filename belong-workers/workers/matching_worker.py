@@ -98,6 +98,12 @@ class MatchingWorker:
                     user_b_profile=user_b_profile
                 )
 
+                logger.info(
+                    f"Stage 2 Pairwise LLM Result ({user_id} -> {candidate.user_id}): "
+                    f"Verdict={output.overall_verdict.upper()} | ReciprocityScore={output.reciprocity_score:.2f} | "
+                    f"Dealbreakers={len(output.dealbreaker_violations)} | Conflicts={len(output.potential_conflicts)}"
+                )
+
                 evaluated_candidates.append({
                     "candidate_user_id": candidate.user_id,
                     "stage1_combined_score": candidate.combined_score,
