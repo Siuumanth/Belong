@@ -174,14 +174,55 @@ export type DimensionResult = {
   evidence_b_ids?: string[];
 };
 
+// Stage 1 — candidate from retrieval engine
+export type CandidateMatch = {
+  user_id: string;
+  name?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  orientation?: string | null;
+  relationship_goal?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  distance_km?: number | null;
+  profile?: Record<string, unknown>;
+  cosine_distance?: number;
+  cosine_similarity?: number;
+  reverse_cosine_distance?: number | null;
+  reverse_cosine_similarity?: number | null;
+  combined_score?: number;
+};
+
+export type RetrievalListResponse = {
+  user_id: string;
+  total_candidates: number;
+  candidates: CandidateMatch[];
+};
+
+export type RetrievalOptions = {
+  candidate_pool_limit?: number;
+  pre_rank_limit?: number;
+  max_distance_km?: number;
+  min_similarity_threshold?: number;
+  bidirectional_weight?: number;
+  require_mutual_age?: boolean;
+  require_mutual_gender?: boolean;
+  require_mutual_relationship_goal?: boolean;
+};
+
+export type AnalyzeMatchRequest = {
+  candidate_user_id: string;
+  user_id?: string | null;
+};
+
+// Stage 2 — full qualitative analysis result
 export type MatchResultItem = {
-  // Phase 11 fields
   id?: string | null;
   match_id?: string | null;
   user_a_id?: string | null;
   user_b_id?: string;
   user_b_name?: string | null;
-  // legacy field name kept for compat
+  // legacy field kept for compat
   candidate_id?: string;
   overall_verdict?: OverallVerdict;
   overall_reasoning?: string;
@@ -288,6 +329,34 @@ export const onboardingApi = {
 };
 
 export const matchApi = {
+  // Stage 1 — fast candidate retrieval (no LLM, ~5-15ms)
+  candidates: (userId: string, opts?: RetrievalOptions) => {
+    const params = new URLSearchParams();
+    if (opts?.candidate_pool_limit) params.set("candidate_pool_limit", String(opts.candidate_pool_limit));
+    if (opts?.pre_rank_limit) params.set("pre_rank_limit", String(opts.pre_rank_limit));
+    if (opts?.max_distance_km) params.set("max_distance_km", String(opts.max_distance_km));
+    const qs = params.toString();
+    return api<RetrievalListResponse>(`/matches/candidates/${userId}${qs ? `?${qs}` : ""}`);
+  },
+
+  // Stage 2 — on-demand LLM pairwise reasoning for a single candidate
+  analyze: (candidateUserId: string, userId?: string) =>
+    api<MatchResultItem>("/matches/analyze", {
+      method: "POST",
+      body: JSON.stringify({ candidate_user_id: candidateUserId, user_id: userId ?? null }),
+    }),
+
+  // Fetch existing analysis for a candidate pair (avoids re-running LLM)
+  pairDetail: (candidateUserId: string) =>
+    api<MatchResultItem>(`/matches/details/pair/${candidateUserId}`),
+
+  // Get all persisted analyses for a user
+  latest: (userId: string) => api<MatchesListResponse>(`/matches/${userId}`),
+
+  // Get full detail by result ID
+  detail: (resultId: string) => api<MatchResultItem>(`/matches/details/${resultId}`),
+
+  // Legacy batch job endpoints (kept for compat)
   createJob: (userId: string, limit = 5) =>
     api<JobAcceptedResponse>("/matches", {
       method: "POST",
@@ -295,6 +364,4 @@ export const matchApi = {
     }),
   job: (jobId: string) => api<MatchJob>(`/matches/jobs/${jobId}`),
   jobResults: (jobId: string) => api<MatchesListResponse>(`/matches/jobs/${jobId}/results`),
-  latest: (userId: string) => api<MatchesListResponse>(`/matches/${userId}`),
-  detail: (resultId: string) => api<MatchResultItem>(`/matches/details/${resultId}`),
 };
