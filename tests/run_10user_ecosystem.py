@@ -199,7 +199,7 @@ async def run_ecosystem_test():
                 print(f"      └─ 🎯 Combined Score:   {combined:.4f}")
                 print()
 
-        # STEP 5: EXPORT SUMMARY REPORT TO tests/results/results_stage1_retrieval.md
+        # STEP 5: EXPORT DETAILED FULL RANKING REPORT TO tests/results/results_stage1_retrieval.md
         results_dir = TESTS_DIR / "results"
         results_dir.mkdir(exist_ok=True)
         report_path = results_dir / "results_stage1_retrieval.md"
@@ -213,7 +213,7 @@ async def run_ecosystem_test():
             "- **Retrieval Method**: pgvector Cosine Distance on 1536-dim text-embedding-3-small embeddings.",
             "- **Scoring Formula**: `Combined Score = 0.5 * (Self->Wants Sim) + 0.5 * (Wants<-Self Sim)`.",
             "",
-            "## Stage 1 Candidate Retrieval Matrix",
+            "## Summary Retrieval Matrix",
             "",
             "| Primary User | Gender/Age | Candidates Retrieved | #1 Top Candidate | #1 Combined Score | #1 Self->Wants Sim | #2 Candidate | #2 Combined Score |",
             "| --- | --- | --- | --- | --- | --- | --- | --- |",
@@ -244,6 +244,38 @@ async def run_ecosystem_test():
             report_lines.append(
                 f"| `{pid}` | {gender_age} | {len(cands)} | `{c1_pid}` | **{c1_score:.4f}** | {c1_sim:.4f} | `{c2_pid}` | {c2_score:.4f} |"
             )
+
+        report_lines.extend([
+            "",
+            "---",
+            "## Detailed Candidate Rankings (Full Ordered Shortlists)",
+            "",
+        ])
+
+        for pid, u in simulated_users.items():
+            cands = retrieval_matrix.get(pid, [])
+            demo = u.persona.demographics
+            report_lines.append(f"### Primary User: `{pid}` ({demo.get('gender')}, age {demo.get('age')})")
+            report_lines.append(f"- **User ID**: `{u.user_id}`")
+            report_lines.append(f"- **Total Retrieved Candidates**: {len(cands)}")
+            report_lines.append("")
+            report_lines.append("| Rank | Candidate | Gender/Age | Distance | Combined Score | Forward Sim (A.wants->B.self) | Reverse Sim (B.wants->A.self) |")
+            report_lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+
+            for rank, cand in enumerate(cands, 1):
+                cand_id = cand.get("user_id", "")
+                cand_pid = user_id_to_pid.get(cand_id, cand.get("name") or cand_id[:8])
+                c_demo = f"{cand.get('gender')}, {cand.get('age')}"
+                dist_str = f"{cand.get('distance_km')} km" if cand.get("distance_km") is not None else "Nearby"
+                combined = cand.get("combined_score", 0.0)
+                fwd = cand.get("cosine_similarity", 0.0)
+                rev = cand.get("reverse_cosine_similarity")
+                rev_str = f"{rev:.4f}" if rev is not None else "N/A"
+
+                report_lines.append(
+                    f"| **#{rank}** | `{cand_pid}` | {c_demo} | {dist_str} | **{combined:.4f}** | {fwd:.4f} | {rev_str} |"
+                )
+            report_lines.append("")
 
         with open(report_path, "w", encoding="utf-8") as f:
             f.write("\n".join(report_lines))

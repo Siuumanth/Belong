@@ -12,34 +12,108 @@
         "longitude": 77.5946,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["male"],
+        "preferred_genders": [
+          "male"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
         "q1_intent_partner": "honestly I'm kinda done with dating casually at this point — I want something real in Bangalore. I need someone who's emotionally available, not just texting back. like, checks in, talks about the future, actually shows up. communication is everything for me.",
-        "q2_emotional_needs": "when I'm stressed I tend to go quiet, and I need someone who can read that and not push me to talk right away. a simple 'hey I'm here' goes a long way. I feel most secure when my partner verbally reassures me — words of affirmation honestly matter more than I'd like to admit lol.",
-        "q3_conflict_provides": "I don't love conflict but I won't ghost it either. I usually need like an hour to settle, then I'll come back and talk it out. I try not to blame, I use 'I felt...' a lot. and when my partner is having a rough time I show up — I'll cook for them, check in more, just make sure they feel seen.",
+        "q2_emotional_needs": "when I'm stressed I tend to go quiet, and I need someone who can read that and not push me to talk right away. I feel most secure when my partner offers calm verbal reassurance — saying 'I'm here for you' without pressuring me. words of affirmation matter a lot to me.",
+        "q3_conflict_provides": "I don't love conflict but I won't ghost it either. I usually need like an hour to settle, then I'll come back and talk it out. In a relationship, I bring deep loyalty, warm attentive listening, and I care for my partner by cooking plant-based meals and making sure they feel deeply supported when they're going through a tough time.",
         "q4_lifestyle_values": "I do morning yoga most days — probably 5 or 6 times a week in Indiranagar. I work in product design which is a lot of screen time so I really need that movement. weekends I'm usually at Cubbon Park, farmers market, or in a bookstore. I eat plant-based and I love cooking. I care a lot about consistency — like doing small things well.",
         "q5_personality": "my friends say I'm a lot, in a good way I hope. I'm pretty intense when I care about something, very organized, I overthink but I know it. I'm genuinely warm though — I love people, I notice the small things, and I think that makes me a good partner.",
         "q6_dealbreakers": "smoking is a hard no — I have asthma so it's literally a health thing. any regular substance use is also off the table. and dishonesty in any form, even the small stuff. if I can't trust what you're telling me, we're done."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "honesty and emotional connection", "confidence": 0.9, "evidence": "I value honesty, continuous learning, and balance."}],
-          "lifestyle": [{"summary": "active and balanced lifestyle in Bangalore with yoga and Cubbon Park walks", "confidence": 0.95, "evidence": "morning yoga in Indiranagar, cooking plant-based meals, spending weekends at Cubbon Park"}],
-          "personality_signals": [{"summary": "warm, empathetic, thoughtful, and grounded", "confidence": 0.9, "evidence": "Friends describe me as warm, thoughtful, empathetic, and grounded."}],
-          "interests": [{"summary": "hiking, cooking, reading, and yoga", "confidence": 0.95, "evidence": "morning yoga, cooking plant-based meals, and spending weekends reading"}],
-          "life_goals": [{"summary": "building a balanced, growth-oriented long-term life", "confidence": 0.85, "evidence": "committed, long-term partner who values emotional connection and personal growth"}],
-          "conflict_style": [{"summary": "calm, communicative, and collaborative resolution", "confidence": 0.9, "evidence": "expressing my feelings calmly, and working together to find a solution"}],
-          "provides": [{"summary": "deep loyalty, empathy, and active encouragement", "confidence": 0.95, "evidence": "In a relationship, I bring deep loyalty, empathy, and active encouragement."}],
-          "emotional_needs": [{"summary": "active listening, calm reassurance, and safe vulnerability", "confidence": 0.95, "evidence": "I need a partner who listens actively before jumping into solution mode"}]
+          "values": [
+            {
+              "summary": "honesty and emotional connection",
+              "confidence": 0.9,
+              "evidence": "I value honesty, continuous learning, and balance."
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "active and balanced lifestyle in Bangalore with yoga and Cubbon Park walks",
+              "confidence": 0.95,
+              "evidence": "morning yoga in Indiranagar, cooking plant-based meals, spending weekends at Cubbon Park"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "warm, empathetic, thoughtful, and grounded",
+              "confidence": 0.9,
+              "evidence": "Friends describe me as warm, thoughtful, empathetic, and grounded."
+            }
+          ],
+          "interests": [
+            {
+              "summary": "hiking, cooking, reading, and yoga",
+              "confidence": 0.95,
+              "evidence": "morning yoga, cooking plant-based meals, and spending weekends reading"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "building a balanced, growth-oriented long-term life",
+              "confidence": 0.85,
+              "evidence": "committed, long-term partner who values emotional connection and personal growth"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "calm, communicative, and collaborative resolution",
+              "confidence": 0.9,
+              "evidence": "expressing my feelings calmly, and working together to find a solution"
+            }
+          ],
+          "provides": [
+            {
+              "summary": "deep loyalty, empathetic active listening, and nurturing cooking support",
+              "confidence": 0.95,
+              "evidence": "deep loyalty, warm attentive listening, and care for partner by cooking"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "calm verbal reassurance and patient processing space",
+              "confidence": 0.95,
+              "evidence": "offers calm verbal reassurance — saying 'I'm here for you' without pressuring me"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "communicative, emotionally available, and kind", "confidence": 0.95, "evidence": "someone communicative, emotionally available, and kind."}],
-          "partner_values": [{"summary": "integrity, continuous learning, and mutual respect", "confidence": 0.9, "evidence": "values emotional connection and personal growth"}],
-          "relationship_expectations": [{"summary": "committed long-term partnership with strong emotional connection", "confidence": 0.95, "evidence": "looking for a committed, long-term partner"}],
-          "desired_lifestyle": [{"summary": "active, healthy, and growth-oriented daily life", "confidence": 0.85, "evidence": "personal growth and continuous learning"}]
+          "partner_traits": [
+            {
+              "summary": "communicative, steady, emotionally available, and providing verbal reassurance",
+              "confidence": 0.95,
+              "evidence": "someone communicative, emotionally available, steady, and providing verbal reassurance"
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "integrity, continuous learning, and mutual respect",
+              "confidence": 0.9,
+              "evidence": "values emotional connection and personal growth"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "committed long-term partnership with strong emotional connection",
+              "confidence": 0.95,
+              "evidence": "looking for a committed, long-term partner"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "active, healthy, and growth-oriented daily life",
+              "confidence": 0.85,
+              "evidence": "personal growth and continuous learning"
+            }
+          ]
         }
       }
     },
@@ -55,34 +129,108 @@
         "longitude": 77.6245,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["female"],
+        "preferred_genders": [
+          "female"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
         "q1_intent_partner": "I want something that lasts. I've had the casual thing, I've done the 'let's see where it goes' thing — I'm past that. I want someone I can actually grow with in Bangalore. someone curious, takes care of themselves, doesn't play games. trust first, everything else builds from there.",
-        "q2_emotional_needs": "I get pretty quiet when I'm stressed — I need an hour or so to sit with it before I can talk. what helps is if my partner doesn't push but doesn't vanish either. just knowing they're around is enough. and I'm kind of the opposite when she's going through something — I'm good at just listening, I don't jump straight into fix-it mode.",
-        "q3_conflict_provides": "I'd rather deal with something quickly than let it rot for a week. I stay calm, I don't raise my voice — I genuinely hate that. I'd rather have a slightly awkward conversation than a cold shoulder. I think what I bring to a relationship is stability — my partner knows I'm not going anywhere even when things are hard.",
+        "q2_emotional_needs": "I get pretty quiet when I'm stressed — I need an hour or so to sit with it before I can talk. I feel most appreciated when my partner notices and values the practical support and effort I put into our relationship.",
+        "q3_conflict_provides": "I stay completely calm under pressure — I genuinely hate shouting or passive-aggression. What I naturally bring to a partner is steady emotional stability and verbal reassurance. When my partner is stressed, I listen actively without rushing to fix things and give them consistent reassurance that I'm in their corner.",
         "q4_lifestyle_values": "running is my main thing — I do Nandi Hills runs on weekends. software engineer in Koramangala so weekdays I'm pretty heads-down, but I make myself get outside every day. I take specialty filter coffee brewing way too seriously. I value people who are actually growing — professionally, personally, either one.",
         "q5_personality": "pretty chill, pretty reliable. I show up when I say I will. I'm curious about a lot of things — I'll read a book on almost anything. my friends say I'm a good listener and I think that's true, I actually care what people have to say. I can be reserved at first but I warm up fast.",
         "q6_dealbreakers": "arrogance is a big one — like someone who literally can't admit they're wrong ever. and dishonesty, not just the obvious stuff, the small habitual ones are worse honestly. also someone who's totally checked out from growing, just not interested in improving anything."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "integrity, health, and lifelong learning", "confidence": 0.95, "evidence": "I value integrity, health, and lifelong learning."}],
-          "lifestyle": [{"summary": "active tech lifestyle in Bangalore with distance running and specialty coffee", "confidence": 0.9, "evidence": "outdoor activities like Nandi Hills runs and brewing specialty filter coffee"}],
-          "personality_signals": [{"summary": "patient, dependable, upbeat, and great listener", "confidence": 0.9, "evidence": "patient, dependable, upbeat, and a great listener"}],
-          "interests": [{"summary": "running, filter coffee, cooking, tech", "confidence": 0.9, "evidence": "running and experimenting with filter coffee recipes"}],
-          "life_goals": [{"summary": "building a healthy, stable, long-term future", "confidence": 0.85, "evidence": "meaningful, long-term relationship"}],
-          "conflict_style": [{"summary": "early resolution, patient listening, no voice raising", "confidence": 0.95, "evidence": "I listen carefully, stay patient, and avoid raising my voice."}],
-          "provides": [{"summary": "stability, humor, and strong emotional support", "confidence": 0.95, "evidence": "I bring stability, humor, and strong emotional support."}],
-          "emotional_needs": [{"summary": "quiet support and processing space during stress", "confidence": 0.85, "evidence": "I appreciate quiet support and space to process"}]
+          "values": [
+            {
+              "summary": "integrity, health, and lifelong learning",
+              "confidence": 0.95,
+              "evidence": "I value integrity, health, and lifelong learning."
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "active tech lifestyle in Bangalore with distance running and specialty coffee",
+              "confidence": 0.9,
+              "evidence": "outdoor activities like Nandi Hills runs and brewing specialty filter coffee"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "patient, dependable, upbeat, and great listener",
+              "confidence": 0.9,
+              "evidence": "patient, dependable, upbeat, and a great listener"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "running, filter coffee, cooking, tech",
+              "confidence": 0.9,
+              "evidence": "running and experimenting with filter coffee recipes"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "building a healthy, stable, long-term future",
+              "confidence": 0.85,
+              "evidence": "meaningful, long-term relationship"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "calm resolution, patient listening, zero voice raising",
+              "confidence": 0.95,
+              "evidence": "I listen carefully, stay patient, and avoid raising my voice."
+            }
+          ],
+          "provides": [
+            {
+              "summary": "steady emotional stability, patient listening, and verbal reassurance",
+              "confidence": 0.95,
+              "evidence": "steady emotional stability and verbal reassurance... listen actively and give consistent reassurance"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "quiet processing space and recognition of practical support",
+              "confidence": 0.85,
+              "evidence": "notices and values the practical support and effort"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "thoughtful, empathetic, active, and communicative", "confidence": 0.95, "evidence": "someone who is thoughtful, empathetic, and enjoys an active life."}],
-          "partner_values": [{"summary": "open communication, growth mindset, and health", "confidence": 0.9, "evidence": "values open communication"}],
-          "relationship_expectations": [{"summary": "long-term relationship based on mutual priority and support", "confidence": 0.95, "evidence": "meaningful, long-term relationship"}],
-          "desired_lifestyle": [{"summary": "active and healthy lifestyle", "confidence": 0.85, "evidence": "enjoys an active life"}]
+          "partner_traits": [
+            {
+              "summary": "thoughtful, empathetic, communicative female partner who values reassurance and loyalty",
+              "confidence": 0.95,
+              "evidence": "someone who is thoughtful, empathetic, and enjoys an active life."
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "open communication, growth mindset, and health",
+              "confidence": 0.9,
+              "evidence": "values open communication"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "long-term relationship based on mutual priority and support",
+              "confidence": 0.95,
+              "evidence": "meaningful, long-term relationship"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "active and healthy lifestyle",
+              "confidence": 0.85,
+              "evidence": "enjoys an active life"
+            }
+          ]
         }
       }
     },
@@ -98,34 +246,108 @@
         "longitude": 77.6445,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["male"],
+        "preferred_genders": [
+          "male"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "I'm at a point in my life where I really do want marriage and a family in Bangalore — that's not something I'm vague about anymore. I want someone who's warm, has real ambition but doesn't let it make them cold, and actually wants to build something together. compassion is non-negotiable for me.",
-        "q2_emotional_needs": "when I'm overwhelmed I really need physical presence — a hug, someone sitting next to me. I can't do the text-from-across-the-room support lol. and I need someone who's willing to talk about how they actually feel, not just 'I'm fine'. emotional openness is huge.",
-        "q3_conflict_provides": "I'm direct — I'll say what's bothering me pretty quickly, but I try to stay warm about it. I'm not a passive-aggressive person. and what I think I bring to a relationship is real stability — I'm the person who keeps things organized, remembers dates, cheers loudly for my partner's goals. I get genuinely excited about their work.",
-        "q4_lifestyle_values": "I'm an architect in HSR Layout so creativity is kind of my whole life. outside of work I garden, I paint — watercolor mostly — and I love hosting, like a proper dinner party maybe once a month. family is really central to me. I grew up in a big one and I want that again.",
-        "q5_personality": "my friends would say I'm creative, very nurturing, sometimes annoyingly organized — I make lists for everything. and loyal to a fault. I think I'm a good partner because I make people feel genuinely cared for.",
-        "q6_dealbreakers": "emotional distance is the big one — if someone shuts down every time things get hard, I can't do it. same with people who avoid talking about the future, that avoidance stresses me out. and cynicism, like a general 'everything sucks' worldview — I can't live in that."
+        "q1_intent_partner": "I'm at a point in my life where I really do want marriage and starting a family in Bangalore within the next 2-3 years — that's not something I'm vague about anymore. I want someone who's warm, has real ambition but doesn't let it make them cold, and actually wants to build a home together.",
+        "q2_emotional_needs": "when I'm overwhelmed I really need physical presence and emotional openness — a hug, sitting next to each other, and a partner who's willing to talk about how they actually feel.",
+        "q3_conflict_provides": "I'm direct and warm. In a relationship, I bring deep emotional safety, an organized, nurturing home environment, and enthusiastic encouragement for my partner's career and creative goals.",
+        "q4_lifestyle_values": "I'm an architect in HSR Layout so creativity is kind of my whole life. outside of work I garden, I paint — watercolor mostly — and I love hosting dinner parties. family is central to me.",
+        "q5_personality": "my friends would say I'm creative, very nurturing, organized, and loyal to a fault.",
+        "q6_dealbreakers": "emotional distance, people who avoid talking about marriage or starting a family, and cynicism."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "family, creative expression, and grounding", "confidence": 0.9, "evidence": "Family and creative expression drive me."}],
-          "lifestyle": [{"summary": "creative, family-centered in HSR Layout, gardening, painting", "confidence": 0.9, "evidence": "gardening, painting, and hosting dinner parties"}],
-          "personality_signals": [{"summary": "creative, nurturing, organized, deeply loyal", "confidence": 0.9, "evidence": "creative, nurturing, organized, and deeply loyal"}],
-          "interests": [{"summary": "architecture, gardening, painting, dinner parties", "confidence": 0.9, "evidence": "gardening, painting, and hosting dinner parties"}],
-          "life_goals": [{"summary": "marriage, family, and shared creative aspirations", "confidence": 0.95, "evidence": "serious partnership leading to marriage and family"}],
-          "conflict_style": [{"summary": "direct, warm, and constructive communication", "confidence": 0.85, "evidence": "direct but warm during discussions"}],
-          "provides": [{"summary": "emotional safety, organization, and goal enthusiasm", "confidence": 0.9, "evidence": "provide deep emotional safety, organization, and enthusiasm"}],
-          "emotional_needs": [{"summary": "emotional presence, physical touch, and openness", "confidence": 0.9, "evidence": "emotional presence and physical touch when feeling overwhelmed"}]
+          "values": [
+            {
+              "summary": "family, creative expression, and grounding",
+              "confidence": 0.9,
+              "evidence": "Family and creative expression drive me."
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "creative, family-centered in HSR Layout, gardening, painting",
+              "confidence": 0.9,
+              "evidence": "gardening, painting, and hosting dinner parties"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "creative, nurturing, organized, deeply loyal",
+              "confidence": 0.9,
+              "evidence": "creative, nurturing, organized, and deeply loyal"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "architecture, gardening, painting, dinner parties",
+              "confidence": 0.9,
+              "evidence": "gardening, painting, and hosting dinner parties"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "marriage, family, and building a home together",
+              "confidence": 0.95,
+              "evidence": "serious partnership leading to marriage and family"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "direct, warm, and constructive communication",
+              "confidence": 0.85,
+              "evidence": "direct but warm during discussions"
+            }
+          ],
+          "provides": [
+            {
+              "summary": "emotional safety, nurturing home environment, and goal enthusiasm",
+              "confidence": 0.9,
+              "evidence": "deep emotional safety, an organized, nurturing home environment, and enthusiastic encouragement"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "physical presence, emotional openness, and shared family vision",
+              "confidence": 0.9,
+              "evidence": "physical presence and emotional openness"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "compassionate, grounded, ambitious, humble", "confidence": 0.9, "evidence": "compassionate, grounded people who are ambitious yet humble"}],
-          "partner_values": [{"summary": "commitment to family and emotional openness", "confidence": 0.9, "evidence": "Openness about feelings is non-negotiable"}],
-          "relationship_expectations": [{"summary": "serious partnership leading to family", "confidence": 0.95, "evidence": "serious partnership leading to marriage and family"}],
-          "desired_lifestyle": [{"summary": "family-oriented and socially engaged lifestyle", "confidence": 0.8, "evidence": "hosting dinner parties"}]
+          "partner_traits": [
+            {
+              "summary": "grounded, ambitious yet humble, family-oriented male partner",
+              "confidence": 0.9,
+              "evidence": "grounded people who are ambitious yet humble and want a family"
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "commitment to family, marriage, and emotional openness",
+              "confidence": 0.9,
+              "evidence": "marriage and starting a family within 2-3 years"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "serious partnership leading to marriage and family",
+              "confidence": 0.95,
+              "evidence": "serious partnership leading to marriage and family"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "family-oriented and socially engaged lifestyle",
+              "confidence": 0.8,
+              "evidence": "hosting dinner parties"
+            }
+          ]
         }
       }
     },
@@ -141,34 +363,108 @@
         "longitude": 77.7499,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["female"],
+        "preferred_genders": [
+          "female"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "long-term partner, build a home together in Bangalore, probably kids at some point — that's the plan. I do best with someone who's warm, creative, a little expressive. I tend to be the quieter steady one so I appreciate someone who brings some color to things.",
-        "q2_emotional_needs": "when things get hard I want physical closeness more than words — just a hand on the shoulder or sitting together. and I need someone who's willing to actually open up about what's going on with them. I don't do well with stonewalling.",
-        "q3_conflict_provides": "I'm calm in conflict — maybe too calm sometimes, my ex said I seemed unbothered when I really wasn't. I try to stay practical and focus on what we can actually do about the problem. I think what I consistently bring is showing up — my partner can count on me, I'm very reliable and I genuinely root for them.",
-        "q4_lifestyle_values": "civil engineer in Whitefield — I spend a lot of time problem-solving on-site. outside of that I'm doing woodworking, or in the kitchen trying new recipes. I host friends pretty often, usually around food. family matters a lot to me, it's just kind of what I'm oriented around.",
-        "q5_personality": "grounded, warm, pretty practical. people tend to come to me when things go sideways because I don't panic. my friends would say dependable, which I take as a compliment. I'm not flashy but I'm consistent.",
-        "q6_dealbreakers": "inauthenticity — if I feel like I'm getting a performance instead of a real person, I can't trust that. also avoidant behavior, like someone who physically disappears when conflict comes up. and someone who's sure they never want a family — that's a life direction thing I can't work around."
+        "q1_intent_partner": "Looking for a long-term partner to build a home and start a family with in Bangalore. I do best with someone who is warm, creative, and family-focused.",
+        "q2_emotional_needs": "when things get hard I value physical closeness and open discussion about feelings. I don't do well with avoidant stonewalling.",
+        "q3_conflict_provides": "I stay calm and practical. What I bring to a relationship is steadfast reliability, a grounded home environment, and active support for my partner's aspirations.",
+        "q4_lifestyle_values": "civil engineer in Whitefield — woodworking, cooking, hosting friends, and family-centered values.",
+        "q5_personality": "grounded, warm, dependable, practical.",
+        "q6_dealbreakers": "inauthenticity, avoidant conflict behavior, and people who never want a family."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "family, craftsmanship, and stability", "confidence": 0.9, "evidence": "Value family, craft, and stability."}],
-          "lifestyle": [{"summary": "grounded home life in Whitefield, woodworking, cooking", "confidence": 0.9, "evidence": "woodworking, cooking, and hosting friends"}],
-          "personality_signals": [{"summary": "grounded, warm, dependable, practical", "confidence": 0.9, "evidence": "grounded, warm, dependable, and practical"}],
-          "interests": [{"summary": "woodworking, culinary arts, home improvement", "confidence": 0.9, "evidence": "woodworking, cooking, and hosting friends"}],
-          "life_goals": [{"summary": "building a home and raising a family", "confidence": 0.95, "evidence": "lifetime partner to build a home and family with"}],
-          "conflict_style": [{"summary": "calm, practical, and solution-focused", "confidence": 0.85, "evidence": "I stay calm and practical"}],
-          "provides": [{"summary": "steadfast reliability, warmth, and encouragement", "confidence": 0.9, "evidence": "steadfast reliability, warmth, and strong encouragement"}],
-          "emotional_needs": [{"summary": "physical affection and open discussion", "confidence": 0.9, "evidence": "physical affection and open conversation"}]
+          "values": [
+            {
+              "summary": "family, craftsmanship, and stability",
+              "confidence": 0.9,
+              "evidence": "Value family, craft, and stability."
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "grounded home life in Whitefield, woodworking, cooking",
+              "confidence": 0.9,
+              "evidence": "woodworking, cooking, and hosting friends"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "grounded, warm, dependable, practical",
+              "confidence": 0.9,
+              "evidence": "grounded, warm, dependable, and practical"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "woodworking, culinary arts, home improvement",
+              "confidence": 0.9,
+              "evidence": "woodworking, cooking, and hosting friends"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "building a home and raising a family",
+              "confidence": 0.95,
+              "evidence": "lifetime partner to build a home and family with"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "calm, practical, and solution-focused",
+              "confidence": 0.85,
+              "evidence": "I stay calm and practical"
+            }
+          ],
+          "provides": [
+            {
+              "summary": "steadfast reliability, grounded home environment, and encouragement",
+              "confidence": 0.9,
+              "evidence": "steadfast reliability, a grounded home environment, and active support"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "physical closeness and open discussion",
+              "confidence": 0.9,
+              "evidence": "physical closeness and open discussion"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "warm, creative, and emotionally expressive", "confidence": 0.95, "evidence": "warm, creative, and expressive partners"}],
-          "partner_values": [{"summary": "family-focused, authentic, and communicative", "confidence": 0.9, "evidence": "build a home and family with"}],
-          "relationship_expectations": [{"summary": "lifetime partnership toward marriage and family", "confidence": 0.95, "evidence": "lifetime partner to build a home and family with"}],
-          "desired_lifestyle": [{"summary": "warm, community-focused home life", "confidence": 0.85, "evidence": "hosting friends"}]
+          "partner_traits": [
+            {
+              "summary": "warm, creative, family-oriented female partner",
+              "confidence": 0.95,
+              "evidence": "warm, creative, and family-focused partner"
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "family-focused, authentic, and communicative",
+              "confidence": 0.9,
+              "evidence": "build a home and family with"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "lifetime partnership toward marriage and family",
+              "confidence": 0.95,
+              "evidence": "lifetime partner to build a home and family with"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "warm, community-focused home life",
+              "confidence": 0.85,
+              "evidence": "hosting friends"
+            }
+          ]
         }
       }
     },
@@ -184,34 +480,108 @@
         "longitude": 77.6408,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["female"],
+        "preferred_genders": [
+          "female"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
         "q1_intent_partner": "Looking for an active partner in Bangalore who loves bouldering and outdoor adventure.",
         "q2_emotional_needs": "I need immediate intense talk when upset.",
-        "q3_conflict_provides": "When there is conflict, I get urgent and demand we hash it out right this second until it is resolved.",
-        "q4_lifestyle_values": "Rock climber and software dev in Indiranagar. Bouldering 4 days a week.",
+        "q3_conflict_provides": "When conflict happens, I get urgent and anxious if we don't talk it out immediately. I push to hash things out right this second and hate silence or space.",
+        "q4_lifestyle_values": "Rock climber and software dev in JP Nagar. Bouldering 4 days a week.",
         "q5_personality": "Energetic, passionate, hyper-focused.",
-        "q6_dealbreakers": "Sedentary lifestyle."
+        "q6_dealbreakers": "Sedentary lifestyle and people who ignore arguments."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "adventure, athletic performance, resolution", "confidence": 0.9, "evidence": "bouldering and outdoor adventure"}],
-          "lifestyle": [{"summary": "bouldering 4 days a week, outdoors", "confidence": 0.95, "evidence": "Bouldering 4 days a week"}],
-          "personality_signals": [{"summary": "energetic, passionate, hyper-focused", "confidence": 0.85, "evidence": "Energetic, passionate, hyper-focused"}],
-          "interests": [{"summary": "rock climbing, bouldering, outdoor sports", "confidence": 0.95, "evidence": "bouldering and outdoor adventure"}],
-          "life_goals": [{"summary": "active outdoor lifestyle with long-term partner", "confidence": 0.8, "evidence": "Looking for an active partner"}],
-          "conflict_style": [{"summary": "anxious pursuer requiring immediate forced resolution", "confidence": 0.95, "evidence": "demand we hash it out right this second"}],
-          "provides": [{"summary": "high energy and athletic companionship", "confidence": 0.85, "evidence": "bouldering 4 days a week"}],
-          "emotional_needs": [{"summary": "immediate intense dialogue when anxious", "confidence": 0.9, "evidence": "need immediate intense talk when upset"}]
+          "values": [
+            {
+              "summary": "adventure, athletic performance, immediate resolution",
+              "confidence": 0.9,
+              "evidence": "bouldering and outdoor adventure"
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "bouldering 4 days a week, outdoors",
+              "confidence": 0.95,
+              "evidence": "Bouldering 4 days a week"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "energetic, passionate, hyper-focused",
+              "confidence": 0.85,
+              "evidence": "Energetic, passionate, hyper-focused"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "rock climbing, bouldering, outdoor sports",
+              "confidence": 0.95,
+              "evidence": "bouldering and outdoor adventure"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "active outdoor lifestyle with long-term partner",
+              "confidence": 0.8,
+              "evidence": "Looking for an active partner"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "anxious pursuer requiring immediate forced resolution",
+              "confidence": 0.95,
+              "evidence": "urgent and anxious if we don't talk it out immediately... push to hash things out right this second"
+            }
+          ],
+          "provides": [
+            {
+              "summary": "high energy and athletic companionship",
+              "confidence": 0.85,
+              "evidence": "bouldering 4 days a week"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "immediate intense dialogue when anxious",
+              "confidence": 0.9,
+              "evidence": "need immediate intense talk when upset"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "athletic, energetic boulderer", "confidence": 0.9, "evidence": "loves bouldering and outdoor adventure"}],
-          "partner_values": [{"summary": "fitness and immediate conflict engagement", "confidence": 0.85, "evidence": "hash it out right this second"}],
-          "relationship_expectations": [{"summary": "active long-term relationship", "confidence": 0.85, "evidence": "Looking for an active partner"}],
-          "desired_lifestyle": [{"summary": "outdoor athletic lifestyle", "confidence": 0.9, "evidence": "Bouldering 4 days a week"}]
+          "partner_traits": [
+            {
+              "summary": "athletic, energetic boulderer",
+              "confidence": 0.9,
+              "evidence": "loves bouldering and outdoor adventure"
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "fitness and immediate conflict engagement",
+              "confidence": 0.85,
+              "evidence": "hash it out right this second"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "active long-term relationship",
+              "confidence": 0.85,
+              "evidence": "Looking for an active partner"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "outdoor athletic lifestyle",
+              "confidence": 0.9,
+              "evidence": "Bouldering 4 days a week"
+            }
+          ]
         }
       }
     },
@@ -227,35 +597,115 @@
         "longitude": 77.6070,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["male"],
+        "preferred_genders": [
+          "male"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
         "q1_intent_partner": "Looking for an outdoor-loving partner in Bangalore who climbs and hikes.",
         "q2_emotional_needs": "I need complete silence and space when overwhelmed.",
-        "q3_conflict_provides": "When conflict starts, I completely shut down, walk away, and refuse to speak for days until I feel ready.",
+        "q3_conflict_provides": "When conflict starts, I completely shut down, walk away, and refuse to speak for 24-48 hours until I feel ready. Pushing me to talk immediately makes me isolate completely.",
         "q4_lifestyle_values": "Climber and graphic designer off Church Street. Weekends spent bouldering.",
         "q5_personality": "Independent, quiet, artistic.",
-        "q6_dealbreakers": "Aggressive confrontation."
+        "q6_dealbreakers": "Aggressive confrontation and pushing me when I need space."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "independence, solitude, outdoor freedom", "confidence": 0.9, "evidence": "bouldering... quiet"}],
-          "lifestyle": [{"summary": "bouldering, graphic design, outdoor trips", "confidence": 0.95, "evidence": "bouldering"}],
-          "personality_signals": [{"summary": "independent, quiet, artistic", "confidence": 0.9, "evidence": "Independent, quiet, artistic"}],
-          "interests": [{"summary": "climbing, bouldering, design", "confidence": 0.95, "evidence": "climbs and hikes"}],
-          "life_goals": [{"summary": "outdoor climbing lifestyle with partner", "confidence": 0.8, "evidence": "outdoor-loving partner"}],
-          "conflict_style": [{"summary": "stonewaller who shuts down and isolates for days", "confidence": 0.95, "evidence": "completely shut down, walk away, and refuse to speak for days"}],
-          "provides": [{"summary": "artistic aesthetic and climbing buddy", "confidence": 0.8, "evidence": "Climber and graphic designer"}],
-          "emotional_needs": [{"summary": "complete silence and space without pressure", "confidence": 0.95, "evidence": "need complete silence and space when overwhelmed"}]
+          "values": [
+            {
+              "summary": "independence, solitude, outdoor freedom",
+              "confidence": 0.9,
+              "evidence": "bouldering... quiet"
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "bouldering, graphic design, outdoor trips",
+              "confidence": 0.95,
+              "evidence": "bouldering"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "independent, quiet, artistic",
+              "confidence": 0.9,
+              "evidence": "Independent, quiet, artistic"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "climbing, bouldering, design",
+              "confidence": 0.95,
+              "evidence": "climbs and hikes"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "outdoor climbing lifestyle with partner",
+              "confidence": 0.8,
+              "evidence": "outdoor-loving partner"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "stonewaller who shuts down and isolates for 24-48 hours",
+              "confidence": 0.95,
+              "evidence": "completely shut down, walk away, and refuse to speak for 24-48 hours"
+            }
+          ],
+          "provides": [
+            {
+              "summary": "artistic aesthetic and climbing buddy",
+              "confidence": 0.8,
+              "evidence": "Climber and graphic designer"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "complete silence and space without pressure",
+              "confidence": 0.95,
+              "evidence": "need complete silence and space when overwhelmed"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "climbing lover who respects space", "confidence": 0.9, "evidence": "outdoor-loving partner who climbs"}],
-          "partner_values": [{"summary": "independence and quiet demeanor", "confidence": 0.85, "evidence": "Independent, quiet"}],
-          "relationship_expectations": [{"summary": "low-pressure long-term relationship", "confidence": 0.85, "evidence": "Looking for an outdoor-loving partner"}],
-          "desired_lifestyle": [{"summary": "outdoor climbing trips", "confidence": 0.9, "evidence": "bouldering"}],
-          "conflict_style": [{"summary": "low-confrontation quiet space", "confidence": 0.9, "evidence": "refuse to speak for days"}]
+          "partner_traits": [
+            {
+              "summary": "climbing lover who respects space",
+              "confidence": 0.9,
+              "evidence": "outdoor-loving partner who climbs"
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "independence and quiet demeanor",
+              "confidence": 0.85,
+              "evidence": "Independent, quiet"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "low-pressure long-term relationship",
+              "confidence": 0.85,
+              "evidence": "Looking for an outdoor-loving partner"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "outdoor climbing trips",
+              "confidence": 0.9,
+              "evidence": "bouldering"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "low-confrontation quiet space",
+              "confidence": 0.9,
+              "evidence": "refuse to speak for days"
+            }
+          ]
         }
       }
     },
@@ -271,34 +721,108 @@
         "longitude": 77.5857,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["male"],
+        "preferred_genders": [
+          "male"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "Looking for a health-conscious, non-smoking partner for a long-term relationship in JP Nagar.",
+        "q1_intent_partner": "Looking for a health-conscious, non-smoking partner for a long-term relationship in Bellandur.",
         "q2_emotional_needs": "Clear communication and consideration.",
         "q3_conflict_provides": "Calm, reasonable discussion.",
         "q4_lifestyle_values": "Clean living, wellness, fitness.",
         "q5_personality": "Disciplined, caring, health-focused.",
-        "q6_dealbreakers": "Smoking of any kind is an absolute non-negotiable dealbreaker. I cannot tolerate tobacco or vaping."
+        "q6_dealbreakers": "Smoking of any kind (cigarettes, tobacco, or vaping) is an absolute non-negotiable dealbreaker due to asthma and health."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "clean living and health", "confidence": 0.95, "evidence": "Clean living, wellness, fitness."}],
-          "lifestyle": [{"summary": "wellness and fitness centered in Bangalore", "confidence": 0.9, "evidence": "Clean living, wellness, fitness"}],
-          "personality_signals": [{"summary": "disciplined, caring, health-focused", "confidence": 0.9, "evidence": "Disciplined, caring, health-focused"}],
-          "interests": [{"summary": "fitness, wellness", "confidence": 0.9, "evidence": "wellness, fitness"}],
-          "life_goals": [{"summary": "healthy long-term life", "confidence": 0.85, "evidence": "long-term relationship"}],
-          "conflict_style": [{"summary": "calm and reasonable", "confidence": 0.85, "evidence": "Calm, reasonable discussion"}],
-          "provides": [{"summary": "care and health discipline", "confidence": 0.85, "evidence": "Disciplined, caring"}],
-          "emotional_needs": [{"summary": "consideration and clear talk", "confidence": 0.85, "evidence": "Clear communication and consideration"}]
+          "values": [
+            {
+              "summary": "clean living and health",
+              "confidence": 0.95,
+              "evidence": "Clean living, wellness, fitness."
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "wellness and fitness centered in Bangalore",
+              "confidence": 0.9,
+              "evidence": "Clean living, wellness, fitness"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "disciplined, caring, health-focused",
+              "confidence": 0.9,
+              "evidence": "Disciplined, caring, health-focused"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "fitness, wellness",
+              "confidence": 0.9,
+              "evidence": "wellness, fitness"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "healthy long-term life",
+              "confidence": 0.85,
+              "evidence": "long-term relationship"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "calm and reasonable",
+              "confidence": 0.85,
+              "evidence": "Calm, reasonable discussion"
+            }
+          ],
+          "provides": [
+            {
+              "summary": "care and health discipline",
+              "confidence": 0.85,
+              "evidence": "Disciplined, caring"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "consideration and clear talk",
+              "confidence": 0.85,
+              "evidence": "Clear communication and consideration"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "health-conscious non-smoker", "confidence": 0.95, "evidence": "health-conscious, non-smoking partner"}],
-          "partner_values": [{"summary": "wellness and non-smoking lifestyle", "confidence": 0.95, "evidence": "Smoking of any kind is an absolute non-negotiable dealbreaker"}],
-          "relationship_expectations": [{"summary": "long-term healthy relationship", "confidence": 0.9, "evidence": "long-term relationship"}],
-          "desired_lifestyle": [{"summary": "smoke-free clean environment", "confidence": 0.95, "evidence": "cannot tolerate tobacco or vaping"}]
+          "partner_traits": [
+            {
+              "summary": "health-conscious non-smoker",
+              "confidence": 0.95,
+              "evidence": "health-conscious, non-smoking partner"
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "wellness and non-smoking lifestyle",
+              "confidence": 0.95,
+              "evidence": "Smoking of any kind is an absolute non-negotiable dealbreaker"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "long-term healthy relationship",
+              "confidence": 0.9,
+              "evidence": "long-term relationship"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "smoke-free clean environment",
+              "confidence": 0.95,
+              "evidence": "cannot tolerate tobacco or vaping"
+            }
+          ]
         }
       }
     },
@@ -314,34 +838,108 @@
         "longitude": 77.6408,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["female"],
+        "preferred_genders": [
+          "female"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "Looking for a relaxed partner in Indiranagar who accepts me as I am.",
+        "q1_intent_partner": "Looking for a relaxed partner in Marathahalli who accepts me as I am.",
         "q2_emotional_needs": "Low pressure and easygoing vibe.",
         "q3_conflict_provides": "I prefer to avoid drama.",
-        "q4_lifestyle_values": "Musician and bartender in Indiranagar. I smoke cigarettes daily and love nightlife.",
+        "q4_lifestyle_values": "Musician and bartender in Marathahalli. I smoke cigarettes daily (half a pack) and love nightlife.",
         "q5_personality": "Easygoing, artistic, night owl.",
         "q6_dealbreakers": "Overly controlling partners."
       },
       "profile": {
         "self": {
-          "values": [{"summary": "artistic freedom and relaxed lifestyle", "confidence": 0.9, "evidence": "Easygoing, artistic"}],
-          "lifestyle": [{"summary": "Indiranagar nightlife, music, heavy daily tobacco smoker", "confidence": 0.95, "evidence": "I smoke cigarettes daily and love nightlife."}],
-          "personality_signals": [{"summary": "easygoing, artistic, night owl", "confidence": 0.9, "evidence": "Easygoing, artistic, night owl"}],
-          "interests": [{"summary": "music, nightlife, mixology", "confidence": 0.9, "evidence": "Musician and bartender"}],
-          "life_goals": [{"summary": "relaxed artistic partnership", "confidence": 0.8, "evidence": "relaxed partner"}],
-          "conflict_style": [{"summary": "drama avoidance", "confidence": 0.8, "evidence": "prefer to avoid drama"}],
-          "provides": [{"summary": "relaxed easygoing energy", "confidence": 0.85, "evidence": "Low pressure and easygoing vibe"}],
-          "emotional_needs": [{"summary": "acceptance and freedom", "confidence": 0.85, "evidence": "accepts me as I am"}]
+          "values": [
+            {
+              "summary": "artistic freedom and relaxed lifestyle",
+              "confidence": 0.9,
+              "evidence": "Easygoing, artistic"
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "Marathahalli nightlife, music, heavy daily tobacco smoker",
+              "confidence": 0.95,
+              "evidence": "I smoke cigarettes daily (half a pack) and love nightlife."
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "easygoing, artistic, night owl",
+              "confidence": 0.9,
+              "evidence": "Easygoing, artistic, night owl"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "music, nightlife, mixology",
+              "confidence": 0.9,
+              "evidence": "Musician and bartender"
+            }
+          ],
+          "life_goals": [
+            {
+              "summary": "relaxed artistic partnership",
+              "confidence": 0.8,
+              "evidence": "relaxed partner"
+            }
+          ],
+          "conflict_style": [
+            {
+              "summary": "drama avoidance",
+              "confidence": 0.8,
+              "evidence": "prefer to avoid drama"
+            }
+          ],
+          "provides": [
+            {
+              "summary": "relaxed easygoing energy",
+              "confidence": 0.85,
+              "evidence": "Low pressure and easygoing vibe"
+            }
+          ],
+          "emotional_needs": [
+            {
+              "summary": "acceptance and freedom",
+              "confidence": 0.85,
+              "evidence": "accepts me as I am"
+            }
+          ]
         },
         "wants": {
-          "partner_traits": [{"summary": "relaxed and non-judgmental", "confidence": 0.9, "evidence": "relaxed partner who accepts me"}],
-          "partner_values": [{"summary": "flexibility and chill vibe", "confidence": 0.85, "evidence": "avoid drama"}],
-          "relationship_expectations": [{"summary": "low-pressure long-term bond", "confidence": 0.85, "evidence": "long-term relationship"}],
-          "desired_lifestyle": [{"summary": "nightlife friendly", "confidence": 0.85, "evidence": "love nightlife"}]
+          "partner_traits": [
+            {
+              "summary": "relaxed and non-judgmental",
+              "confidence": 0.9,
+              "evidence": "relaxed partner who accepts me"
+            }
+          ],
+          "partner_values": [
+            {
+              "summary": "flexibility and chill vibe",
+              "confidence": 0.85,
+              "evidence": "avoid drama"
+            }
+          ],
+          "relationship_expectations": [
+            {
+              "summary": "low-pressure long-term bond",
+              "confidence": 0.85,
+              "evidence": "long-term relationship"
+            }
+          ],
+          "desired_lifestyle": [
+            {
+              "summary": "nightlife friendly",
+              "confidence": 0.85,
+              "evidence": "love nightlife"
+            }
+          ]
         }
       }
     },
@@ -357,12 +955,14 @@
         "longitude": 77.7011,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["female"],
+        "preferred_genders": [
+          "female"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
       "question_responses": {
-        "q1_intent_partner": "Just seeing what happens in Marathahalli. Looking for someone cool.",
+        "q1_intent_partner": "Just seeing what happens in Bangalore. Looking for someone cool.",
         "q2_emotional_needs": "I don't know, normal stuff.",
         "q3_conflict_provides": "Whatever, I guess.",
         "q4_lifestyle_values": "Hang out, watch TV, work.",
@@ -372,8 +972,20 @@
       "profile": {
         "self": {
           "values": [],
-          "lifestyle": [{"summary": "watching TV and hanging out", "confidence": 0.5, "evidence": "Hang out, watch TV"}],
-          "personality_signals": [{"summary": "nice guy", "confidence": 0.5, "evidence": "Nice guy"}],
+          "lifestyle": [
+            {
+              "summary": "watching TV and hanging out",
+              "confidence": 0.5,
+              "evidence": "Hang out, watch TV"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "nice guy",
+              "confidence": 0.5,
+              "evidence": "Nice guy"
+            }
+          ],
           "interests": [],
           "life_goals": [],
           "conflict_style": [],
@@ -381,7 +993,13 @@
           "emotional_needs": []
         },
         "wants": {
-          "partner_traits": [{"summary": "cool person", "confidence": 0.5, "evidence": "someone cool"}],
+          "partner_traits": [
+            {
+              "summary": "cool person",
+              "confidence": 0.5,
+              "evidence": "someone cool"
+            }
+          ],
           "partner_values": [],
           "relationship_expectations": [],
           "desired_lifestyle": []
@@ -400,7 +1018,9 @@
         "longitude": 77.6070,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["female"],
+        "preferred_genders": [
+          "female"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
@@ -414,19 +1034,61 @@
       },
       "profile": {
         "self": {
-          "values": [{"summary": "honesty", "confidence": 0.9, "evidence": "Dishonesty"}],
-          "lifestyle": [{"summary": "running and filter coffee in Bangalore", "confidence": 0.9, "evidence": "coffee, running in Cubbon Park"}],
-          "personality_signals": [{"summary": "friendly", "confidence": 0.9, "evidence": "Friendly"}],
-          "interests": [{"summary": "running, tech, filter coffee", "confidence": 0.9, "evidence": "Tech, coffee, running"}],
+          "values": [
+            {
+              "summary": "honesty",
+              "confidence": 0.9,
+              "evidence": "Dishonesty"
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "running and filter coffee in Bangalore",
+              "confidence": 0.9,
+              "evidence": "coffee, running in Cubbon Park"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "friendly",
+              "confidence": 0.9,
+              "evidence": "Friendly"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "running, tech, filter coffee",
+              "confidence": 0.9,
+              "evidence": "Tech, coffee, running"
+            }
+          ],
           "life_goals": [],
-          "conflict_style": [{"summary": "calm", "confidence": 0.85, "evidence": "Calm talks"}],
+          "conflict_style": [
+            {
+              "summary": "calm",
+              "confidence": 0.85,
+              "evidence": "Calm talks"
+            }
+          ],
           "provides": [],
           "emotional_needs": []
         },
         "wants": {
-          "partner_traits": [{"summary": "communicative female partner", "confidence": 0.9, "evidence": "Good communication"}],
+          "partner_traits": [
+            {
+              "summary": "communicative female partner",
+              "confidence": 0.9,
+              "evidence": "Good communication"
+            }
+          ],
           "partner_values": [],
-          "relationship_expectations": [{"summary": "long-term partner", "confidence": 0.9, "evidence": "long-term partner"}],
+          "relationship_expectations": [
+            {
+              "summary": "long-term partner",
+              "confidence": 0.9,
+              "evidence": "long-term partner"
+            }
+          ],
           "desired_lifestyle": []
         }
       }
@@ -443,7 +1105,9 @@
         "longitude": 77.5946,
         "preferred_age_min": 24,
         "preferred_age_max": 38,
-        "preferred_genders": ["male"],
+        "preferred_genders": [
+          "male"
+        ],
         "max_distance_km": 50,
         "required_relationship_goal": "long-term"
       },
@@ -457,19 +1121,61 @@
       },
       "profile": {
         "self": {
-          "values": [{"summary": "honesty", "confidence": 0.9, "evidence": "Lies"}],
-          "lifestyle": [{"summary": "yoga and design in Bangalore", "confidence": 0.9, "evidence": "Design and yoga"}],
-          "personality_signals": [{"summary": "kind", "confidence": 0.9, "evidence": "Kind"}],
-          "interests": [{"summary": "yoga, design", "confidence": 0.9, "evidence": "Design and yoga"}],
+          "values": [
+            {
+              "summary": "honesty",
+              "confidence": 0.9,
+              "evidence": "Lies"
+            }
+          ],
+          "lifestyle": [
+            {
+              "summary": "yoga and design in Bangalore",
+              "confidence": 0.9,
+              "evidence": "Design and yoga"
+            }
+          ],
+          "personality_signals": [
+            {
+              "summary": "kind",
+              "confidence": 0.9,
+              "evidence": "Kind"
+            }
+          ],
+          "interests": [
+            {
+              "summary": "yoga, design",
+              "confidence": 0.9,
+              "evidence": "Design and yoga"
+            }
+          ],
           "life_goals": [],
-          "conflict_style": [{"summary": "open", "confidence": 0.85, "evidence": "Open talk"}],
+          "conflict_style": [
+            {
+              "summary": "open",
+              "confidence": 0.85,
+              "evidence": "Open talk"
+            }
+          ],
           "provides": [],
           "emotional_needs": []
         },
         "wants": {
-          "partner_traits": [{"summary": "empathic male partner", "confidence": 0.9, "evidence": "Empathy"}],
+          "partner_traits": [
+            {
+              "summary": "empathic male partner",
+              "confidence": 0.9,
+              "evidence": "Empathy"
+            }
+          ],
           "partner_values": [],
-          "relationship_expectations": [{"summary": "long-term relationship in Bangalore", "confidence": 0.9, "evidence": "long-term partner in Bangalore"}],
+          "relationship_expectations": [
+            {
+              "summary": "long-term relationship in Bangalore",
+              "confidence": 0.9,
+              "evidence": "long-term partner in Bangalore"
+            }
+          ],
           "desired_lifestyle": []
         }
       }
