@@ -76,8 +76,8 @@ Use ONLY one of these four verdicts for overall and dimension results:
 OVERALL REASONING SUMMARY:
 In `overall_reasoning`, write a concise 2-3 sentence executive conclusion summarizing why these two users match or don't match, highlighting key reciprocal synergies and main friction points.
 
-EVIDENCE CITATIONS:
-For each dimension, populate `evidence_a_ids` and `evidence_b_ids` using the exact signal "id" fields from the profiles (e.g. ["q2_emotional_needs_s_emotional_needs_00"]). Do NOT invent facts or signal IDs.
+EVIDENCE CITATIONS & DIMENSION REASONING:
+For each dimension, populate `evidence_a_ids` and `evidence_b_ids` using exact signal "id" fields from profiles (e.g. ["q2_emotional_needs_s_emotional_needs_00"]). Include a 1-2 sentence explanation in `reasoning` for each dimension explaining the verdict based on the cited evidence.
 
 USER A PROFILE:
 {user_a_profile}
@@ -85,9 +85,51 @@ USER A PROFILE:
 USER B PROFILE:
 {user_b_profile}
 
-Analyze their compatibility across all dimensions according to the required schema.
-
-Return your response as a valid JSON object matching the required output schema."""
+OUTPUT FORMAT REQUIREMENT:
+You MUST return your response ONLY as a JSON object matching this EXACT format:
+```json
+{{
+  "overall_verdict": "strong_alignment",
+  "overall_reasoning": "Executive summary conclusion explaining overall compatibility and key synergies.",
+  "dimension_results": {{
+    "emotional_needs": {{
+      "verdict": "strong_alignment",
+      "evidence_a_ids": ["q2_emotional_needs_s_emotional_needs_00"],
+      "evidence_b_ids": ["q2_emotional_needs_s_provides_00"],
+      "reasoning": "Explanation of emotional needs alignment based on evidence."
+    }},
+    "core_values": {{
+      "verdict": "strong_alignment",
+      "evidence_a_ids": ["q4_lifestyle_values_s_values_00"],
+      "evidence_b_ids": ["q4_lifestyle_values_s_values_00"],
+      "reasoning": "Explanation of shared core values and goals based on evidence."
+    }},
+    "lifestyle": {{
+      "verdict": "partial_alignment",
+      "evidence_a_ids": ["q4_lifestyle_values_s_lifestyle_00"],
+      "evidence_b_ids": ["q4_lifestyle_values_s_lifestyle_00"],
+      "reasoning": "Explanation of daily habits and lifestyle alignment."
+    }},
+    "conflict_style": {{
+      "verdict": "strong_alignment",
+      "evidence_a_ids": ["q3_conflict_provides_s_conflict_style_00"],
+      "evidence_b_ids": ["q3_conflict_provides_s_conflict_style_00"],
+      "reasoning": "Explanation of conflict resolution style alignment."
+    }}
+  }},
+  "complementary_alignments": [
+    "A wants [X] -> B provides [Y]"
+  ],
+  "shared_alignments": [
+    "Both share interest/value in [Z]"
+  ],
+  "potential_conflicts": [
+    "Potential friction point between A and B"
+  ],
+  "dealbreaker_violations": [],
+  "uncertainties": []
+}}
+```"""
     )
 
     # Embeddings

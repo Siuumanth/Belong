@@ -11,13 +11,25 @@ class DimensionDetail(BaseModel):
         ..., 
         description="Verdict for this dimension: 'strong_alignment', 'partial_alignment', 'unclear', or 'conflict'"
     )
-    evidence_a: str = Field(
-        ..., 
+    evidence_a: Optional[str] = Field(
+        default="", 
         description="Direct quote or explicit evidence extracted from User A's profile."
     )
-    evidence_b: str = Field(
-        ..., 
+    evidence_b: Optional[str] = Field(
+        default="", 
         description="Direct quote or explicit evidence extracted from User B's profile."
+    )
+    evidence_a_ids: List[str] = Field(
+        default_factory=list,
+        description="Signal IDs from User A's profile supporting this verdict."
+    )
+    evidence_b_ids: List[str] = Field(
+        default_factory=list,
+        description="Signal IDs from User B's profile supporting this verdict."
+    )
+    reasoning: Optional[str] = Field(
+        default="",
+        description="Explanation of the verdict based on cited evidence."
     )
 
 class DimensionResults(BaseModel):

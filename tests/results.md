@@ -3,350 +3,13 @@
 =====================================================================================
 
 ================================================================================
-USER PROFILE #1: Bob (User ID: aa0341e4-6c4e-4ee2-a0d8-14d9279fc94c)
-================================================================================
-Age / Gender       : 30 / male
-Orientation / Goal : straight / long-term
-Location (Lat/Lon) : 37.78, -122.41
-Preferences        : Age 23-32, Dist 50km, Genders ['female']
-Created At         : 2026-09-30T20:38:16.297908+00:00
-
-Extracted Profile JSON:
-{
-  "self": {
-    "values": [
-      {
-        "id": "q4_lifestyle_values_s_values_00",
-        "label": "Values ambition and growth",
-        "quote": "ambition and keep growing",
-        "summary": "Values people who possess ambition and continuous personal growth.",
-        "confidence": 0.96,
-        "question_id": "q4_lifestyle_values",
-        "evidence_type": "explicit"
-      }
-    ],
-    "provides": [
-      {
-        "id": "q3_conflict_provides_s_provides_00",
-        "label": "Provides emotional stability",
-        "quote": "making my partner feel stable",
-        "summary": "Makes their partner feel secure and stable during hard times.",
-        "confidence": 0.95,
-        "question_id": "q3_conflict_provides",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q5_personality_s_provides_01",
-        "label": "Attentive listening",
-        "quote": "good listener",
-        "summary": "Offers genuine care and good listening to others.",
-        "confidence": 0.98,
-        "question_id": "q5_personality",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "probe_self_emotional_needs_s_provides_02",
-        "label": "Listens patiently",
-        "quote": "listening patiently",
-        "summary": "The user offers patient listening when a partner is stressed.",
-        "confidence": 0.98,
-        "question_id": "probe_self_emotional_needs",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "probe_self_emotional_needs_s_provides_03",
-        "label": "Offers clear reassurance",
-        "quote": "offering clear reassurance",
-        "summary": "Provides clear reassurance to a partner during difficult times.",
-        "confidence": 0.98,
-        "question_id": "probe_self_emotional_needs",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "probe_self_emotional_needs_s_provides_04",
-        "label": "Transparent communication",
-        "quote": "communicating transparently",
-        "summary": "Communicates transparently during challenging moments.",
-        "confidence": 0.98,
-        "question_id": "probe_self_emotional_needs",
-        "evidence_type": "explicit"
-      }
-    ],
-    "interests": [
-      {
-        "id": "q4_lifestyle_values_s_interests_00",
-        "label": "Trail running",
-        "quote": "trail running",
-        "summary": "The user enjoys trail running as a hobby.",
-        "confidence": 0.98,
-        "question_id": "q4_lifestyle_values",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q4_lifestyle_values_s_interests_01",
-        "label": "Coffee brewing passion",
-        "quote": "coffee brewing",
-        "summary": "Took up coffee brewing and takes it seriously.",
-        "confidence": 0.98,
-        "question_id": "q4_lifestyle_values",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q5_personality_s_interests_02",
-        "label": "Broad curiosity",
-        "quote": "curious about a lot of things",
-        "summary": "Enjoys reading widely about almost anything.",
-        "confidence": 0.95,
-        "question_id": "q5_personality",
-        "evidence_type": "explicit"
-      }
-    ],
-    "lifestyle": [
-      {
-        "id": "q4_lifestyle_values_s_lifestyle_00",
-        "label": "Weekend half marathons",
-        "quote": "half marathon most weekends",
-        "summary": "Runs a half marathon most weekends.",
-        "confidence": 0.96,
-        "question_id": "q4_lifestyle_values",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q4_lifestyle_values_s_lifestyle_01",
-        "label": "Software engineer work schedule",
-        "quote": "software engineer so weekdays are pretty heads-down",
-        "summary": "Works as a software engineer with focused weekdays.",
-        "confidence": 0.95,
-        "question_id": "q4_lifestyle_values",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q4_lifestyle_values_s_lifestyle_02",
-        "label": "Daily outdoor habit",
-        "quote": "try to get outside every day",
-        "summary": "Makes an effort to get outside every single day.",
-        "confidence": 0.95,
-        "question_id": "q4_lifestyle_values",
-        "evidence_type": "explicit"
-      }
-    ],
-    "life_goals": [],
-    "conflict_style": [
-      {
-        "id": "q3_conflict_provides_s_conflict_style_00",
-        "label": "Prompt conflict resolution",
-        "quote": "deal with things pretty quickly",
-        "summary": "Deals with issues quickly rather than letting them sit.",
-        "confidence": 0.98,
-        "question_id": "q3_conflict_provides",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q3_conflict_provides_s_conflict_style_01",
-        "label": "Calm communication under tension",
-        "quote": "stay calm, I don't raise my voice",
-        "summary": "Stays calm and avoids raising their voice during disagreements.",
-        "confidence": 0.98,
-        "question_id": "q3_conflict_provides",
-        "evidence_type": "explicit"
-      }
-    ],
-    "emotional_needs": [],
-    "personality_signals": [
-      {
-        "id": "q5_personality_s_personality_signals_00",
-        "label": "Easygoing demeanor",
-        "quote": "pretty chill",
-        "summary": "Describes themselves as pretty chill and relaxed.",
-        "confidence": 0.98,
-        "question_id": "q5_personality",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q5_personality_s_personality_signals_01",
-        "label": "High reliability",
-        "quote": "pretty reliable",
-        "summary": "Consistently shows up when they say they will.",
-        "confidence": 0.98,
-        "question_id": "q5_personality",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q5_personality_s_personality_signals_02",
-        "label": "Warms up quickly",
-        "quote": "a bit reserved at first",
-        "summary": "Starts out a bit reserved before warming up fast.",
-        "confidence": 0.95,
-        "question_id": "q5_personality",
-        "evidence_type": "explicit"
-      }
-    ]
-  },
-  "wants": {
-    "partner_traits": [
-      {
-        "id": "q1_intent_partner_w_partner_traits_00",
-        "label": "Intellectual curiosity",
-        "quote": "someone who's curious",
-        "summary": "Seeks a partner who is curious and inquisitive.",
-        "confidence": 0.95,
-        "question_id": "q1_intent_partner",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q1_intent_partner_w_partner_traits_01",
-        "label": "Self-care habits",
-        "quote": "takes care of themselves",
-        "summary": "Looks for someone who takes good care of themselves.",
-        "confidence": 0.95,
-        "question_id": "q1_intent_partner",
-        "evidence_type": "explicit"
-      }
-    ],
-    "partner_values": [
-      {
-        "id": "q1_intent_partner_w_partner_values_00",
-        "label": "Trust as baseline",
-        "quote": "trust is the baseline",
-        "summary": "Requires trust as the absolute foundational requirement.",
-        "confidence": 0.98,
-        "question_id": "q1_intent_partner",
-        "evidence_type": "explicit"
-      }
-    ],
-    "desired_lifestyle": [],
-    "relationship_expectations": [
-      {
-        "id": "q1_intent_partner_w_relationship_expectations_00",
-        "label": "Wants lasting relationship",
-        "quote": "something that actually lasts",
-        "summary": "Looking for a serious, long-term relationship that lasts.",
-        "confidence": 0.98,
-        "question_id": "q1_intent_partner",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q1_intent_partner_w_relationship_expectations_01",
-        "label": "Desires mutual growth",
-        "quote": "genuinely grow with",
-        "summary": "Wants a partner to genuinely grow with over time.",
-        "confidence": 0.98,
-        "question_id": "q1_intent_partner",
-        "evidence_type": "explicit"
-      }
-    ]
-  },
-  "constraints": {
-    "dealbreakers": [
-      {
-        "id": "q1_intent_partner_c_dealbreakers_00",
-        "label": "No games or manipulation",
-        "quote": "doesn't play games",
-        "summary": "Will not accept playing games or dishonesty in dating.",
-        "confidence": 0.95,
-        "question_id": "q1_intent_partner",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q6_dealbreakers_c_dealbreakers_01",
-        "label": "Arrogance dealbreaker",
-        "quote": "can't do arrogance",
-        "summary": "Cannot tolerate arrogance and inability to admit mistakes.",
-        "confidence": 0.98,
-        "question_id": "q6_dealbreakers",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q6_dealbreakers_c_dealbreakers_02",
-        "label": "Dishonesty dealbreaker",
-        "quote": "dishonesty \u2014 not just big lies",
-        "summary": "Considers both big and small habitual lies as absolute dealbreakers.",
-        "confidence": 0.98,
-        "question_id": "q6_dealbreakers",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q6_dealbreakers_c_dealbreakers_03",
-        "label": "Stagnation dealbreaker",
-        "quote": "totally stagnant, just not interested",
-        "summary": "Cannot be with someone totally stagnant and lacking self-improvement.",
-        "confidence": 0.95,
-        "question_id": "q6_dealbreakers",
-        "evidence_type": "explicit"
-      }
-    ]
-  }
-}
-
-Self Embedding Source Text:
-SELF
-
-Values: Values people who possess ambition and continuous personal growth.
-Lifestyle: Runs a half marathon most weekends., Works as a software engineer with focused weekdays., Makes an effort to get outside every single day.
-Personality: Describes themselves as pretty chill and relaxed., Consistently shows up when they say they will., Starts out a bit reserved before warming up fast.
-Interests: The user enjoys trail running as a hobby., Took up coffee brewing and takes it seriously., Enjoys reading widely about almost anything.
-Conflict style: Deals with issues quickly rather than letting them sit., Stays calm and avoids raising their voice during disagreements.
-Provides: Makes their partner feel secure and stable during hard times., Offers genuine care and good listening to others., The user offers patient listening when a partner is stressed., Provides clear reassurance to a partner during difficult times., Communicates transparently during challenging moments.
-
-Want Embedding Source Text:
-WANTS
-
-Partner traits: Seeks a partner who is curious and inquisitive., Looks for someone who takes good care of themselves.
-Partner values: Requires trust as the absolute foundational requirement.
-Relationship expectations: Looking for a serious, long-term relationship that lasts., Wants a partner to genuinely grow with over time.
-
---------------------------------------------------------------------------------
-ONBOARDING DIALOGUE FOR PROFILE #1 (Bob)
---------------------------------------------------------------------------------
-   Conversation ID : 4dcc7ca4-15da-4f35-aa30-620fa44fe4cc
-   Status          : completed
-   Started At      : 2026-09-30T20:39:29.225871+00:00
-
-   Q1 (q1_intent_partner): What are you looking for in a relationship, and what kind of person tends to be a good fit for you?
-   A1: I want something that actually lasts. I've had fun, I've dated around, but at this point I want someone I can genuinely grow with — someone who's curious, takes care of themselves, and doesn't play games. trust is the baseline for me, everything else builds from there.
-
-   Q2 (q1_intent_partner): That foundation of deep trust and mutual growth is so grounding, and it’s wonderful that you’re clear on wanting something truly lasting. 
-
-When life inevitably gets a bit stressful or difficult, what do you need most from a partner to feel supported?
-   A2: when I'm stressed I get kind of quiet and withdrawn — I usually need an hour to process before I can talk about it. what helps is if my partner doesn't push too hard but also doesn't disappear. just knowing they're around is enough. I'm the opposite when she's stressed — I'm pretty good at just listening without jumping to solutions.
-
-   Q3 (q2_emotional_needs): That self-awareness is such a gift—having that quiet space to process while still feeling anchored by your partner is a really tender balance to strike. Being able to just sit and listen for her without rushing to fix things shows how deeply attuned and supportive you naturally are. 
-
-When disagreements do pop up, how do you usually find yourself handling that friction, and what do you feel are some of the biggest heart-gifts you bring as a partner?
-   A3: I try to deal with things pretty quickly rather than letting them sit. I stay calm, I don't raise my voice — I just hate that. I'd rather have a slightly awkward conversation than let something fester for a week. I think I'm good at making my partner feel stable, like I'm not going anywhere even when things are hard.
-
-   Q4 (q3_conflict_provides): That kind of emotional steadiness and commitment to working through things right away is such a rare, comforting gift to offer a partner. 
-
-As we look toward building a match that truly fits your world, what does your day-to-day life look like, what do you enjoy doing for fun, and what core values or future goals are most important to you?
-   A4: trail running is my thing — I do a half marathon most weekends. I'm a software engineer so weekdays are pretty heads-down but I try to get outside every day. I got into coffee brewing during covid and now I take it a bit too seriously. I value people who actually have ambition and keep growing, professionally or personally, I don't really care which.
-
-   Q5 (q4_lifestyle_values): That sounds like such a great balance of focused ambition and outdoor adventure—and honestly, taking coffee seriously is practically a requirement for a software engineer! 
-
-How would the people closest to you describe your personality, and what do you feel is the best part of yourself that you bring to a relationship?
-   A5: pretty chill, pretty reliable. I show up when I say I will. I'm curious about a lot of things — I'll read a book about almost anything. my friends say I'm a good listener which I think is true, I genuinely care what people have to say. I can be a bit reserved at first but I warm up fast.
-
-   Q6 (q5_personality): That kind of steady reliability paired with genuine curiosity is such a rare, comforting combination to find in someone. It makes total sense that people love opening up to you! As you look toward building a meaningful connection, what are some absolute hard constraints or non-negotiable dealbreakers for you in a partner?
-   A6: I can't do arrogance, like someone who can never admit they're wrong. and dishonesty — not just big lies, the small habitual ones are worse honestly. also someone who's totally stagnant, just not interested in improving anything about themselves.
-
-   Q7 (q6_dealbreakers): That makes so much sense—honesty, humility, and a shared drive for personal growth are such solid foundations for a real connection. When you're feeling stressed or overwhelmed, what helps you feel supported by a partner?
-   A7: I naturally support my partner by listening patiently when they are stressed, offering clear reassurance, and communicating transparently during difficult times.
-
-   Q8: 🎉 Woohoo! You did it! 
-
-Thank you so much for taking the time to share a bit about yourself. Completing your profile is a wonderful, courageous first step toward finding the kind of genuine, meaningful connections you deserve. 
-
-Right now, our system is carefully reviewing your answers and working behind the scenes to find profiles that truly resonate with who you are and what you're looking for. 
-
-Sit back, take a deep breath, and get ready—your compatibility matches are on their way! We are so excited to have you here at Belong. 💛
-
-================================================================================
-USER PROFILE #2: Alice (User ID: d4c090b1-efe7-410e-bab1-539e3facce19)
+USER PROFILE #1: Alice (User ID: 5ed78814-19a6-4f83-ab59-ca844ac3ef38)
 ================================================================================
 Age / Gender       : 28 / female
 Orientation / Goal : straight / long-term
 Location (Lat/Lon) : 37.7749, -122.4194
 Preferences        : Age 24-35, Dist 50km, Genders ['male']
-Created At         : 2026-09-30T20:38:16.260447+00:00
+Created At         : 2026-10-01T06:35:51.322505+00:00
 
 Extracted Profile JSON:
 {
@@ -356,8 +19,8 @@ Extracted Profile JSON:
         "id": "q4_lifestyle_values_s_values_00",
         "label": "Values consistency",
         "quote": "being consistent",
-        "summary": "Prioritizes consistency and doing small things well over time.",
-        "confidence": 0.95,
+        "summary": "Cares deeply about consistency and doing small things well over time.",
+        "confidence": 0.98,
         "question_id": "q4_lifestyle_values",
         "evidence_type": "explicit"
       }
@@ -365,18 +28,27 @@ Extracted Profile JSON:
     "provides": [
       {
         "id": "q3_conflict_provides_s_provides_00",
-        "label": "Shows up through care",
-        "quote": "I cook for them, check in more often",
-        "summary": "Shows up for a partner by cooking and checking in more often.",
+        "label": "Shows up during tough times",
+        "quote": "when my partner is going through something, I show up",
+        "summary": "Actively shows up and supports partners through difficult times.",
         "confidence": 0.98,
         "question_id": "q3_conflict_provides",
         "evidence_type": "explicit"
       },
       {
-        "id": "q5_personality_s_provides_01",
+        "id": "q3_conflict_provides_s_provides_01",
+        "label": "Provides practical care",
+        "quote": "I cook for them, check in more often",
+        "summary": "Cares for partners by cooking and increasing check-ins.",
+        "confidence": 0.98,
+        "question_id": "q3_conflict_provides",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q5_personality_s_provides_02",
         "label": "Pays attention to details",
         "quote": "pay attention to the small stuff",
-        "summary": "Brings attentiveness to small details as a partner.",
+        "summary": "Brings attentiveness to small details as a good partner.",
         "confidence": 0.98,
         "question_id": "q5_personality",
         "evidence_type": "explicit"
@@ -387,7 +59,16 @@ Extracted Profile JSON:
         "id": "q4_lifestyle_values_s_interests_00",
         "label": "Hiking and markets",
         "quote": "hike or farmers market",
-        "summary": "Spends weekends hiking, visiting farmers markets, or bookstores.",
+        "summary": "Spends weekends hiking, visiting farmers markets, and bookstores.",
+        "confidence": 0.95,
+        "question_id": "q4_lifestyle_values",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q4_lifestyle_values_s_interests_01",
+        "label": "Cooking and food",
+        "quote": "pretty into cooking",
+        "summary": "Enjoys cooking as a personal hobby.",
         "confidence": 0.95,
         "question_id": "q4_lifestyle_values",
         "evidence_type": "explicit"
@@ -427,7 +108,7 @@ Extracted Profile JSON:
       {
         "id": "q3_conflict_provides_s_conflict_style_00",
         "label": "Takes time to cool down",
-        "quote": "take an hour or two to cool down",
+        "quote": "take an hour or two to cool down first",
         "summary": "Takes an hour or two to cool down before addressing conflict.",
         "confidence": 0.98,
         "question_id": "q3_conflict_provides",
@@ -437,16 +118,16 @@ Extracted Profile JSON:
         "id": "q3_conflict_provides_s_conflict_style_01",
         "label": "Uses I-statements",
         "quote": "say 'I felt...' instead of blaming",
-        "summary": "Uses 'I felt' statements instead of blaming during arguments.",
+        "summary": "Uses 'I felt' statements instead of blaming during disagreements.",
         "confidence": 0.98,
         "question_id": "q3_conflict_provides",
         "evidence_type": "explicit"
       },
       {
         "id": "q3_conflict_provides_s_conflict_style_02",
-        "label": "Addresses hard conversations",
-        "quote": "won't avoid a hard conversation",
-        "summary": "Willing to engage in difficult conversations rather than avoiding them.",
+        "label": "Direct conflict approach",
+        "quote": "won't avoid a hard conversation either",
+        "summary": "Willing to have difficult conversations rather than avoiding them.",
         "confidence": 0.95,
         "question_id": "q3_conflict_provides",
         "evidence_type": "explicit"
@@ -465,18 +146,18 @@ Extracted Profile JSON:
       {
         "id": "q2_emotional_needs_s_emotional_needs_01",
         "label": "Needs quiet presence",
-        "quote": "sits with me? not trying to fix it",
-        "summary": "Needs a partner to notice and sit quietly without trying to fix it immediately.",
+        "quote": "just... sits with me? not trying to fix it",
+        "summary": "Needs a partner to notice and sit quietly without trying to fix it right away.",
         "confidence": 0.98,
         "question_id": "q2_emotional_needs",
         "evidence_type": "explicit"
       },
       {
         "id": "q2_emotional_needs_s_emotional_needs_02",
-        "label": "Words of affirmation",
+        "label": "Values words of affirmation",
         "quote": "words of affirmation are genuinely important",
-        "summary": "Feels more secure and values receiving words of affirmation.",
-        "confidence": 0.99,
+        "summary": "Feels significantly more secure when hearing words of affirmation during tough times.",
+        "confidence": 0.98,
         "question_id": "q2_emotional_needs",
         "evidence_type": "explicit"
       }
@@ -486,7 +167,7 @@ Extracted Profile JSON:
         "id": "q5_personality_s_personality_signals_00",
         "label": "High intensity and passion",
         "quote": "pretty intense when I care about something",
-        "summary": "Describes being intense and deeply invested when caring about something.",
+        "summary": "Describes themselves as intense and passionate when caring about something.",
         "confidence": 0.98,
         "question_id": "q5_personality",
         "evidence_type": "explicit"
@@ -495,7 +176,7 @@ Extracted Profile JSON:
         "id": "q5_personality_s_personality_signals_01",
         "label": "Highly organized",
         "quote": "very organized",
-        "summary": "Friends describe them as very organized.",
+        "summary": "Identifies as a very organized person.",
         "confidence": 0.98,
         "question_id": "q5_personality",
         "evidence_type": "explicit"
@@ -504,8 +185,8 @@ Extracted Profile JSON:
         "id": "q5_personality_s_personality_signals_02",
         "label": "Self-aware overthinker",
         "quote": "overthink sometimes but I'm self-aware",
-        "summary": "Recognizes and is self-aware about overthinking tendencies.",
-        "confidence": 0.98,
+        "summary": "Notes that they overthink sometimes but maintain self-awareness about it.",
+        "confidence": 0.95,
         "question_id": "q5_personality",
         "evidence_type": "explicit"
       },
@@ -513,7 +194,7 @@ Extracted Profile JSON:
         "id": "q5_personality_s_personality_signals_03",
         "label": "Warm and people-oriented",
         "quote": "warm and I genuinely love people",
-        "summary": "Characterizes themselves as warm with a genuine love for people.",
+        "summary": "Describes themselves as warm and genuinely loving people.",
         "confidence": 0.98,
         "question_id": "q5_personality",
         "evidence_type": "explicit"
@@ -524,36 +205,27 @@ Extracted Profile JSON:
     "partner_traits": [
       {
         "id": "q1_intent_partner_w_partner_traits_00",
-        "label": "Attentive and checking in",
-        "quote": "checks in on me",
-        "summary": "Needs a partner who actively checks in.",
-        "confidence": 0.95,
+        "label": "Good communicator",
+        "quote": "communication is huge",
+        "summary": "Considers communication to be a huge priority in a partner.",
+        "confidence": 0.98,
         "question_id": "q1_intent_partner",
         "evidence_type": "explicit"
       },
       {
         "id": "q1_intent_partner_w_partner_traits_01",
-        "label": "Strong communication",
-        "quote": "communication is huge for me",
-        "summary": "Considers good communication a major requirement.",
-        "confidence": 0.98,
-        "question_id": "q1_intent_partner",
-        "evidence_type": "explicit"
-      },
-      {
-        "id": "q1_intent_partner_w_partner_traits_02",
         "label": "Emotionally present",
         "quote": "emotionally present",
-        "summary": "Requires emotional presence rather than just physical proximity.",
+        "summary": "Requires a partner who is emotionally present rather than just physically around.",
         "confidence": 0.98,
         "question_id": "q1_intent_partner",
         "evidence_type": "explicit"
       },
       {
-        "id": "q2_emotional_needs_w_partner_traits_03",
+        "id": "q2_emotional_needs_w_partner_traits_02",
         "label": "Offers unprompted reassurance",
         "quote": "says something like 'I'm here' without me having to ask",
-        "summary": "Wants a partner who proactively offers reassurance without being asked.",
+        "summary": "Wants a partner who spontaneously offers reassurance without being asked.",
         "confidence": 0.95,
         "question_id": "q2_emotional_needs",
         "evidence_type": "explicit"
@@ -564,9 +236,9 @@ Extracted Profile JSON:
     "relationship_expectations": [
       {
         "id": "q1_intent_partner_w_relationship_expectations_00",
-        "label": "Seeking serious commitment",
+        "label": "Seeking real commitment",
         "quote": "build something real",
-        "summary": "Wants to build something real and is tired of situationships.",
+        "summary": "Wants to build something real and talks about the future.",
         "confidence": 0.98,
         "question_id": "q1_intent_partner",
         "evidence_type": "explicit"
@@ -575,7 +247,7 @@ Extracted Profile JSON:
         "id": "q1_intent_partner_w_relationship_expectations_01",
         "label": "Future-oriented discussions",
         "quote": "talks about the future",
-        "summary": "Desires a partner who talks about the future.",
+        "summary": "Looks for a partner who talks about the future.",
         "confidence": 0.95,
         "question_id": "q1_intent_partner",
         "evidence_type": "explicit"
@@ -585,7 +257,16 @@ Extracted Profile JSON:
   "constraints": {
     "dealbreakers": [
       {
-        "id": "q6_dealbreakers_c_dealbreakers_00",
+        "id": "q1_intent_partner_c_dealbreakers_00",
+        "label": "Tired of situationships",
+        "quote": "tired of situationships",
+        "summary": "Wants to avoid casual situationships and half-in dynamics.",
+        "confidence": 0.95,
+        "question_id": "q1_intent_partner",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q6_dealbreakers_c_dealbreakers_01",
         "label": "No smoking",
         "quote": "smoking is a hard no",
         "summary": "Smoking is an absolute dealbreaker due to asthma.",
@@ -594,7 +275,7 @@ Extracted Profile JSON:
         "evidence_type": "explicit"
       },
       {
-        "id": "q6_dealbreakers_c_dealbreakers_01",
+        "id": "q6_dealbreakers_c_dealbreakers_02",
         "label": "No regular substance use",
         "quote": "anyone who uses substances regularly",
         "summary": "Regular substance use beyond occasional social drinking is unacceptable.",
@@ -603,10 +284,10 @@ Extracted Profile JSON:
         "evidence_type": "explicit"
       },
       {
-        "id": "q6_dealbreakers_c_dealbreakers_02",
+        "id": "q6_dealbreakers_c_dealbreakers_03",
         "label": "Zero tolerance for dishonesty",
         "quote": "dishonesty in any form",
-        "summary": "Any form of dishonesty, even small white lies, is a dealbreaker.",
+        "summary": "Any form of dishonesty or lying is an absolute dealbreaker.",
         "confidence": 1.0,
         "question_id": "q6_dealbreakers",
         "evidence_type": "explicit"
@@ -618,180 +299,521 @@ Extracted Profile JSON:
 Self Embedding Source Text:
 SELF
 
-Values: Prioritizes consistency and doing small things well over time.
+Values: Cares deeply about consistency and doing small things well over time.
 Lifestyle: Practices morning yoga regularly throughout the week., Works in product design with a screen-heavy routine., Follows a plant-based diet and enjoys cooking.
-Personality: Describes being intense and deeply invested when caring about something., Friends describe them as very organized., Recognizes and is self-aware about overthinking tendencies., Characterizes themselves as warm with a genuine love for people.
-Interests: Spends weekends hiking, visiting farmers markets, or bookstores.
-Conflict style: Takes an hour or two to cool down before addressing conflict., Uses 'I felt' statements instead of blaming during arguments., Willing to engage in difficult conversations rather than avoiding them.
-Provides: Shows up for a partner by cooking and checking in more often., Brings attentiveness to small details as a partner.
-Emotional needs: The user tends to go quiet when feeling stressed., Needs a partner to notice and sit quietly without trying to fix it immediately., Feels more secure and values receiving words of affirmation.
+Personality: Describes themselves as intense and passionate when caring about something., Identifies as a very organized person., Notes that they overthink sometimes but maintain self-awareness about it., Describes themselves as warm and genuinely loving people.
+Interests: Spends weekends hiking, visiting farmers markets, and bookstores., Enjoys cooking as a personal hobby.
+Conflict style: Takes an hour or two to cool down before addressing conflict., Uses 'I felt' statements instead of blaming during disagreements., Willing to have difficult conversations rather than avoiding them.
+Provides: Actively shows up and supports partners through difficult times., Cares for partners by cooking and increasing check-ins., Brings attentiveness to small details as a good partner.
+Emotional needs: The user tends to go quiet when feeling stressed., Needs a partner to notice and sit quietly without trying to fix it right away., Feels significantly more secure when hearing words of affirmation during tough times.
 
 Want Embedding Source Text:
 WANTS
 
-Partner traits: Needs a partner who actively checks in., Considers good communication a major requirement., Requires emotional presence rather than just physical proximity., Wants a partner who proactively offers reassurance without being asked.
-Relationship expectations: Wants to build something real and is tired of situationships., Desires a partner who talks about the future.
+Partner traits: Considers communication to be a huge priority in a partner., Requires a partner who is emotionally present rather than just physically around., Wants a partner who spontaneously offers reassurance without being asked.
+Relationship expectations: Wants to build something real and talks about the future., Looks for a partner who talks about the future.
 
 --------------------------------------------------------------------------------
-ONBOARDING DIALOGUE FOR PROFILE #2 (Alice)
+ONBOARDING DIALOGUE FOR PROFILE #1 (Alice)
 --------------------------------------------------------------------------------
-   Conversation ID : def712d7-ab48-49a8-85d3-20a3de66a168
+   Conversation ID : 4ff6dce3-b846-4943-9d1f-425d08206c57
    Status          : completed
-   Started At      : 2026-09-30T20:38:16.379428+00:00
+   Started At      : 2026-10-01T06:35:51.359111+00:00
 
    Q1 (q1_intent_partner): What are you looking for in a relationship, and what kind of person tends to be a good fit for you?
    A1: honestly I'm just tired of situationships lol. I want someone who actually wants to build something real — like talks about the future, checks in on me, that kind of thing. communication is huge for me, and I need someone who's emotionally present, not just physically around.
 
-   Q2 (q1_intent_partner): I hear you completely—there is nothing more exhausting than half-in, half-out dynamics when you're ready for true intention and depth. Wanting someone who is actively invested, communicates openly, and shows up emotionally is so valid and essential. 
-
-When things do get stressful or difficult, what do you need most from a partner to help you feel supported and grounded?
+   Q2 (q1_intent_partner): Ugh, I completely feel you—navigating those half-in, half-out dynamics is so draining, and you deserve someone who is fully invested and emotionally available. Since being truly seen and supported is so foundational for you, when things do get stressful or difficult, what do you need most from a partner to feel grounded?
    A2: when I'm stressed I go pretty quiet and I need someone who notices and just... sits with me? not trying to fix it immediately. I really appreciate when my partner says something like 'I'm here' without me having to ask. words of affirmation are genuinely important to me, I feel more secure when I hear them.
 
-   Q3 (q2_emotional_needs): There is something so deeply comforting about a partner who knows how to just sit with you in the quiet instead of rushing to fix things. It makes complete sense that hearing those reassuring words helps you feel safe and anchored. 
+   Q3 (q2_emotional_needs): There is so much tenderness in wanting that quiet, reassuring presence without the pressure to fix things right away. Words of affirmation truly create such a safe harbor when the world feels overwhelming. 
 
-When a disagreement does come up, how do you usually handle it, and what do you feel is your special superpower or gift that you bring to a relationship?
+As we think about building that safe space together, when a disagreement actually arises, how do you usually handle it, and what do you feel you naturally bring to a relationship as a partner?
    A3: I don't like fighting but I won't avoid a hard conversation either. I usually take an hour or two to cool down first, then I'll bring it up. I try to say 'I felt...' instead of blaming. when my partner is going through something, I show up — I cook for them, check in more often, just make sure they know I'm paying attention.
 
-   Q4 (q3_conflict_provides): That is such a grounded and loving approach—taking that pause to cool down before communicating with "I" statements shows so much emotional maturity, and the way you show up with care when things get tough is deeply comforting. 
+   Q4 (q3_conflict_provides): That takes so much self-awareness and care—taking time to cool down before communicating with "I" statements is such a healthy way to handle conflict, and your partner is lucky to have that kind of steady, comforting support. 
 
-To help us find someone who matches that wonderful energy, what does your day-to-day life look like, what do you enjoy doing for fun, and what values or future goals are most important to you?
+As we look toward building a life that feels aligned, what does your day-to-day life look like, what do you enjoy doing for fun, and what core values or future goals are most important to you?
    A4: I do morning yoga most days, like 5-6 times a week. I work in product design so I spend a lot of time at a screen which is why I try to stay active. weekends are usually a hike or farmers market, maybe a bookstore. I'm plant-based and pretty into cooking. I care a lot about being consistent — like doing small things well over time.
 
-   Q5 (q4_lifestyle_values): That sounds like such a beautifully grounded and intentional routine—balancing creative screen time with yoga, nature, and nourishing food is wonderful. I love how much value you place on consistency and those little daily habits that build a meaningful life. 
+   Q5 (q4_lifestyle_values): That sounds like such a wonderfully grounded and mindful routine—balancing screen time with yoga, nature, and good food is an art form in itself! I love that value of consistency, too; those daily small habits really build a beautiful foundation for life and love. 
 
-How would people close to you describe you, and what do you feel makes you a good partner in a relationship?
+How would people closest to you describe you, and what do you feel makes you a good partner?
    A5: my friends say I'm a lot — in a good way I think? I'm pretty intense when I care about something, very organized, and I overthink sometimes but I'm self-aware about it. I'm warm and I genuinely love people. I probably make a good partner because I actually pay attention to the small stuff.
 
-   Q6 (q5_personality): That kind of intentionality and deep care is such a rare, beautiful gift to bring to a relationship—paying attention to the small stuff makes people feel truly seen. Knowing what you bring to the table is wonderful, but it's just as important to protect your energy; what are some non-negotiable dealbreakers or absolute hard constraints for you in a partner?
+   Q6 (q5_personality): That kind of deep intensity and attention to the small stuff is such a rare, beautiful gift in a partner—it shows how much you truly care. 
+
+Knowing yourself so well makes it much easier to find someone who appreciates that depth; as we look toward building that right connection, what are some non-negotiable dealbreakers or absolute hard constraints for you in a relationship?
    A6: smoking is a hard no, I have asthma. also anyone who uses substances regularly — I'm fine with a drink socially but that's about it. and dishonesty in any form, even white lies about small things. if I can't trust what you say, it's done.
 
-   Q7 (q6_dealbreakers): 🎉 You did it! 
+   Q7 (q6_dealbreakers): You did it! 🎉 
 
-Thank you so much for taking the time to share a bit of your world with us. I am so genuinely glad you’re here. Taking this step toward meaningful connection—and investing in yourself—is something to celebrate! 
+Thank you so much for taking the time to share a bit about who you are with us. I know answering those questions takes a little reflection, and I want to celebrate you for taking this wonderful step toward finding truly meaningful, authentic connections. 
 
-Right now, our system is carefully reviewing your profile and getting to work behind the scenes, sifting through our community to find those special people who truly align with your vibe, values, and vision. 
+Right now, our system is working its magic behind the scenes, carefully processing your profile to find wonderful compatibility matches who share your values and vibe. 
 
-Sit back, take a deep breath, and get ready. Your compatibility matches are on the way, and we can’t wait to introduce you! 💛
+Sit back, relax, and get ready—we'll be in touch very soon with your first matches. Welcome to Belong! We are so happy you're here. 💛
+
+================================================================================
+USER PROFILE #2: Bob (User ID: ab5c75fe-0008-46b4-8db2-64b9d23ab57b)
+================================================================================
+Age / Gender       : 30 / male
+Orientation / Goal : straight / long-term
+Location (Lat/Lon) : 37.78, -122.41
+Preferences        : Age 23-32, Dist 50km, Genders ['female']
+Created At         : 2026-10-01T06:35:51.322027+00:00
+
+Extracted Profile JSON:
+{
+  "self": {
+    "values": [
+      {
+        "id": "q4_lifestyle_values_s_values_00",
+        "label": "Values ambition and growth",
+        "quote": "ambition and keep growing",
+        "summary": "Values people who have ambition and keep growing.",
+        "confidence": 0.95,
+        "question_id": "q4_lifestyle_values",
+        "evidence_type": "explicit"
+      }
+    ],
+    "provides": [
+      {
+        "id": "q2_emotional_needs_s_provides_00",
+        "label": "Good listener under stress",
+        "quote": "good at just listening without jumping to solutions",
+        "summary": "Listens patiently to a stressed partner without jumping straight to solutions.",
+        "confidence": 0.98,
+        "question_id": "q2_emotional_needs",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q3_conflict_provides_s_provides_01",
+        "label": "Provides emotional stability",
+        "quote": "making my partner feel stable",
+        "summary": "Makes their partner feel stable and secure during hard times.",
+        "confidence": 0.98,
+        "question_id": "q3_conflict_provides",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q3_conflict_provides_s_provides_02",
+        "label": "Provides reliable presence",
+        "quote": "I'm not going anywhere",
+        "summary": "Shows consistency by assuring the partner they are not going anywhere.",
+        "confidence": 0.95,
+        "question_id": "q3_conflict_provides",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q5_personality_s_provides_03",
+        "label": "Attentive active listening",
+        "quote": "good listener",
+        "summary": "Provides genuine care and listens closely to others.",
+        "confidence": 0.98,
+        "question_id": "q5_personality",
+        "evidence_type": "explicit"
+      }
+    ],
+    "interests": [
+      {
+        "id": "q4_lifestyle_values_s_interests_00",
+        "label": "Trail running",
+        "quote": "trail running is my thing",
+        "summary": "The user enjoys trail running as a main hobby.",
+        "confidence": 0.98,
+        "question_id": "q4_lifestyle_values",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q4_lifestyle_values_s_interests_01",
+        "label": "Coffee brewing",
+        "quote": "coffee brewing during covid",
+        "summary": "Passionate about coffee brewing picked up during covid.",
+        "confidence": 0.95,
+        "question_id": "q4_lifestyle_values",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q5_personality_s_interests_02",
+        "label": "Wide-ranging curiosity",
+        "quote": "curious about a lot of things",
+        "summary": "Enjoys learning about diverse topics and reading widely.",
+        "confidence": 0.95,
+        "question_id": "q5_personality",
+        "evidence_type": "explicit"
+      }
+    ],
+    "lifestyle": [
+      {
+        "id": "q4_lifestyle_values_s_lifestyle_00",
+        "label": "Weekend half marathons",
+        "quote": "half marathon most weekends",
+        "summary": "Runs half marathons almost every weekend.",
+        "confidence": 0.95,
+        "question_id": "q4_lifestyle_values",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q4_lifestyle_values_s_lifestyle_01",
+        "label": "Software engineer routine",
+        "quote": "software engineer so weekdays are pretty heads-down",
+        "summary": "Works as a software engineer with focused weekdays.",
+        "confidence": 0.95,
+        "question_id": "q4_lifestyle_values",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q4_lifestyle_values_s_lifestyle_02",
+        "label": "Daily outdoor habit",
+        "quote": "try to get outside every day",
+        "summary": "Makes a daily effort to get outside.",
+        "confidence": 0.95,
+        "question_id": "q4_lifestyle_values",
+        "evidence_type": "explicit"
+      }
+    ],
+    "life_goals": [],
+    "conflict_style": [
+      {
+        "id": "q3_conflict_provides_s_conflict_style_00",
+        "label": "Prompt conflict resolution",
+        "quote": "deal with things pretty quickly",
+        "summary": "Deals with disagreements quickly rather than letting them linger.",
+        "confidence": 0.98,
+        "question_id": "q3_conflict_provides",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q3_conflict_provides_s_conflict_style_01",
+        "label": "Calm under tension",
+        "quote": "stay calm, I don't raise my voice",
+        "summary": "Stays calm and avoids raising their voice during disagreements.",
+        "confidence": 0.98,
+        "question_id": "q3_conflict_provides",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q3_conflict_provides_s_conflict_style_02",
+        "label": "Prefers direct communication",
+        "quote": "slightly awkward conversation than let something fester",
+        "summary": "Prefers a slightly awkward conversation over letting issues fester.",
+        "confidence": 0.95,
+        "question_id": "q3_conflict_provides",
+        "evidence_type": "explicit"
+      }
+    ],
+    "emotional_needs": [
+      {
+        "id": "q2_emotional_needs_s_emotional_needs_00",
+        "label": "Needs processing time",
+        "quote": "need an hour to process",
+        "summary": "Needs about an hour of quiet time to process stress before talking.",
+        "confidence": 0.98,
+        "question_id": "q2_emotional_needs",
+        "evidence_type": "explicit"
+      }
+    ],
+    "personality_signals": [
+      {
+        "id": "q5_personality_s_personality_signals_00",
+        "label": "Easygoing demeanor",
+        "quote": "pretty chill",
+        "summary": "Describes themselves as pretty chill and relaxed.",
+        "confidence": 0.98,
+        "question_id": "q5_personality",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q5_personality_s_personality_signals_01",
+        "label": "High reliability",
+        "quote": "pretty reliable",
+        "summary": "Consistently follows through on commitments and shows up.",
+        "confidence": 0.98,
+        "question_id": "q5_personality",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q5_personality_s_personality_signals_02",
+        "label": "Reserved initially",
+        "quote": "bit reserved at first",
+        "summary": "Tends to be somewhat reserved at first before warming up.",
+        "confidence": 0.98,
+        "question_id": "q5_personality",
+        "evidence_type": "explicit"
+      }
+    ]
+  },
+  "wants": {
+    "partner_traits": [
+      {
+        "id": "q1_intent_partner_w_partner_traits_00",
+        "label": "Curious partner",
+        "quote": "who's curious",
+        "summary": "Desires a partner who is naturally curious.",
+        "confidence": 0.95,
+        "question_id": "q1_intent_partner",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q1_intent_partner_w_partner_traits_01",
+        "label": "Takes care of self",
+        "quote": "takes care of themselves",
+        "summary": "Looks for someone who takes good care of themselves.",
+        "confidence": 0.95,
+        "question_id": "q1_intent_partner",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q2_emotional_needs_w_partner_traits_02",
+        "label": "Patient and present partner",
+        "quote": "doesn't push too hard but also doesn't disappear",
+        "summary": "Wants a partner who does not push too hard but stays present and available.",
+        "confidence": 0.95,
+        "question_id": "q2_emotional_needs",
+        "evidence_type": "explicit"
+      }
+    ],
+    "partner_values": [
+      {
+        "id": "q1_intent_partner_w_partner_values_00",
+        "label": "Trust as baseline",
+        "quote": "trust is the baseline",
+        "summary": "Requires trust as the essential foundation for a relationship.",
+        "confidence": 0.98,
+        "question_id": "q1_intent_partner",
+        "evidence_type": "explicit"
+      }
+    ],
+    "desired_lifestyle": [],
+    "relationship_expectations": [
+      {
+        "id": "q1_intent_partner_w_relationship_expectations_00",
+        "label": "Seeks lasting relationship",
+        "quote": "want something that actually lasts",
+        "summary": "Wants a serious, long-term relationship that genuinely lasts.",
+        "confidence": 0.98,
+        "question_id": "q1_intent_partner",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q1_intent_partner_w_relationship_expectations_01",
+        "label": "Wants mutual growth",
+        "quote": "genuinely grow with",
+        "summary": "Looking for a partner to genuinely grow with over time.",
+        "confidence": 0.98,
+        "question_id": "q1_intent_partner",
+        "evidence_type": "explicit"
+      }
+    ]
+  },
+  "constraints": {
+    "dealbreakers": [
+      {
+        "id": "q1_intent_partner_c_dealbreakers_00",
+        "label": "No game playing",
+        "quote": "doesn't play games",
+        "summary": "Has a strict boundary against playing games in dating.",
+        "confidence": 0.95,
+        "question_id": "q1_intent_partner",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q6_dealbreakers_c_dealbreakers_01",
+        "label": "Arrogance dealbreaker",
+        "quote": "arrogance, like someone who can never admit they're wrong",
+        "summary": "Cannot accept arrogance or someone who cannot admit mistakes.",
+        "confidence": 0.98,
+        "question_id": "q6_dealbreakers",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q6_dealbreakers_c_dealbreakers_02",
+        "label": "Dishonesty dealbreaker",
+        "quote": "dishonesty \u2014 not just big lies, the small habitual ones",
+        "summary": "Considers both big and small habitual lies to be dealbreakers.",
+        "confidence": 0.98,
+        "question_id": "q6_dealbreakers",
+        "evidence_type": "explicit"
+      },
+      {
+        "id": "q6_dealbreakers_c_dealbreakers_03",
+        "label": "Stagnation dealbreaker",
+        "quote": "totally stagnant, just not interested in improving",
+        "summary": "Cannot be with someone who is stagnant and lacks self-improvement.",
+        "confidence": 0.95,
+        "question_id": "q6_dealbreakers",
+        "evidence_type": "explicit"
+      }
+    ]
+  }
+}
+
+Self Embedding Source Text:
+SELF
+
+Values: Values people who have ambition and keep growing.
+Lifestyle: Runs half marathons almost every weekend., Works as a software engineer with focused weekdays., Makes a daily effort to get outside.
+Personality: Describes themselves as pretty chill and relaxed., Consistently follows through on commitments and shows up., Tends to be somewhat reserved at first before warming up.
+Interests: The user enjoys trail running as a main hobby., Passionate about coffee brewing picked up during covid., Enjoys learning about diverse topics and reading widely.
+Conflict style: Deals with disagreements quickly rather than letting them linger., Stays calm and avoids raising their voice during disagreements., Prefers a slightly awkward conversation over letting issues fester.
+Provides: Listens patiently to a stressed partner without jumping straight to solutions., Makes their partner feel stable and secure during hard times., Shows consistency by assuring the partner they are not going anywhere., Provides genuine care and listens closely to others.
+Emotional needs: Needs about an hour of quiet time to process stress before talking.
+
+Want Embedding Source Text:
+WANTS
+
+Partner traits: Desires a partner who is naturally curious., Looks for someone who takes good care of themselves., Wants a partner who does not push too hard but stays present and available.
+Partner values: Requires trust as the essential foundation for a relationship.
+Relationship expectations: Wants a serious, long-term relationship that genuinely lasts., Looking for a partner to genuinely grow with over time.
+
+--------------------------------------------------------------------------------
+ONBOARDING DIALOGUE FOR PROFILE #2 (Bob)
+--------------------------------------------------------------------------------
+   Conversation ID : a4d4e3d5-3665-4e9b-badb-b706b4b43e5c
+   Status          : completed
+   Started At      : 2026-10-01T06:35:51.359904+00:00
+
+   Q1 (q1_intent_partner): What are you looking for in a relationship, and what kind of person tends to be a good fit for you?
+   A1: I want something that actually lasts. I've had fun, I've dated around, but at this point I want someone I can genuinely grow with — someone who's curious, takes care of themselves, and doesn't play games. trust is the baseline for me, everything else builds from there.
+
+   Q2 (q1_intent_partner): I love that—trust as a non-negotiable baseline makes so much sense, and wanting that deep, genuine growth is such a beautiful place to be from. 
+
+When life inevitably gets stressful or difficult, what do you usually need most from a partner, and what helps you feel truly supported by them?
+   A2: when I'm stressed I get kind of quiet and withdrawn — I usually need an hour to process before I can talk about it. what helps is if my partner doesn't push too hard but also doesn't disappear. just knowing they're around is enough. I'm the opposite when she's stressed — I'm pretty good at just listening without jumping to solutions.
+
+   Q3 (q2_emotional_needs): That is such a self-aware and grounding way to handle stress, and it's wonderful that you can hold that steady space for your partner when she needs it. When disagreements do pop up, how do you usually navigate those moments, and what do you feel are the biggest strengths you naturally bring to a partnership?
+   A3: I try to deal with things pretty quickly rather than letting them sit. I stay calm, I don't raise my voice — I just hate that. I'd rather have a slightly awkward conversation than let something fester for a week. I think I'm good at making my partner feel stable, like I'm not going anywhere even when things are hard.
+
+   Q4 (q3_conflict_provides): That kind of emotional steadiness and commitment to working through things right away is such a grounding gift to bring to a relationship. It creates a wonderful sense of safety. 
+
+As we look toward the day-to-day side of things, what does your life usually look like, what do you love doing for fun, and what core values or future goals are most important to you?
+   A4: trail running is my thing — I do a half marathon most weekends. I'm a software engineer so weekdays are pretty heads-down but I try to get outside every day. I got into coffee brewing during covid and now I take it a bit too seriously. I value people who actually have ambition and keep growing, professionally or personally, I don't really care which.
+
+   Q5 (q4_lifestyle_values): That sounds like such a great balance of intense focus and grounding outdoor time—though I totally respect a dedicated quarantine coffee journey! It’s really refreshing that you value growth and ambition in a partner, too. 
+
+Building on that, how would the people closest to you describe you, and what do you feel makes you a great partner to share life with?
+   A5: pretty chill, pretty reliable. I show up when I say I will. I'm curious about a lot of things — I'll read a book about almost anything. my friends say I'm a good listener which I think is true, I genuinely care what people have to say. I can be a bit reserved at first but I warm up fast.
+
+   Q6 (q5_personality): That sounds like such a grounded and comforting energy to bring into someone's life—being reliable and genuinely curious is a rare, beautiful combination. It makes complete sense that people love opening up to you, even if it takes a moment for you to warm up yourself. 
+
+As we look toward building something meaningful, what are some absolute hard constraints or non-negotiable dealbreakers for you in a partner?
+   A6: I can't do arrogance, like someone who can never admit they're wrong. and dishonesty — not just big lies, the small habitual ones are worse honestly. also someone who's totally stagnant, just not interested in improving anything about themselves.
+
+   Q7 (q6_dealbreakers): Woohoo! You did it! 🎉 
+
+Thank you so much for taking the time to share a bit about who you are, what you value, and what you're looking for. That is a huge step, and you deserve a moment to celebrate choosing yourself and investing in the possibility of truly meaningful connection. 
+
+Behind the scenes, your profile is now being safely processed and thoughtfully reviewed to find wonderful, high-compatibility matches who share your wavelength. 
+
+Take a deep breath and relax—you are officially on your way. We'll be in touch very soon as your matches start blooming! 💛✨
 
 ================================================================================
 LATEST MATCH RUN SESSION (MATCH_RUNS TABLE)
 ================================================================================
-Match Run ID   : 0f8cea2b-061a-492e-aa0f-5902fd935921
-User ID        : d4c090b1-efe7-410e-bab1-539e3facce19
+Match Run ID   : a10659c6-7d98-4253-bfc0-a1877709389f
+User ID        : 5ed78814-19a6-4f83-ab59-ca844ac3ef38
 Status         : completed
 Candidate Count: 1
 Error Message  : None
-Created At     : 2026-09-30T20:40:48.488691+00:00
-Completed At   : 2026-09-30T20:41:39.883584+00:00
+Created At     : 2026-10-01T06:56:35.559698+00:00
+Completed At   : 2026-10-01T06:56:45.011815+00:00
 
 ================================================================================
 LATEST COMPATIBILITY MATCH RESULT (COMPATIBILITY_RESULTS TABLE)
 ================================================================================
-Match Record ID : 6eb9e16a-5d1e-4b97-a9e8-80f29288fc21
-Match Session ID: 0f8cea2b-061a-492e-aa0f-5902fd935921
-User A ID       : d4c090b1-efe7-410e-bab1-539e3facce19
-User B ID       : aa0341e4-6c4e-4ee2-a0d8-14d9279fc94c
+Match Record ID : 6bd2e356-50a0-4f07-af41-2065e7e0dc9e
+Match Session ID: a10659c6-7d98-4253-bfc0-a1877709389f
+User A ID       : 5ed78814-19a6-4f83-ab59-ca844ac3ef38
+User B ID       : ab5c75fe-0008-46b4-8db2-64b9d23ab57b
 Model / Version : None (v1)
-Created At      : 2026-09-30T20:41:39.883584+00:00
+Created At      : 2026-10-01T06:56:45.011815+00:00
 
 Overall Compatibility Reasoning:
-User A and User B demonstrate strong reciprocal alignment across emotional support, relationship intent, and lifestyle compatibility. User B provides clear reassurance, emotional stability, and patient listening which fulfills User A's need for a quiet, present, and reassuring partner during stress, while User A's warmth, organization, and self-care align with User B's desire for personal growth and reliability.
+User A and User B demonstrate exceptional reciprocal compatibility across emotional needs, conflict resolution, and long-term relationship intent. User B provides the patient listening and emotional stability that User A requires when withdrawing under stress, while User A offers consistency and attentiveness that aligns with User B's desire for a growth-oriented, trusting partnership. Their shared commitment to serious, long-term relationships and clear communication creates a strong foundation for mutual success.
 
 Dimension Results:
 {
   "lifestyle": {
-    "verdict": "strong_alignment",
-    "reasoning": "Both users embrace active, health-conscious lifestyles with outdoor affinities (hiking, markets, trail running, daily outdoor time). Their professional routines (product design and software engineering) balance well with shared weekend outdoor exploration.",
+    "verdict": "partial_alignment",
+    "reasoning": "Both enjoy health-conscious, active lifestyles with outdoor habits, though User A's routine centers around farmers markets, cooking, and yoga while User B engages in intensive weekend half-marathons and trail running.",
     "evidence_a_ids": [
       "q4_lifestyle_values_s_interests_00",
-      "q4_lifestyle_values_s_lifestyle_00",
-      "q4_lifestyle_values_s_lifestyle_02"
+      "q4_lifestyle_values_s_lifestyle_00"
     ],
     "evidence_b_ids": [
       "q4_lifestyle_values_s_interests_00",
-      "q4_lifestyle_values_s_lifestyle_00",
       "q4_lifestyle_values_s_lifestyle_02"
     ]
   },
   "core_values": {
     "verdict": "strong_alignment",
-    "reasoning": "Both users prioritize trust, absolute honesty, and long-term commitment. They share a mutual aversion to dishonesty and games, creating a solid ethical and relational foundation.",
+    "reasoning": "Both users share an explicit dedication to building a lasting, serious long-term relationship, valuing growth, consistency, and a strong baseline of trust.",
     "evidence_a_ids": [
       "q1_intent_partner_w_relationship_expectations_00",
-      "q6_dealbreakers_c_dealbreakers_02"
+      "q4_lifestyle_values_s_values_00"
     ],
     "evidence_b_ids": [
-      "q1_intent_partner_w_partner_values_00",
       "q1_intent_partner_w_relationship_expectations_00",
-      "q6_dealbreakers_c_dealbreakers_02"
+      "q4_lifestyle_values_s_values_00"
     ]
   },
   "conflict_style": {
     "verdict": "strong_alignment",
-    "reasoning": "User A takes time to cool down before using I-statements and engaging in hard conversations, while User B stays calm, avoids raising their voice, and deals with issues promptly. Their collaborative and calm approaches complement each other effectively.",
+    "reasoning": "Both partners value direct communication, are willing to engage in difficult conversations rather than letting issues fester, and recognize the need for a brief cooling-off/processing period during tension.",
     "evidence_a_ids": [
       "q3_conflict_provides_s_conflict_style_00",
-      "q3_conflict_provides_s_conflict_style_01",
       "q3_conflict_provides_s_conflict_style_02"
     ],
     "evidence_b_ids": [
       "q3_conflict_provides_s_conflict_style_00",
-      "q3_conflict_provides_s_conflict_style_01",
-      "probe_self_emotional_needs_s_provides_04"
+      "q3_conflict_provides_s_conflict_style_2"
     ]
   },
   "emotional_needs": {
     "verdict": "strong_alignment",
-    "reasoning": "User A tends to withdraw and go quiet under stress, needing a calm, non-fixing presence and clear reassurance. User B explicitly provides patient listening, clear reassurance, and emotional stability during difficult times.",
+    "reasoning": "User A needs quiet presence and reassurance when stressed, and User B explicitly provides patient listening without rushing to solutions and offers dependable emotional stability.",
     "evidence_a_ids": [
-      "q2_emotional_needs_s_emotional_needs_00",
       "q2_emotional_needs_s_emotional_needs_01",
-      "q2_emotional_needs_w_partner_traits_03"
+      "q2_emotional_needs_s_emotional_needs_02"
     ],
     "evidence_b_ids": [
-      "q3_conflict_provides_s_provides_00",
-      "probe_self_emotional_needs_s_provides_02",
-      "probe_self_emotional_needs_s_provides_03"
+      "q2_emotional_needs_s_provides_00",
+      "q3_conflict_provides_s_provides_01"
     ]
   }
 }
 
 Complementary Alignments (Reciprocal Fulfillment):
 [
-  "A wants unprompted reassurance and attentive checking in -> B provides clear reassurance and patient listening",
-  "A wants emotional presence and care -> B provides emotional stability and checks in through consistent reliability",
-  "B wants someone who takes care of themselves and values growth -> A maintains active self-care (morning yoga, plant-based diet) and personal organization",
-  "B wants honesty and zero games -> A values consistency, direct communication ('I-statements'), and has zero tolerance for dishonesty"
+  "A wants emotionally present communication and unprompted reassurance -> B provides reliable presence and makes his partner feel stable and secure during hard times",
+  "B wants a curious partner who takes care of themselves -> A embodies self-care through plant-based nutrition, morning yoga, and brings wide-ranging attentiveness"
 ]
 
 Shared Alignments (Similarity):
 [
-  "Both are seeking a serious, long-term relationship with commitment",
-  "Both value honesty and have zero tolerance for dishonesty or games",
-  "Both enjoy outdoor activities and spending time in nature (hiking for A, trail running and daily outdoor habits for B)"
+  "Both seek serious, long-term commitment and are tired of superficial dating dynamics",
+  "Both value direct, prompt conflict resolution rather than letting issues fester"
 ]
 
 Strong Alignments (Combined):
 [
-  "A wants unprompted reassurance and attentive checking in -> B provides clear reassurance and patient listening",
-  "A wants emotional presence and care -> B provides emotional stability and checks in through consistent reliability",
-  "B wants someone who takes care of themselves and values growth -> A maintains active self-care (morning yoga, plant-based diet) and personal organization",
-  "B wants honesty and zero games -> A values consistency, direct communication ('I-statements'), and has zero tolerance for dishonesty",
-  "Both are seeking a serious, long-term relationship with commitment",
-  "Both value honesty and have zero tolerance for dishonesty or games",
-  "Both enjoy outdoor activities and spending time in nature (hiking for A, trail running and daily outdoor habits for B)"
+  "A wants emotionally present communication and unprompted reassurance -> B provides reliable presence and makes his partner feel stable and secure during hard times",
+  "B wants a curious partner who takes care of themselves -> A embodies self-care through plant-based nutrition, morning yoga, and brings wide-ranging attentiveness",
+  "Both seek serious, long-term commitment and are tired of superficial dating dynamics",
+  "Both value direct, prompt conflict resolution rather than letting issues fester"
 ]
 
 Potential Conflicts:
-[]
+[
+  "User A can go quiet and overthink when stressed, which might occasionally interact with User B's initial reservation, though both require short processing times that should harmonize well."
+]
 
 Dealbreaker Violations:
 []
 
 Uncertainties:
-[
-  "User A has moments of high intensity and overthinking while User B is very chill; while complementary, their differing stress processing tempos should be navigated with continued open communication."
-]
+[]
 
 =====================================================================================
 INSPECTION COMPLETED

@@ -79,6 +79,21 @@ class PairwiseCompatibilityOutput(BaseModel):
         ...,
         description="Core compatibility dimensions results."
     )
+    complementary_alignments: List[str] = Field(
+        default_factory=list,
+        description="Areas where A's needs/wants are met by B's self (and/or vice versa). This is reciprocal fulfillment — the core product signal."
+    )
+    shared_alignments: List[str] = Field(
+        default_factory=list,
+        description="Areas where both users independently want or value the same thing (similarity, not complementarity)."
+    )
+    potential_conflicts: List[str] = Field(default_factory=list, description="Areas of friction or misalignment")
+    dealbreaker_violations: List[str] = Field(default_factory=list, description="Hard constraints or dealbreakers triggered")
+    uncertainties: List[str] = Field(default_factory=list, description="Areas where info was insufficient to evaluate")
+    reciprocity_score: float = Field(
+        default=0.0,
+        description="0.0–1.0 estimate of how well both partners' needs are mutually fulfilled by the other's self. 1.0 = both directions fully satisfied."
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -109,25 +124,35 @@ class PairwiseCompatibilityOutput(BaseModel):
                         "evidence_b_ids": [],
                         "reasoning": ""
                     }
+                else:
+                    d = dim_res[dim]
+                    if "reasoning" not in d:
+                        d["reasoning"] = ""
+                    if "evidence_a_ids" not in d and "evidence_a" in d:
+                        ev = d.pop("evidence_a")
+                        d["evidence_a_ids"] = [ev] if isinstance(ev, str) else ev
+                    if "evidence_b_ids" not in d and "evidence_b" in d:
+                        ev = d.pop("evidence_b")
+                        d["evidence_b_ids"] = [ev] if isinstance(ev, str) else ev
             data["dimension_results"] = dim_res
 
-            # 4. Ensure overall_verdict is present
+            # 4. Handle alias names for alignment arrays if LLM varies key names
+            aliases = {
+                "complementary_alignments": ["complementary", "complementary_matches", "reciprocal_alignments"],
+                "shared_alignments": ["shared", "similarities", "shared_interests"],
+                "potential_conflicts": ["conflicts", "friction_points", "potential_friction"],
+                "dealbreaker_violations": ["dealbreakers", "violations"],
+                "uncertainties": ["uncertainty", "insufficient_info"]
+            }
+            for target_key, alt_keys in aliases.items():
+                if target_key not in data or not data[target_key]:
+                    for alt in alt_keys:
+                        if alt in data and data[alt]:
+                            data[target_key] = data.pop(alt)
+                            break
+
+            # 5. Ensure overall_verdict is present
             if "overall_verdict" not in data:
                 data["overall_verdict"] = "partial_alignment"
 
         return data
-    complementary_alignments: List[str] = Field(
-        default_factory=list,
-        description="Areas where A's needs/wants are met by B's self (and/or vice versa). This is reciprocal fulfillment — the core product signal."
-    )
-    shared_alignments: List[str] = Field(
-        default_factory=list,
-        description="Areas where both users independently want or value the same thing (similarity, not complementarity)."
-    )
-    potential_conflicts: List[str] = Field(default_factory=list, description="Areas of friction or misalignment")
-    dealbreaker_violations: List[str] = Field(default_factory=list, description="Hard constraints or dealbreakers triggered")
-    uncertainties: List[str] = Field(default_factory=list, description="Areas where info was insufficient to evaluate")
-    reciprocity_score: float = Field(
-        default=0.0,
-        description="0.0–1.0 estimate of how well both partners' needs are mutually fulfilled by the other's self. 1.0 = both directions fully satisfied."
-    )

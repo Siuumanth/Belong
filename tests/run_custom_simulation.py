@@ -234,43 +234,55 @@ async def run_simulation():
         # -----------------------------------------------------------------
         if CREATE_PROFILES:
             print("\n-----------------------------------------------------------------")
-            print("STEP 1: Registering User Demographic Profiles")
+            print("STEP 1: Registering User Demographic Profiles (In Parallel)")
             print("-----------------------------------------------------------------")
-            for user in users:
+            
+            async def _create_profile(user: UserSimulator):
                 ok = await user.create_profile_async(client)
                 if ok:
                     logger.info(f"✅ Created profile for '{user.persona.id}' (User ID: {user.user_id})")
                 else:
                     logger.error(f"❌ Failed creating profile for '{user.persona.id}'")
+                return ok
+
+            await asyncio.gather(*(_create_profile(user) for user in users))
 
         # -----------------------------------------------------------------
-        # STEP 2: MULTI-TURN AI ONBOARDING CHAT (Primary User Only)
+        # STEP 2: MULTI-TURN AI ONBOARDING CHAT (In Parallel)
         # -----------------------------------------------------------------
         if RUN_ONBOARDING:
             print("\n-----------------------------------------------------------------")
-            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (All Users)")
+            print("STEP 2: Executing Multi-Turn AI Onboarding Dialogue (In Parallel)")
             print("-----------------------------------------------------------------")
-            for user in users:
+
+            async def _onboard_user(user: UserSimulator):
                 logger.info(f"Starting conversational onboarding for '{user.persona.id}'...")
                 ok = await user.run_onboarding_async(client)
                 if ok:
                     logger.info(f"✅ Onboarding finished for '{user.persona.id}' (Status: {user.status})")
                 else:
                     logger.error(f"❌ Onboarding failed/incomplete for '{user.persona.id}'")
+                return ok
+
+            await asyncio.gather(*(_onboard_user(user) for user in users))
 
         # -----------------------------------------------------------------
         # STEP 3: TRIGGER EMBEDDING GENERATION
         # -----------------------------------------------------------------
         if TRIGGER_EMBEDDINGS:
             print("\n-----------------------------------------------------------------")
-            print("STEP 3: Triggering Trait & Vector Embedding Generation")
+            print("STEP 3: Triggering Trait & Vector Embedding Generation (In Parallel)")
             print("-----------------------------------------------------------------")
-            for user in users:
+
+            async def _trigger_embedding(user: UserSimulator):
                 ok = await user.trigger_embeddings_async(client)
                 if ok:
                     logger.info(f"✅ Embeddings job queued for '{user.persona.id}'")
                 else:
                     logger.error(f"❌ Embedding trigger failed for '{user.persona.id}'")
+                return ok
+
+            await asyncio.gather(*(_trigger_embedding(user) for user in users))
 
             logger.info("Waiting for background EmbeddingWorker to complete vector generation...")
             for w in range(15):
