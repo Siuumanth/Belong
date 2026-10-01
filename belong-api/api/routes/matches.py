@@ -12,7 +12,10 @@ from matching.schemas import (
     JobStatusResponse,
     MatchCandidateResponse,
     MatchesListResponse,
+    RetrievalListResponse,
+    RetrievalOptions,
 )
+from matching.retrieval import default_retriever
 from profile.repository import ProfileRepository
 from rabbitmq.publisher import publisher
 
@@ -261,3 +264,37 @@ async def get_match_detail(result_id: UUID):
         created_at=r.get("created_at"),
         updated_at=r.get("updated_at")
     )
+
+@router.get("/retrieval/{user_id}", response_model=RetrievalListResponse)
+async def get_candidate_retrieval(
+    user_id: UUID,
+    candidate_pool_limit: Optional[int] = None,
+    pre_rank_limit: Optional[int] = None,
+    max_distance_km: Optional[int] = None,
+):
+    """Performs Stage 1 candidate retrieval (hard constraint SQL filters + vector similarity recall) without running LLM compatibility analysis."""
+    options = RetrievalOptions(
+        candidate_pool_limit=candidate_pool_limit,
+        pre_rank_limit=pre_rank_limit,
+        max_distance_km=max_distance_km,
+    )
+    try:
+        candidates = await default_retriever.retrieve_candidates(user_id=user_id, options=options)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Candidate retrieval failed for user {user_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Candidate retrieval error: {e}"
+        )
+
+    return RetrievalListResponse(
+        user_id=user_id,
+        total_candidates=len(candidates),
+        candidates=candidates
+    )
+
