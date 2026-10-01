@@ -72,6 +72,27 @@ class CanonicalSerializer:
                     summary_str += "."
                 lines.append(f"{label}: {summary_str}")
 
+        # Novel insights (escape hatch signals)
+        novel_signals = []
+        if isinstance(profile, dict):
+            novel_signals = profile.get("novel_signals", []) or self_data.get("novel_signals", [])
+        if novel_signals:
+            novel_summaries = self._extract_summaries(novel_signals)
+            if novel_summaries:
+                has_content = True
+                lines.append(f"Novel insights: {', '.join(novel_summaries)}.")
+
+        # Compact Raw Dialogue summary (token budget capped ~200 chars)
+        raw_dialogue = ""
+        if isinstance(profile, dict):
+            raw_dialogue = profile.get("raw_dialogue", "") or profile.get("raw_answers", "")
+        if raw_dialogue and isinstance(raw_dialogue, str) and raw_dialogue.strip():
+            has_content = True
+            compact_raw = raw_dialogue.strip()
+            if len(compact_raw) > 250:
+                compact_raw = compact_raw[:250].rsplit(" ", 1)[0] + "..."
+            lines.append(f"Raw dialogue: {compact_raw}")
+
         if not has_content:
             return ""
 

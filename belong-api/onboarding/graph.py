@@ -211,8 +211,9 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
             else:
                 raise
         items = data.get("extracted_items", [])
+        novel_items = data.get("novel_signals", [])
 
-        # Store signals under target_field paths (e.g. self.emotional_needs)
+        # 1. Process structured items
         for item in items:
             field_path = item.get("target_field")
             if not field_path:
@@ -268,6 +269,26 @@ async def extract_signals_node(state: OnboardingState) -> Dict[str, Any]:
                 "confidence": confidence,
                 "evidence_type": evidence_type,
             })
+
+        # 2. Process novel & uncategorized signals
+        if novel_items:
+            if "novel_signals" not in extracted_signals:
+                extracted_signals["novel_signals"] = []
+            for n_item in novel_items:
+                if not isinstance(n_item, dict):
+                    continue
+                label_clean = n_item.get("label", "").strip().lower()
+                quote_clean = n_item.get("quote", "").strip().lower()
+                already_exists = any(
+                    (label_clean and isinstance(ex, dict) and ex.get("label", "").strip().lower() == label_clean) or
+                    (quote_clean and isinstance(ex, dict) and ex.get("quote", "").strip().lower() == quote_clean)
+                    for ex in extracted_signals["novel_signals"]
+                )
+                if not already_exists:
+                    sig_id = f"{topic_id}_novel_{len(extracted_signals['novel_signals']):02d}"
+                    n_item["id"] = sig_id
+                    n_item["question_id"] = topic_id
+                    extracted_signals["novel_signals"].append(n_item)
 
     except Exception as e:
         logger.error(f"Error in extract_signals_node: {e}")
