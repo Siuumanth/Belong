@@ -132,6 +132,111 @@ The onboarding engine separates **user interaction** from **psychographic signal
 - **Dual-Filing Rule:** Explicit dealbreakers (e.g., "must be a non-smoker", "monogamy only") are saved into `constraints.dealbreakers` and omitted from general trait preferences.
 - **Evidence Traceability:** All extracted claims include verbatim quotes from user responses to ground LLM compatibility reasoning in verified facts.
 
+### Data Representation & Embedding Serialization Example
+
+#### 1. Stored Profile Signal JSON (`profiles.profile` in PostgreSQL)
+User responses are parsed into structured JSON containing verbatim evidence quotes, confidence scores, and strict separation between `self`, `wants`, and `constraints`:
+
+```json
+{
+  "self": {
+    "values": [
+      {
+        "summary": "Values honesty, transparency, and continuous personal growth",
+        "evidence": "I really value honesty above all else and being open about emotions.",
+        "confidence": 0.95
+      }
+    ],
+    "lifestyle": [
+      {
+        "summary": "Enjoys active weekend hiking and quiet evening reading",
+        "evidence": "On weekends I love hiking in nature or reading at home.",
+        "confidence": 0.90
+      }
+    ],
+    "emotional_needs": [
+      {
+        "summary": "Needs explicit verbal reassurance when feeling stressed",
+        "evidence": "When I am stressed, I need my partner to reassure me that we are okay.",
+        "confidence": 0.92
+      }
+    ],
+    "conflict_style": [
+      {
+        "summary": "Prefers calm, immediate discussion over silent treatment",
+        "evidence": "I hate going to bed angry, I prefer talking things out calmly.",
+        "confidence": 0.88
+      }
+    ]
+  },
+  "wants": {
+    "partner_traits": [
+      {
+        "summary": "Grounded, patient, and emotionally available listener",
+        "evidence": "I am looking for someone who is patient and stays calm during tough conversations.",
+        "confidence": 0.95
+      }
+    ],
+    "relationship_expectations": [
+      {
+        "summary": "Seeks intentional long-term commitment leading to family",
+        "evidence": "I want a serious relationship where we build a future together.",
+        "confidence": 0.98
+      }
+    ]
+  },
+  "constraints": {
+    "dealbreakers": [
+      {
+        "summary": "Non-smoker only",
+        "evidence": "I cannot date anyone who smokes.",
+        "confidence": 1.0
+      }
+    ]
+  }
+}
+```
+
+#### 2. Canonical Text Serialization (`CanonicalSerializer`)
+Before vectorization, the `CanonicalSerializer` filters items above confidence threshold ($\ge 0.7$), strips metadata/quotes, and formats section headings into clean canonical text:
+
+* **Generated `self_text`:**
+  ```text
+  SELF
+
+  Values: Values honesty, transparency, and continuous personal growth.
+  Lifestyle: Enjoys active weekend hiking and quiet evening reading.
+  Conflict style: Prefers calm, immediate discussion over silent treatment.
+  Emotional needs: Needs explicit verbal reassurance when feeling stressed.
+  ```
+
+* **Generated `wants_text`:**
+  ```text
+  WANTS
+
+  Partner traits: Grounded, patient, and emotionally available listener.
+  Relationship expectations: Seeks intentional long-term commitment leading to family.
+  ```
+
+#### 3. Embedding Vector Generation (`self_embedding` & `wants_embedding`)
+The serialized canonical strings are passed into the embedding model (`all-MiniLM-L6-v2`) to produce 384-dimensional floating point vectors:
+
+```text
+self_text  ──► [Embedding Model] ──► self_embedding  (VECTOR(384))
+wants_text ──► [Embedding Model] ──► wants_embedding (VECTOR(384))
+```
+
+These vectors are saved directly into the `profiles` table in PostgreSQL:
+```sql
+UPDATE profiles
+SET self_embedding = '[0.023, -0.087, 0.142, ...]'::vector,
+    wants_embedding = '[-0.015, 0.114, -0.063, ...]'::vector,
+    embedding_source_text = '{"self_text": "...", "wants_text": "..."}'::jsonb
+WHERE user_id = 'user-uuid';
+```
+
+During Stage 1 candidate retrieval, PostgreSQL executes HNSW cosine distance search (`wants_embedding <=> self_embedding`) to rapidly find candidate matches based on what the user is seeking.
+
 ---
 
 ## 3. Two-Stage Matchmaking Pipeline

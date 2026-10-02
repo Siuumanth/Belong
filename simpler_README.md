@@ -25,6 +25,79 @@ Belong flips the script. Instead of treating dating as endless swiping, Belong f
 
 ---
 
+## 🔍 How Data is Extracted & Represented (Ensuring Correctness)
+
+To guarantee that compatibility matching is trustworthy and accurate, Belong follows strict extraction principles:
+
+- 💬 **Verbatim Evidence Mappings:** Every extracted trait or preference is tied directly to verbatim quotes from the user's onboarding chat. The AI never guesses or makes assumptions without user evidence.
+- 🏷️ **Dual Profile Schema (`self` vs. `wants`):** Profile data strictly separates **who you are** (`self`) from **what you need in a partner** (`wants`), preventing self-traits from being confused with partner preferences.
+- 🚫 **Dual-Filing for Dealbreakers:** Absolute dealbreakers (e.g., smoking, family planning, monogamy) are filed into a dedicated `dealbreakers` list so they trigger instant Surface Layer filters rather than diluting vector scores.
+- ❓ **No Hallucinated Defaults:** Unmentioned profile dimensions remain `null` rather than being filled with guessed or default values.
+- 🔎 **Dynamic Contextual Probes:** If a user's response is vague, the AI guide asks targeted follow-up probe questions until sufficient clarity is established.
+
+### 📊 Example: Signal Storage & Vector Embedding
+
+#### 1. Stored Profile JSON
+User responses are parsed into structured JSON with verbatim evidence quotes and strict separation between `self`, `wants`, and dealbreakers:
+
+```json
+{
+  "self": {
+    "values": [
+      {
+        "summary": "Values honesty and personal growth",
+        "evidence": "I value honesty above all else.",
+        "confidence": 0.95
+      }
+    ],
+    "emotional_needs": [
+      {
+        "summary": "Needs explicit verbal reassurance when stressed",
+        "evidence": "I need reassurance when I'm stressed.",
+        "confidence": 0.92
+      }
+    ]
+  },
+  "wants": {
+    "partner_traits": [
+      {
+        "summary": "Grounded, patient, and supportive listener",
+        "evidence": "I am looking for a patient partner.",
+        "confidence": 0.95
+      }
+    ]
+  },
+  "constraints": {
+    "dealbreakers": [
+      {
+        "summary": "Non-smoker only",
+        "evidence": "Cannot date anyone who smokes.",
+        "confidence": 1.0
+      }
+    ]
+  }
+}
+```
+
+#### 2. Converting JSON to Text & Vectors
+Before calculating vector similarity, the profile JSON is converted into canonical text strings, which are then passed into the embedding model:
+
+* **`self_text`**:
+  ```text
+  SELF
+  Values: Values honesty and personal growth.
+  Emotional needs: Needs explicit verbal reassurance when stressed.
+  ```
+  $\rightarrow$ **Embedding Model** $\rightarrow$ **`self_embedding` (`VECTOR(384)`)**
+
+* **`wants_text`**:
+  ```text
+  WANTS
+  Partner traits: Grounded, patient, and supportive listener.
+  ```
+  $\rightarrow$ **Embedding Model** $\rightarrow$ **`wants_embedding` (`VECTOR(384)`)**
+
+---
 ## 🔄 The Matchmaking Flow
 
 Belong processes candidate matchmaking through a 4-step pipeline:
@@ -55,9 +128,7 @@ Belong processes candidate matchmaking through a 4-step pipeline:
 ```
 
 ### 1. Conversational AI Onboarding
-Instead of answering rigid forms, users engage in a natural conversation with an AI guide. The AI parses user responses into two distinct profiles:
-- **`self`**: Who you are, your lifestyle habits, core values, emotional tendencies, and conflict resolution style.
-- **`wants`**: What you specifically look for and need in a partner for a healthy relationship.
+Instead of answering rigid forms, users engage in a natural conversation with an AI guide. The AI parses user responses into two distinct profiles (`self` vs. `wants`).
 
 ### 2. Surface Layer Screening
 Baseline SQL filters immediately remove non-matches based on physical location, age range, gender preference, and explicit dealbreakers.
@@ -89,7 +160,7 @@ Belong's backend is built with a decoupled, asynchronous microservice architectu
 * **Belong API (`belong-api` - FastAPI `:8000`):** Handles profile updates, AI onboarding conversational graphs (LangGraph), and real-time candidate retrieval.
 * **RabbitMQ Message Broker:** Asynchronous message broker queueing embedding generation and LLM matching jobs.
 * **Python Workers (`belong-workers`):** Background workers that process vector embedding serialization and execute Stage 1 SQL/vector queries + Stage 2 LLM compatibility reasoning.
-* **PostgreSQL + `pgvector`:** Relational storage for profiles, 1536-dimensional semantic vector embeddings (`self_embedding` and `wants_embedding`), and persisted compatibility results.
+* **PostgreSQL + `pgvector`:** Relational storage for profiles, 384-dimensional semantic vector embeddings (`self_embedding` and `wants_embedding`), and persisted compatibility results.
 
 ---
 
