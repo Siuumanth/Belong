@@ -4,22 +4,19 @@
 
 ---
 
-## 💡 Why Belong? (The Modern Dating Problem & Solution)
+## 💡 Why Belong?
 
 ### 💔 The Problem with Modern Dating Apps
-Most popular dating apps function like visual slot machines:
-- **Superficial Sorting:** Matches are made in split seconds based almost entirely on photos, prompt quips, or generic hobbies.
-- **Illusion of Choice & Swipe Fatigue:** Endless swiping breeds burnout, ghosting, and disposable interactions rather than genuine human connections.
-- **Surface Similarity vs. Real Compatibility:** Liking the same music, movies, or sports team does not mean two people share compatible values, emotional communication, or relationship expectations.
+- **Superficial Sorting:** Split-second visual decisions based on photos and prompt quips instead of real compatibility.
+- **Swipe Fatigue & Ghosting:** Infinite swiping creates burnout and disposable interactions rather than genuine human connection.
+- **Surface Similarity vs. Real Compatibility:** Liking the same music or hobbies does not mean two people share core values, emotional needs, or relationship goals.
 
-Traditional dating apps excel at quick dates and maximizing user retention, but frequently fail people looking for **intentional, deep, and lasting relationships**.
+### ❤️ How Belong Fixes It
+- **Emotional Complementarity:** Matches partners based on how they balance each other (e.g., pairing someone needing reassurance with a grounded, supportive listener).
+- **Evidence-Based AI Profiling:** Natural conversational onboarding extracts structured psychographic insights backed by verbatim user quotes (`self` vs. `wants`).
+- **Mutual Intentionality:** Two-way matching ensures User A fits what User B seeks **and** User B fits what User A seeks.
+- **Surface Layer Screening:** Instant baseline filtering (distance, age, gender reciprocity, dealbreakers) before running AI vector evaluations.
 
-### ❤️ Why Belong is Better for Serious Relationships
-Belong shifts the focus from visual sorting to **relationship psychology, emotional complementarity, and mutual alignment**:
-- **Emotional & Psychological Complementarity:** Real compatibility isn't just about shared traits—it's about how two people balance each other (e.g., pairing someone who seeks emotional reassurance with a grounded, supportive listener).
-- **Evidence-Grounded AI Profiling:** Users engage in a natural conversation with an AI guide (`self` vs. `wants`). The system extracts psychographic insights backed by verbatim user quotes.
-- **Mutual Intentionality:** Matchmaking is strictly reciprocal. A match is only suggested if **User A fits what User B seeks AND User B fits what User A seeks**.
-- 
 ---
 
 ## 🛠️ Tech Stack & Dependencies
@@ -32,6 +29,7 @@ Belong shifts the focus from visual sorting to **relationship psychology, emotio
 - **Testing:** Custom multi-user simulation & benchmark suite (`httpx` + `asyncio`)
 
 ---
+
 ## 1. System Overview & Architecture
 
 Belong's backend is built with a decoupled, asynchronous microservice architecture designed for high throughput, sub-15ms candidate retrieval, and scalable background reasoning.
@@ -91,14 +89,12 @@ Belong's backend is built with a decoupled, asynchronous microservice architectu
 ```
 
 ### Service Breakdown
-- **`gateway` (Go `:9000`):** Single entry point. Handles CORS, JWT verification, and proxies `/api/...` requests to internal services.
-- **`auth` (Go `:9001`):** Dedicated authentication microservice. Handles user registration, bcrypt password hashing, and JWT token signing.
-- **`belong-api` (FastAPI `:8000`):** Main application backend. Manages profile signals, executes the LangGraph AI onboarding graph, serves real-time candidate retrieval (`CandidateRetriever`), and triggers pairwise LLM evaluations.
-- **`belong-workers` (Python):** Background worker process running queue listeners:
-  - `embedding_jobs`: Listens for updated profile signals and generates 384-dimensional vector embeddings (`self_embedding` and `wants_embedding`).
-  - `matching_jobs`: Executes batch matching and background Stage 1 & Stage 2 compatibility runs.
-- **`belong-postgres`:** PostgreSQL 16 database storing profiles, 384-d `pgvector` indexes, conversation sessions, and qualitative match evaluation reports.
-- **`belong-rabbitmq`:** AMQP message broker orchestrating background tasks.
+- **`gateway` (Go `:9000`):** Single entry point handling CORS, JWT verification, and proxying to internal services.
+- **`auth` (Go `:9001`):** Microservice managing user registration, bcrypt password hashing, and JWT signing.
+- **`belong-api` (FastAPI `:8000`):** Handles profile updates, AI onboarding graphs (LangGraph), real-time candidate retrieval (`CandidateRetriever`), and pairwise LLM evaluations.
+- **`belong-workers` (Python):** Background worker process executing RabbitMQ queues (`embedding_jobs` and `matching_jobs`).
+- **`belong-postgres`:** PostgreSQL 16 storage holding profiles, 384-d `pgvector` indexes, conversations, and persisted match reports.
+- **`belong-rabbitmq`:** AMQP message broker managing background execution queues.
 
 ---
 
@@ -135,107 +131,56 @@ The onboarding engine separates **user interaction** from **psychographic signal
 ### Data Representation & Embedding Serialization Example
 
 #### 1. Stored Profile Signal JSON (`profiles.profile` in PostgreSQL)
-User responses are parsed into structured JSON containing verbatim evidence quotes, confidence scores, and strict separation between `self`, `wants`, and `constraints`:
+User responses are stored as structured JSON with evidence quotes, confidence scores, and strict separation between `self`, `wants`, and `constraints`:
 
 ```json
 {
   "self": {
     "values": [
-      {
-        "summary": "Values honesty, transparency, and continuous personal growth",
-        "evidence": "I really value honesty above all else and being open about emotions.",
-        "confidence": 0.95
-      }
-    ],
-    "lifestyle": [
-      {
-        "summary": "Enjoys active weekend hiking and quiet evening reading",
-        "evidence": "On weekends I love hiking in nature or reading at home.",
-        "confidence": 0.90
-      }
+      { "summary": "Values honesty and transparency", "evidence": "I value honesty above all else", "confidence": 0.95 }
     ],
     "emotional_needs": [
-      {
-        "summary": "Needs explicit verbal reassurance when feeling stressed",
-        "evidence": "When I am stressed, I need my partner to reassure me that we are okay.",
-        "confidence": 0.92
-      }
-    ],
-    "conflict_style": [
-      {
-        "summary": "Prefers calm, immediate discussion over silent treatment",
-        "evidence": "I hate going to bed angry, I prefer talking things out calmly.",
-        "confidence": 0.88
-      }
+      { "summary": "Needs verbal reassurance when stressed", "evidence": "I need reassurance when stressed", "confidence": 0.92 }
     ]
   },
   "wants": {
     "partner_traits": [
-      {
-        "summary": "Grounded, patient, and emotionally available listener",
-        "evidence": "I am looking for someone who is patient and stays calm during tough conversations.",
-        "confidence": 0.95
-      }
-    ],
-    "relationship_expectations": [
-      {
-        "summary": "Seeks intentional long-term commitment leading to family",
-        "evidence": "I want a serious relationship where we build a future together.",
-        "confidence": 0.98
-      }
+      { "summary": "Grounded and patient listener", "evidence": "Looking for a patient partner", "confidence": 0.95 }
     ]
   },
   "constraints": {
     "dealbreakers": [
-      {
-        "summary": "Non-smoker only",
-        "evidence": "I cannot date anyone who smokes.",
-        "confidence": 1.0
-      }
+      { "summary": "Non-smoker only", "evidence": "Cannot date anyone who smokes", "confidence": 1.0 }
     ]
   }
 }
 ```
 
 #### 2. Canonical Text Serialization (`CanonicalSerializer`)
-Before vectorization, the `CanonicalSerializer` filters items above confidence threshold ($\ge 0.7$), strips metadata/quotes, and formats section headings into clean canonical text:
+Before vectorization, the `CanonicalSerializer` filters items above confidence threshold ($\ge 0.7$), strips metadata/quotes, and formats canonical text:
 
 * **Generated `self_text`:**
   ```text
   SELF
-
-  Values: Values honesty, transparency, and continuous personal growth.
-  Lifestyle: Enjoys active weekend hiking and quiet evening reading.
-  Conflict style: Prefers calm, immediate discussion over silent treatment.
-  Emotional needs: Needs explicit verbal reassurance when feeling stressed.
+  Values: Values honesty and transparency.
+  Emotional needs: Needs verbal reassurance when stressed.
   ```
 
 * **Generated `wants_text`:**
   ```text
   WANTS
-
-  Partner traits: Grounded, patient, and emotionally available listener.
-  Relationship expectations: Seeks intentional long-term commitment leading to family.
+  Partner traits: Grounded and patient listener.
   ```
 
 #### 3. Embedding Vector Generation (`self_embedding` & `wants_embedding`)
-The serialized canonical strings are passed into the embedding model (`all-MiniLM-L6-v2`) to produce 384-dimensional floating point vectors:
+Canonical text strings are passed to the embedding model (`all-MiniLM-L6-v2`) to produce 384-dimensional floating point vectors:
 
 ```text
 self_text  ──► [Embedding Model] ──► self_embedding  (VECTOR(384))
 wants_text ──► [Embedding Model] ──► wants_embedding (VECTOR(384))
 ```
 
-These vectors are saved directly into the `profiles` table in PostgreSQL:
-```sql
-UPDATE profiles
-SET self_embedding = '[0.023, -0.087, 0.142, ...]'::vector,
-    wants_embedding = '[-0.015, 0.114, -0.063, ...]'::vector,
-    embedding_source_text = '{"self_text": "...", "wants_text": "..."}'::jsonb
-WHERE user_id = 'user-uuid';
-```
-
-During Stage 1 candidate retrieval, PostgreSQL executes HNSW cosine distance search (`wants_embedding <=> self_embedding`) to rapidly find candidate matches based on what the user is seeking.
+These vectors are saved directly into the PostgreSQL `profiles` table for fast `pgvector` HNSW cosine similarity search (`wants_embedding <=> self_embedding`).
 
 ---
 
@@ -265,82 +210,47 @@ To scale matching efficiently without running expensive LLM evaluations on milli
 [ Persist Results to PostgreSQL & Return Qualitative Analysis ]
 ```
 
-### Stage 1: Retrieval (Surface Layer SQL + `pgvector`)
-- Applies hard surface layer constraints: age range, distance radius (Haversine), gender preference, and hard dealbreaker filters.
-- Computes vector similarity between User A's `wants_embedding` and Candidate B's `self_embedding` using `pgvector` HNSW indexes.
+### Stage 1: Fast Retrieval (Surface Layer SQL + `pgvector`)
+- Applies hard surface layer constraints: age range, distance radius (Haversine), gender preference, and dealbreakers.
+- Computes vector similarity between User A's `wants_embedding` and Candidate B's `self_embedding`.
 - Returns candidate previews in **5ms to 15ms** without consuming LLM tokens.
 
-### Stage 2: Reasoning (Pairwise LLM Compatibility Agent)
-- Executes an LLM reasoning node with strict JSON schema validation.
+### Stage 2: Deep Reasoning (Pairwise LLM Agent)
 - Evaluates bi-directional alignment across **4 core relationship dimensions**:
   1. **Emotional Needs:** Support mechanisms, stress handling, and reassurance dynamics.
   2. **Core Values:** Principles regarding family, ambition, personal growth, and ethics.
   3. **Lifestyle & Routine:** Daily habits, social battery, work-life balance, and schedules.
   4. **Conflict & Communication:** How partners navigate disagreements, process emotions, and handle space.
-- Outputs qualitative verdicts (`strong_alignment`, `partial`, `unclear`, `conflict`) along with mapped evidence quotes.
+- Outputs qualitative verdicts (`strong_alignment`, `partial`, `unclear`, `conflict`) along with evidence mappings.
 
 ---
 
 ## 4. System Execution Flows
 
-Belong supports two decoupled execution models: **Decoupled Real-Time Candidate Fetching + On-Demand LLM Reasoning** and **Asynchronous Queue Choreography**.
+Belong supports two decoupled execution models depending on the workflow:
 
-### Flow A: Real-Time Candidate Fetching & On-Demand LLM Reasoning
+### Flow A: Real-Time Candidate Retrieval & On-Demand LLM Reasoning
+Instant candidate preview search (~5-15ms) followed by on-demand deep LLM analysis when requested by the user:
 
-This model enables instantaneous candidate browsing followed by on-demand deep analysis when requested by the user:
+```text
+1. Fast Candidate Retrieval:
+   Client ──► Go Gateway (:9000) ──► Belong API ──► SQL + pgvector ──► Previews (~5-15ms)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as User / Client App
-    participant Gateway as Go Gateway (:9000)
-    participant API as Belong API (:8000)
-    participant DB as Postgres + pgvector
-    participant LLM as LangGraph / LLM Agent
-
-    %% Stage 1: Fast Candidate Fetching
-    rect rgb(240, 248, 255)
-    Note over User, DB: STAGE 1: FIND MATCHES (Fast Surface Layer + Vector Recall)
-    User->>Gateway: GET /matches/candidates/{user_id}
-    Gateway->>API: Forward request with X-User-ID header
-    API->>DB: Execute CandidateRetriever SQL (Surface Filters + pgvector <=>)
-    DB-->>API: Top-K Candidate Rows (IDs, name, age, distance, cosine similarity)
-    API-->>Gateway: HTTP 200 RetrievalListResponse
-    Gateway-->>User: Candidate Previews (~5-15ms response time)
-    end
-
-    %% Stage 2: On-Demand Deep Analysis
-    rect rgb(255, 245, 238)
-    Note over User, LLM: STAGE 2: ANALYZE DEEPER (On-Demand Pairwise LLM Reasoning)
-    User->>Gateway: POST /matches/analyze { candidate_user_id }
-    Gateway->>API: Forward request with X-User-ID header
-    API->>DB: Fetch User A & Candidate B profile signals
-    DB-->>API: User profiles & evidence quotes
-    API->>LLM: PairwiseCompatibilityAgent.evaluate_pair(user_a, candidate_b)
-    LLM-->>API: PairwiseCompatibilityOutput (Verdicts, reasoning, 4 dimensions)
-    API->>DB: INSERT into compatibility_results (is_latest = true)
-    DB-->>API: Saved compatibility record
-    API-->>Gateway: HTTP 200 MatchCandidateResponse
-    Gateway-->>User: Detailed Qualitative Compatibility Breakdown
-    end
+2. On-Demand Deep Reasoning:
+   Client ──► Go Gateway (:9000) ──► Belong API ──► Pairwise LLM Agent ──► Detailed Report
 ```
 
-### Flow B: Asynchronous Worker Choreography (Background Queue Mode)
-
-For long-running batch operations or decoupled background job processing:
+### Flow B: Asynchronous Queue Mode (Background Worker)
+For long-running batch operations or decoupled background job processing via RabbitMQ:
 
 ```text
 Client                  FastAPI (belong-api)              RabbitMQ               Worker (belong-workers)           PostgreSQL
   │                              │                           │                              │                           │
   ├─ POST /matches ─────────────►│                           │                              │                           │
-  │                              ├─ Create Job (pending) ────┼──────────────────────────────┼──────────────────────────►│
-  │                              │                           │                              │                           │
   │                              ├─ Publish matching_job ───►│                              │                           │
-  │◄─ 202 Accepted (job_id) ─────┤                           │                              │                           │
-  │                              │                           ├─ Consume matching_job ──────►│                           │
+  │◄─ 202 Accepted (job_id) ─────┤                           ├─ Consume matching_job ──────►│                           │
   │                              │                           │                              ├─ Execute Stage 1 & 2      │
-  │                              │                           │                              ├─ Write Results & Status ─►│
-  │                              │                           │                              │  (status = 'completed')   │
+  │                              │                           │                              ├─ Write Results to DB ────►│
   │                              │                           │                              │                           │
   ├─ GET /matches/jobs/{id} ────►│                           │                              │                           │
   │◄─ 200 OK (status: completed)─┴───────────────────────────┴──────────────────────────────┴──────────────────────────►│
@@ -395,15 +305,15 @@ Database constraints and relational schemas are defined in PostgreSQL 16 using `
 
 | Category | Endpoint | Method | Stage / Mode | Description & Behavior |
 | :--- | :--- | :--- | :--- | :--- |
-| **Match Retrieval** | `/matches/candidates/{user_id}` | `GET` | Stage 1 (Real-Time) | Instant candidate retrieval via SQL surface filters + `pgvector` (~5-15ms response). **No LLM used**. |
-| **Match Retrieval** | `/matches/candidates` | `POST` | Stage 1 (Real-Time) | Candidate retrieval accepting options in request body. **No LLM used**. |
-| **Deep Analysis** | `/matches/analyze` | `POST` | Stage 2 (On-Demand) | Runs pairwise LLM compatibility reasoning on a selected candidate and saves results to DB. |
+| **Match Retrieval** | `/matches/candidates/{user_id}` | `GET` | Stage 1 (Real-Time) | Instant candidate retrieval via SQL surface filters + `pgvector` (~5-15ms). **No LLM used**. |
+| **Match Retrieval** | `/matches/candidates` | `POST` | Stage 1 (Real-Time) | Candidate retrieval with options in request body. **No LLM used**. |
+| **Deep Analysis** | `/matches/analyze` | `POST` | Stage 2 (On-Demand) | Runs pairwise LLM compatibility reasoning on a selected candidate and saves results. |
 | **Deep Analysis** | `/matches/analyze/{candidate_id}` | `POST` | Stage 2 (On-Demand) | Path-parameter variant for on-demand candidate LLM reasoning. |
-| **Match Results** | `/matches/details/pair/{candidate_id}` | `GET` | Query | Retrieves existing saved qualitative compatibility breakdown for a specific candidate pair. |
+| **Match Results** | `/matches/details/pair/{candidate_id}` | `GET` | Query | Retrieves saved qualitative compatibility breakdown for a candidate pair. |
 | **Match Results** | `/matches/{user_id}` | `GET` | Query | Retrieves all latest saved compatibility evaluations for a user. |
-| **Async Jobs** | `/matches` | `POST` | Async Queue | Submits a background matching job to RabbitMQ queue. Returns `202 Accepted` with `job_id`. |
-| **Async Jobs** | `/matches/jobs/{job_id}` | `GET` | Query | Checks status (`pending`, `completed`, `failed`) and results of an async background job. |
-| **Onboarding** | `/onboarding/chat` | `POST` | Onboarding | Advances the LangGraph AI onboarding conversation and extracts psychographic profile signals. |
+| **Async Jobs** | `/matches` | `POST` | Async Queue | Submits background matching job to RabbitMQ queue. Returns `202 Accepted` with `job_id`. |
+| **Async Jobs** | `/matches/jobs/{job_id}` | `GET` | Query | Checks status (`pending`, `completed`, `failed`) of an async background job. |
+| **Onboarding** | `/onboarding/chat` | `POST` | Onboarding | Advances the LangGraph AI onboarding conversation and extracts profile signals. |
 | **Authentication** | `/auth/register`, `/auth/login` | `POST` | Auth | User registration, password hashing, and JWT token issuance via Go Auth service. |
 
 ---
