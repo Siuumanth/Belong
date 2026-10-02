@@ -186,6 +186,8 @@ export type CandidateMatch = {
   longitude?: number | null;
   distance_km?: number | null;
   profile?: Record<string, unknown>;
+  compatibility_percentage?: number | null; // 0-99 normalized match %
+  // raw scores kept for type compat but not shown in UI
   cosine_distance?: number;
   cosine_similarity?: number;
   reverse_cosine_distance?: number | null;

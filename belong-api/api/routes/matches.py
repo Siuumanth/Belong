@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import Optional, List, Dict, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException, Header, status
 from psycopg.rows import dict_row
 
@@ -268,6 +268,12 @@ async def _perform_pairwise_llm_analysis(user_a_id: UUID, candidate_b_id: UUID) 
 
     async with get_db_connection() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
+            match_run_id = str(uuid4())
+            await cur.execute(
+                "INSERT INTO match_runs (id, user_id, status, candidate_count, completed_at) VALUES (%s, %s, 'completed', 1, CURRENT_TIMESTAMP);",
+                (match_run_id, str(user_a_id))
+            )
+
             await cur.execute(
                 "UPDATE compatibility_results SET is_latest = false WHERE user_a_id = %s AND user_b_id = %s AND is_latest = true;",
                 (str(user_a_id), str(candidate_b_id))
@@ -289,12 +295,13 @@ async def _perform_pairwise_llm_analysis(user_a_id: UUID, candidate_b_id: UUID) 
                     potential_conflicts, dealbreaker_violations, uncertainties,
                     reasoning_version, is_latest, updated_at
                 )
-                VALUES (gen_random_uuid(), %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', true, CURRENT_TIMESTAMP)
+                VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, 'v1', true, CURRENT_TIMESTAMP)
                 RETURNING id, match_id, created_at, updated_at;
             """
             await cur.execute(
                 insert_sql,
                 (
+                    match_run_id,
                     str(user_a_id),
                     str(candidate_b_id),
                     getattr(output, "overall_verdict", "unclear") or "unclear",

@@ -2,6 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { matchApi, type CandidateMatch, type DimensionResult, type MatchResultItem, type OverallVerdict } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
+// ─── In-memory session cache ──────────────────────────────────────────────────
+// Persists across page navigation within the same tab session.
+// Keyed by userId so multi-account use is safe.
+const candidatesCache = new Map<string, { data: CandidateMatch[]; fetchedAt: Date }>();
+const analysisCache   = new Map<string, MatchResultItem>(); // key: `${userId}:${candidateId}`
+
+export function clearMatchCache(userId?: string) {
+  if (userId) {
+    candidatesCache.delete(userId);
+    for (const key of analysisCache.keys()) {
+      if (key.startsWith(`${userId}:`)) analysisCache.delete(key);
+    }
+  } else {
+    candidatesCache.clear();
+    analysisCache.clear();
+  }
+}
+
 // ─── Verdict helpers ──────────────────────────────────────────────────────────
 type VStyle = { dot: string; badge: string; label: string; text: string };
 
@@ -25,17 +43,32 @@ function OverallBadge({ verdict }: { verdict?: OverallVerdict | string }) {
   );
 }
 
-// ─── Score bar ────────────────────────────────────────────────────────────────
-function ScoreBar({ score }: { score: number }) {
-  // combined_score is 0-1 cosine-based; scale for display
-  const pct = Math.min(Math.round(score * 100), 100);
-  const color = pct >= 70 ? "bg-[#d4a843]" : pct >= 40 ? "bg-[#fb923c]" : "bg-zinc-500";
+// ─── Compatibility percentage ring ───────────────────────────────────────────
+function CompatibilityRing({ pct }: { pct: number }) {
+  const clamped = Math.min(Math.max(pct, 0), 99);
+  const color =
+    clamped >= 65 ? "text-emerald-400" :
+    "text-amber-400";
+  const ringColor =
+    clamped >= 65 ? "stroke-emerald-400" :
+    "stroke-amber-400";
+
+  const r = 20;
+  const circ = 2 * Math.PI * r;
+  const dash = (clamped / 100) * circ;
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 flex-1 rounded-full bg-line">
-        <div className={`h-full rounded-full transition-all duration-700 ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="w-8 shrink-0 text-right text-[10px] text-[#4a6080]">{(score * 100).toFixed(0)}%</span>
+    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
+      <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
+        <circle cx="28" cy="28" r={r} fill="none" stroke="currentColor" strokeWidth="3" className="text-line" />
+        <circle
+          cx="28" cy="28" r={r} fill="none" strokeWidth="3"
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
+          className={ringColor}
+        />
+      </svg>
+      <span className={`absolute text-xs font-semibold ${color}`}>{clamped}%</span>
     </div>
   );
 }
@@ -151,37 +184,38 @@ function CandidateCard({
 }) {
   const [visible, setVisible]         = useState(false);
   const [analysing, setAnalysing]     = useState(false);
-  const [analysis, setAnalysis]       = useState<MatchResultItem | null>(null);
   const [analysisErr, setAnalysisErr] = useState<string | null>(null);
   const [expanded, setExpanded]       = useState(false);
   const ref = useRef<HTMLElement>(null);
 
-  // staggered entrance
+  // Seed analysis from cache if already fetched this session
+  const cacheKey = `${userId}:${candidate.user_id}`;
+  const [analysis, setAnalysis] = useState<MatchResultItem | null>(
+    () => analysisCache.get(cacheKey) ?? null
+  );
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), index * 80);
     return () => clearTimeout(t);
   }, [index]);
 
-  // Try to load an existing analysis on first expand
   async function loadOrAnalyze() {
     if (analysis) { setExpanded(e => !e); return; }
     setExpanded(true);
     setAnalysisErr(null);
     setAnalysing(true);
 
-    // First try fetching an existing saved result (no LLM cost)
     try {
       const existing = await matchApi.pairDetail(candidate.user_id);
+      analysisCache.set(cacheKey, existing);
       setAnalysis(existing);
       setAnalysing(false);
       return;
-    } catch {
-      // 404 = no saved result yet, fall through to run LLM
-    }
+    } catch { /* not cached on backend yet */ }
 
-    // Run on-demand LLM analysis (Stage 2)
     try {
       const result = await matchApi.analyze(candidate.user_id, userId);
+      analysisCache.set(cacheKey, result);
       setAnalysis(result);
     } catch (err) {
       setAnalysisErr(err instanceof Error ? err.message : "Analysis failed");
@@ -190,11 +224,12 @@ function CandidateCard({
     }
   }
 
-  const initials = candidate.name
-    ? candidate.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-    : candidate.user_id.slice(0, 2).toUpperCase();
+  const pct = candidate.compatibility_percentage ?? null;
 
-  const score = candidate.combined_score ?? 0;
+  // Override verdict display: if score ≥ 65% treat as strong alignment regardless of LLM output
+  const displayVerdict = analysis
+    ? (pct !== null && pct >= 65 ? "strong_alignment" : analysis.overall_verdict)
+    : undefined;
 
   return (
     <article
@@ -204,84 +239,62 @@ function CandidateCard({
       }`}
     >
       {/* Card header */}
-      <div className="flex items-start gap-4 p-5">
-        {/* Avatar */}
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue/10 text-base font-semibold text-blue">
-          {initials}
-        </div>
+      <div className="flex items-center gap-4 p-5">
+        {/* Compatibility ring — shows % if available, initials otherwise */}
+        {pct !== null ? (
+          <CompatibilityRing pct={pct} />
+        ) : (
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue/10 text-base font-semibold text-blue">
+            {candidate.name
+              ? candidate.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+              : candidate.user_id.slice(0, 2).toUpperCase()}
+          </div>
+        )}
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-semibold text-[#e8edf8]">
-                {candidate.name ?? `User ${candidate.user_id.slice(0, 8)}`}
-              </p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-[#4a6080]">
-                {candidate.age && <span>{candidate.age}</span>}
-                {candidate.gender && <span className="capitalize">{candidate.gender}</span>}
-                {candidate.relationship_goal && (
-                  <span className="capitalize">{candidate.relationship_goal.replace("-", " ")}</span>
-                )}
-                {candidate.distance_km != null && (
-                  <span className="flex items-center gap-1">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-                    </svg>
-                    {candidate.distance_km.toFixed(1)} km
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Analysis badge or Analyze Deeper button */}
-            {analysis ? (
-              <OverallBadge verdict={analysis.overall_verdict} />
-            ) : (
-              <button
-                type="button"
-                onClick={loadOrAnalyze}
-                disabled={analysing}
-                className="shrink-0 rounded-xl border border-blue/30 bg-blue/8 px-3.5 py-1.5 text-xs font-semibold text-blue hover:bg-blue/15 disabled:opacity-50 transition-all"
-              >
-                {analysing ? (
-                  <span className="flex items-center gap-1.5">
-                    <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                    </svg>
-                    Analysing…
-                  </span>
-                ) : "Analyse deeper →"}
-              </button>
+          <p className="font-semibold text-[#e8edf8]">
+            {candidate.name ?? `User ${candidate.user_id.slice(0, 8)}`}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#4a6080]">
+            {candidate.age && <span>{candidate.age}</span>}
+            {candidate.gender && <span className="capitalize">{candidate.gender}</span>}
+            {candidate.relationship_goal && (
+              <span className="capitalize">{candidate.relationship_goal.replace("-", " ")}</span>
             )}
-          </div>
-
-          {/* Compatibility score bar */}
-          {score > 0 && (
-            <div className="mt-3">
-              <div className="mb-1 flex justify-between text-[10px] text-[#4a6080]">
-                <span>Compatibility score</span>
-              </div>
-              <ScoreBar score={score} />
-            </div>
-          )}
-
-          {/* Similarity breakdown pills */}
-          <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
-            {candidate.cosine_similarity != null && (
-              <span className="rounded-full border border-line px-2.5 py-0.5 text-[#4a6080]">
-                Forward {(candidate.cosine_similarity * 100).toFixed(0)}%
-              </span>
-            )}
-            {candidate.reverse_cosine_similarity != null && (
-              <span className="rounded-full border border-line px-2.5 py-0.5 text-[#4a6080]">
-                Reverse {(candidate.reverse_cosine_similarity * 100).toFixed(0)}%
+            {candidate.distance_km != null && (
+              <span className="flex items-center gap-1">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+                </svg>
+                {candidate.distance_km.toFixed(1)} km away
               </span>
             )}
           </div>
         </div>
+
+        {/* Analyse button or verdict badge */}
+        {analysis ? (
+          <OverallBadge verdict={displayVerdict} />
+        ) : (
+          <button
+            type="button"
+            onClick={loadOrAnalyze}
+            disabled={analysing}
+            className="shrink-0 rounded-xl border border-blue/30 bg-blue/8 px-3.5 py-1.5 text-xs font-semibold text-blue hover:bg-blue/15 disabled:opacity-50 transition-all"
+          >
+            {analysing ? (
+              <span className="flex items-center gap-1.5">
+                <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Analysing…
+              </span>
+            ) : "Analyse deeper →"}
+          </button>
+        )}
       </div>
 
-      {/* Error state */}
+      {/* Error */}
       {analysisErr && (
         <div className="mx-5 mb-4 rounded-xl border border-rose-400/20 bg-rose-400/8 px-3 py-2 text-xs text-rose-400">
           {analysisErr}
@@ -307,10 +320,10 @@ function CandidateCard({
         </div>
       )}
 
-      {/* Analysis result (expanded) */}
+      {/* Analysis panel */}
       {analysis && expanded && <AnalysisPanel result={analysis} />}
 
-      {/* Toggle analysis visibility once loaded */}
+      {/* Toggle */}
       {analysis && !analysing && (
         <button
           type="button"
@@ -391,18 +404,31 @@ export function MatchesPage() {
   const { session } = useAuth();
   const userId = session!.userId;
 
-  const [candidates, setCandidates] = useState<CandidateMatch[]>([]);
-  const [pageState, setPageState]   = useState<PageState>("idle");
+  // Seed state from cache immediately — no flash of empty on navigation
+  const cached = candidatesCache.get(userId);
+  const [candidates, setCandidates] = useState<CandidateMatch[]>(cached?.data ?? []);
+  const [pageState, setPageState]   = useState<PageState>(cached ? "done" : "idle");
   const [error, setError]           = useState<string | null>(null);
-  const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  const [lastFetched, setLastFetched] = useState<Date | null>(cached?.fetchedAt ?? null);
 
-  async function findCandidates() {
+  async function findCandidates(force = false) {
+    // Skip network if cached and not explicitly refreshing
+    if (!force && candidatesCache.has(userId)) {
+      const c = candidatesCache.get(userId)!;
+      setCandidates(c.data);
+      setLastFetched(c.fetchedAt);
+      setPageState("done");
+      return;
+    }
     setPageState("loading");
     setError(null);
     try {
       const res = await matchApi.candidates(userId);
-      setCandidates(res.candidates ?? []);
-      setLastFetched(new Date());
+      const data = res.candidates ?? [];
+      const fetchedAt = new Date();
+      candidatesCache.set(userId, { data, fetchedAt });
+      setCandidates(data);
+      setLastFetched(fetchedAt);
       setPageState("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not retrieve candidates");
@@ -436,7 +462,7 @@ export function MatchesPage() {
           )}
           <button
             type="button"
-            onClick={findCandidates}
+            onClick={() => findCandidates(true)}
             disabled={isLoading}
             className="rounded-xl bg-blue px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue/20 hover:bg-blue-dim disabled:opacity-50 transition-all"
           >
@@ -506,7 +532,7 @@ export function MatchesPage() {
           </svg>
           <div>
             <p className="text-sm font-medium text-rose-400">{error}</p>
-            <button type="button" onClick={findCandidates} className="mt-1 text-xs text-rose-400/70 hover:text-rose-400 underline">
+            <button type="button" onClick={() => findCandidates(true)} className="mt-1 text-xs text-rose-400/70 hover:text-rose-400 underline">
               Try again
             </button>
           </div>
@@ -521,18 +547,7 @@ export function MatchesPage() {
       {/* Candidate cards */}
       {pageState === "done" && candidates.length > 0 && (
         <div className="space-y-4">
-          {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-[#4a6080]">
-            <span>Sorted by combined bidirectional score</span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#d4a843]" />Forward = your wants vs their self
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue" />Reverse = their wants vs your self
-            </span>
-          </div>
-
-          <div className="grid gap-4">
+        <div className="grid gap-4">
             {candidates.map((c, i) => (
               <CandidateCard key={c.user_id} candidate={c} index={i} userId={userId} />
             ))}
