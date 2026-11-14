@@ -395,11 +395,11 @@ When an interviewer asks: *"Show me what your data looks like before and after e
 
 > *"When a user completes onboarding, their psychological signals are structured into JSON with verbatim evidence quotes and saved in `profiles.profile`.*  
 >  
-> *Before vectorization, we don't feed raw JSON into the model because curly braces, quotes, and metadata add structural noise that dilutes vector attention. Instead, our **Canonical Serializer** strips metadata, filters low-confidence traits ($< 0.50$), and outputs two clean text blocks: `self_text` (who they are) and `wants_text` (what they need).*  
+> *Before vectorization, I don't feed raw JSON into the model because curly braces, quotes, and metadata add structural noise that dilutes vector attention. Instead, the **Canonical Serializer** strips metadata, filters low-confidence traits ($< 0.50$), and outputs two clean text blocks: `self_text` (who they are) and `wants_text` (what they need).*  
 >  
 > *These text blocks are passed into `sentence-transformers/all-MiniLM-L6-v2` to generate two **384-dimensional dense vectors** stored in `self_embedding` and `wants_embedding` in PostgreSQL with HNSW cosine indexes.*  
 >  
-> *This separation is what enables our Stage 1 query to compute bidirectional compatibility—matching User A's wants against Candidate B's self, and Candidate B's wants against User A's self in under 20 milliseconds."*
+> *This separation is what enables the Stage 1 query to compute bidirectional compatibility—matching User A's wants against Candidate B's self, and Candidate B's wants against User A's self in under 20 milliseconds."*
 
 ```
 
@@ -517,8 +517,8 @@ When an interviewer asks: *"Show me what your data looks like before and after e
 
 > *"When a user completes onboarding, their psychological signals are structured into JSON with verbatim evidence quotes and saved in `profiles.profile`.*  
 >  
-> *Before vectorization, we don't feed raw JSON into the model because curly braces, quotes, and metadata add structural noise that dilutes vector attention. Instead, our **Canonical Serializer** strips metadata, filters low-confidence traits ($< 0.50$), and outputs two clean text blocks: `self_text` (who they are) and `wants_text` (what they need).*  
+> *Before vectorization, I don't feed raw JSON into the model because curly braces, quotes, and metadata add structural noise that dilutes vector attention. Instead, the **Canonical Serializer** strips metadata, filters low-confidence traits ($< 0.50$), and outputs two clean text blocks: `self_text` (who they are) and `wants_text` (what they need).*  
 >  
 > *These text blocks are passed into `sentence-transformers/all-MiniLM-L6-v2` to generate two **384-dimensional dense vectors** stored in `self_embedding` and `wants_embedding` in PostgreSQL with HNSW cosine indexes.*  
 >  
-> *This separation is what enables our Stage 1 query to compute bidirectional compatibility—matching User A's wants against Candidate B's self, and Candidate B's wants against User A's self in under 20 milliseconds."*
+> *This separation is what enables the Stage 1 query to compute bidirectional compatibility—matching User A's wants against Candidate B's self, and Candidate B's wants against User A's self in under 20 milliseconds."*

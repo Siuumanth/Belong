@@ -39,6 +39,6 @@ Welcome to your interview preparation repository for **Belong** — your stronge
 ## 💡 Quick Tips for the Interview
 
 1. **Draw the ASCII diagrams first:** When asked about your project, immediately sketch out the Gateway $\rightarrow$ FastAPI $\rightarrow$ RabbitMQ $\rightarrow$ Workers $\rightarrow$ Postgres flow from [01-overall-architecture.md](file:///d:/code/Golang/Belong/interview-prep/01-overall-architecture.md).
-2. **Emphasize two-way reciprocal matching:** Don't just say "we calculate vector similarity". Say: *"We calculate bidirectional compatibility: User A fulfilling User B's wants, AND User B fulfilling User A's wants."*
+2. **Emphasize two-way reciprocal matching:** Don't just say "I calculate vector similarity". Say: *"I calculate bidirectional compatibility: User A fulfilling User B's wants, AND User B fulfilling User A's wants."*
 3. **Bring up real bugs proactively:** When the interviewer asks *"What was the hardest challenge?"*, talk about the PyTorch event-loop starvation bug or the inverted cosine distance bug from [06-design-decisions-tradeoffs-and-interview-qa.md](file:///d:/code/Golang/Belong/interview-prep/06-design-decisions-tradeoffs-and-interview-qa.md). It instantly proves authenticity and deep systems knowledge.
 

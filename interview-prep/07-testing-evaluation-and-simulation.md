@@ -146,6 +146,6 @@ When the interviewer asks: *"How would this architecture scale as the userbase g
 
 ## 8. High-Impact Interview Soundbites
 
-* *"We treat behavioral invariants the way financial systems treat balance invariants: an avoidant-anxious match must never produce a strong alignment verdict, and dealbreakers must trigger zero-tolerance exclusion."*
-* *"We don't test LLMs by comparing string outputs; we test the system by simulating multi-persona communities and asserting structural and psychological properties on the resulting graph."*
-* *"By decoupling Stage 1 vector recall from Stage 2 LLM reasoning, our system achieves sub-20ms candidate retrieval while keeping per-user matching costs under one cent."*
+* *"I treat behavioral invariants the way financial systems treat balance invariants: an avoidant-anxious match must never produce a strong alignment verdict, and dealbreakers must trigger zero-tolerance exclusion."*
+* *"I don't test LLMs by comparing string outputs; I test the system by simulating multi-persona communities and asserting structural and psychological properties on the resulting matches."*
+* *"By decoupling Stage 1 vector recall from Stage 2 LLM reasoning, the system achieves sub-20ms candidate retrieval while keeping per-user matching costs under one cent."*

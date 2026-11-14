@@ -259,9 +259,9 @@ When an interviewer says: *"Can you draw the architecture of Belong on the white
   4. Arrow down-right to: `Belong API (FastAPI :8000)`.
 * **What you say:**
   > *"Belong is an AI compatibility matchmaking platform. All client traffic hits a high-concurrency **Go API Gateway** at port 9000.*  
-  > *The Gateway acts as our secure perimeter: it handles rate limiting, CORS, and verifies JWT tokens at the edge.*  
+  > *The Gateway acts as the secure perimeter: it handles rate limiting, CORS, and verifies JWT tokens at the edge.*  
   > *For unauthenticated routes like login and registration, it proxies directly to a lightweight **Go Auth service** using bcrypt and HMAC-SHA256.*  
-  > *For protected application routes, the Gateway verifies the token, strips untrusted client headers, and injects a sanitized `X-User-ID` header before reverse-proxying downstream to our Python backend."*
+  > *For protected application routes, the Gateway verifies the token, strips untrusted client headers, and injects a sanitized `X-User-ID` header before reverse-proxying downstream to the Python backend."*
 
 ---
 
@@ -272,10 +272,10 @@ When an interviewer says: *"Can you draw the architecture of Belong on the white
   3. Connect Belong API to Postgres with an arrow.
   4. Annotate inside Postgres: `profiles (JSONB + 384-dim vector)`.
 * **What you say:**
-  > *"Our core backend, **Belong API**, is written in FastAPI. It orchestrates our multi-turn conversational onboarding using **LangGraph**.*  
+  > *"The core backend, **Belong API**, is written in FastAPI. I built it to orchestrate multi-turn conversational onboarding using **LangGraph**.*  
   > *Instead of asking users to swipe on photos, the AI guide converses with them to extract psychological signals into two distinct representations: who the user is (`SELF`), and what they need in a partner (`WANTS`).*  
   > *Everything is persisted in a single **PostgreSQL 16** database with the `pgvector` extension.*  
-  > *We use `JSONB` for flexible semi-structured psychological traits, and store two 384-dimensional dense vectors with **HNSW cosine indexes** for fast approximate nearest-neighbor search."*
+  > *I used `JSONB` for flexible semi-structured psychological traits, and stored two 384-dimensional dense vectors with **HNSW cosine indexes** for fast approximate nearest-neighbor search."*
 
 ---
 
@@ -285,9 +285,9 @@ When an interviewer says: *"Can you draw the architecture of Belong on the white
   2. Box at bottom-right: `Python Workers`. Arrow from RabbitMQ $\rightarrow$ Python Workers.
   3. Arrow from Workers to external cloud: `Groq LLaMA-3.3-70B`.
 * **What you say:**
-  > *"Because vector generation and deep LLM reasoning are computationally expensive, we decouple them completely from the user-facing HTTP lifecycle.*  
+  > *"Because vector generation and deep LLM reasoning are computationally expensive, I decoupled them completely from the user-facing HTTP lifecycle.*  
   > *When onboarding completes or a user requests matches, the API creates a job record in Postgres and publishes an event to **RabbitMQ**.*  
-  > *Our asynchronous **Python Workers** consume jobs with `prefetch_count=1` so tasks are distributed fairly without starving any worker."*
+  > *The asynchronous **Python Workers** consume jobs with `prefetch_count=1` so tasks are distributed fairly without starving any worker."*
 
 ---
 
@@ -298,7 +298,7 @@ When an interviewer says: *"Can you draw the architecture of Belong on the white
 * **What you say:**
   > *"The worker executes a **Two-Stage Matching Pipeline**.*  
   > *In **Stage 1 (Recall)**, it runs a single optimized SQL query combining hard demographic filters—like mutual age, gender, and Haversine distance—with bidirectional `pgvector` cosine distance queries. This narrows 10,000+ candidates down to the top 15 in under 20 milliseconds at zero cost.*  
-  > *In **Stage 2 (Reasoning)**, the worker takes those 15 candidates and invokes **Groq LLaMA-3.3-70B** to evaluate pairwise compatibility across 4 core relationship dimensions: emotional needs, core values, lifestyle, and conflict style. We require verbatim quotes from both users' chat transcripts to eliminate hallucinations.*  
+  > *In **Stage 2 (Reasoning)**, the worker takes those 15 candidates and invokes **Groq LLaMA-3.3-70B** to evaluate pairwise compatibility across 4 core relationship dimensions: emotional needs, core values, lifestyle, and conflict style. I require verbatim quotes from both users' chat transcripts to eliminate hallucinations.*  
   > *The worker ranks them deterministically and writes the results to `compatibility_results`, which the client then polls and displays."*
 
 ---

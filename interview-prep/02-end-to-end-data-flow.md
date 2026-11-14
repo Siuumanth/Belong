@@ -136,7 +136,7 @@ Once onboarding ends, the system prepares Alice's profile for vector search:
   ┌────────────────────────────────────────────────────────────────────────────────────────┐
   │ 2. Canonical Serializer (Turn JSON into clean text)                                    │
   │    Raw JSON has brackets and IDs that confuse vector models.                           │
-  │    So we strip the junk and make two clean text summaries:                             │
+  │    The serializer strips the noise and makes two clean text summaries:                 │
   │                                                                                        │
   │    self_text:                                                                          │
   │    "SELF                                                                               │
@@ -164,7 +164,7 @@ Once onboarding ends, the system prepares Alice's profile for vector search:
 
 ## 4. The Two-Stage Matching Pipeline (Visualized)
 
-When Alice clicks "Find Matches", we run a two-stage pipeline so we don't burn money or time calling an LLM on 10,000 people:
+When Alice clicks "Find Matches", the system runs a two-stage pipeline to avoid burning money or time calling an LLM on 10,000 people:
 
 ```
                                  Alice wants matches
@@ -222,7 +222,7 @@ When Alice clicks "Find Matches", we run a two-stage pipeline so we don't burn m
                                           │
                                           ▼
      ┌────────────────────────────────────────────────────────────────────────┐
-     │ We don't trust an LLM to sort numbers. We sort with Python math:       │
+     │ I don't trust an LLM to sort numbers. The code sorts with Python math: │
      │                                                                        │
      │ 1. Dealbreaker Penalty: Anyone with 1+ dealbreakers drops to bottom.   │
      │ 2. Verdict Rank: strong_alignment (4) > partial (3) > unclear > clash. │
@@ -268,8 +268,8 @@ When Alice clicks "Find Matches", we run a two-stage pipeline so we don't burn m
 * **Under the hood:** The bot bundles her extracted facts into `SELF` (who she is), `WANTS` (what she seeks), and `CONSTRAINTS` (dealbreakers), and saves it into the `profiles` table as JSONB.
 
 ### Step 6: Handing Off to the Background Worker
-* **What happens:** Alice's screen says: *"We are processing your profile to find your best matches!"*
-* **Under the hood:** Generating vectors and running 15 deep LLM comparisons takes 15–20 seconds. We don't want Alice's browser to freeze or time out. The API creates a ticket in the Postgres `jobs` table and publishes a message to RabbitMQ, immediately returning HTTP 202 to the browser.
+* **What happens:** Alice's screen says: *"Processing your profile to find your best matches..."*
+* **Under the hood:** Generating vectors and running 15 deep LLM comparisons takes 15–20 seconds. To keep Alice's browser from freezing or timing out, the API creates a ticket in the Postgres `jobs` table and publishes a message to RabbitMQ, immediately returning HTTP 202 to the browser.
 
 ### Step 7: Making the Vectors (In the Worker)
 * **What happens:** The background worker picks up the ticket.
